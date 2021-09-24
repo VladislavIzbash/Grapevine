@@ -2,5 +2,9 @@
     <string name="app_name">Grapevine</string>
     <string name="settings">Настройки</string>
     <string name="contacts">Контакты</string>
-    <string name="neighbors">Люди вокруг</string>
+    <string name="nodes">Люди поблизости</string>
+    <string name="wifi">Wi-fi</string>
+    <string name="bluetooth">Bluetooth</string>
+    <string name="nfc">NFC</string>
+    <string name="off">Off</string>
 </resources>

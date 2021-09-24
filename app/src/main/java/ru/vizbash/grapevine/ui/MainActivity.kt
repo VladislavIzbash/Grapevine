@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
+import androidx.recyclerview.widget.ConcatAdapter;
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import ru.vizbash.grapevine.R
@@ -18,16 +19,16 @@ class MainActivity : AppCompatActivity() {
         ui = ActivityMainBinding.inflate(layoutInflater)
 
         ui.contactList.layoutManager = LinearLayoutManager(this)
-        ui.contactList.adapter = ContactAdapter {
-            Toast.makeText(this, "Clicked $it", Toast.LENGTH_SHORT).show()
-        }
+        ui.contactList.adapter = ConcatAdapter(
+            SectionAdapter(getString(R.string.contacts)),
+            ContactAdapter {
+                Toast.makeText(this, "Clicked $it", Toast.LENGTH_SHORT).show()
+            },
+            SectionAdapter(getString(R.string.nodes)),
+            NeighborAdapter(),
+        )
         val contactDecoration = DividerItemDecoration(ui.contactList.context, DividerItemDecoration.VERTICAL)
         ui.contactList.addItemDecoration(contactDecoration)
-
-        ui.neighborList.layoutManager = LinearLayoutManager(this)
-        ui.neighborList.adapter = NeighborAdapter()
-        val neighborDecoration = DividerItemDecoration(ui.neighborList.context, DividerItemDecoration.VERTICAL)
-        ui.neighborList.addItemDecoration(neighborDecoration)
 
         setContentView(ui.root)
     }

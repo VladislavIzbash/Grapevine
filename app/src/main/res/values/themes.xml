@@ -2,22 +2,22 @@
     <!-- Base application theme. -->
     <style name="Theme.Grapevine" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
         <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/dark_red</item>
-        <item name="colorPrimaryVariant">@color/dark_red</item>
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryVariant">@color/primary</item>
         <item name="colorOnPrimary">@color/white</item>
         <!-- Secondary brand color. -->
-        <item name="colorSecondary">@color/dark_pink</item>
-        <item name="colorSecondaryVariant">@color/dark_pink</item>
+        <item name="colorSecondary">@color/accent</item>
+        <item name="colorSecondaryVariant">@color/accent</item>
         <item name="colorOnSecondary">@color/black</item>
-        <item name="colorSurface">@color/pinky_gray</item>
-        <item name="android:windowBackground">@color/pinky_gray</item>
+        <item name="colorSurface">@color/background</item>
+        <item name="android:windowBackground">@color/background</item>
         <!-- Status bar color. -->
         <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
         <!-- Customize your theme here. -->
     </style>
     <style name="HeaderText">
         <item name="android:textSize">16sp</item>
-        <item name="android:textColor">@color/dark_red</item>
+        <item name="android:textColor">@color/accent</item>
         <item name="android:textStyle">bold</item>
     </style>
 </resources>

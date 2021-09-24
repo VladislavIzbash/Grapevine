@@ -21,6 +21,6 @@ class ContactAdapter(private val listener: (Int) -> Unit)
         holder.itemView.setOnClickListener { listener(position) }
     }
 
-    override fun getItemCount() = 4
+    override fun getItemCount() = 6
 }
 
