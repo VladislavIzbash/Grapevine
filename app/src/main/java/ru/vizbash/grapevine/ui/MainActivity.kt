@@ -1,0 +1,47 @@
+package ru.vizbash.grapevine.ui
+
+import androidx.appcompat.app.AppCompatActivity
+import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
+import android.widget.Toast
+import androidx.recyclerview.widget.DividerItemDecoration
+import androidx.recyclerview.widget.LinearLayoutManager
+import ru.vizbash.grapevine.R
+import ru.vizbash.grapevine.databinding.ActivityMainBinding
+
+class MainActivity : AppCompatActivity() {
+    private lateinit var ui: ActivityMainBinding
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        ui = ActivityMainBinding.inflate(layoutInflater)
+
+        ui.contactList.layoutManager = LinearLayoutManager(this)
+        ui.contactList.adapter = ContactAdapter {
+            Toast.makeText(this, "Clicked $it", Toast.LENGTH_SHORT).show()
+        }
+        val contactDecoration = DividerItemDecoration(ui.contactList.context, DividerItemDecoration.VERTICAL)
+        ui.contactList.addItemDecoration(contactDecoration)
+
+        ui.neighborList.layoutManager = LinearLayoutManager(this)
+        ui.neighborList.adapter = NeighborAdapter()
+        val neighborDecoration = DividerItemDecoration(ui.neighborList.context, DividerItemDecoration.VERTICAL)
+        ui.neighborList.addItemDecoration(neighborDecoration)
+
+        setContentView(ui.root)
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.appbar, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == R.id.action_settings) {
+            Toast.makeText(this, R.string.settings, Toast.LENGTH_SHORT).show()
+            return true
+        }
+        return super.onOptionsItemSelected(item)
+    }
+}
