@@ -10,14 +10,28 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Grapevine">
+
         <activity
-            android:name=".ui.MainActivity"
-            android:exported="true">
+            android:name=".ui.StartupActivity"
+            android:exported="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.NoDisplay">
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".ui.LoginActivity"
+            android:label="@string/login_title"
+            android:noHistory="true" />
+
+        <activity android:name=".ui.MainActivity" android:label="@string/app_name" />
+
+        <activity android:name=".ui.ChatActivity" />
+
     </application>
 
 </manifest>

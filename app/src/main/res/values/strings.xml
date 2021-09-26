@@ -7,4 +7,12 @@
     <string name="bluetooth">Bluetooth</string>
     <string name="nfc">NFC</string>
     <string name="off">Off</string>
+    <string name="name">Имя</string>
+    <string name="password">Пароль</string>
+    <string name="login">Войти</string>
+    <string name="login_title">Вход в Grapevine</string>
+    <string name="error_empty_field">Поле не должно быть пустым</string>
+    <string name="message_prompt">Введите сообщение</string>
+    <string name="message_text">Текст сообщения</string>
+    <string name="zero_time">00:00</string>
 </resources>

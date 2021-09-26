@@ -7,13 +7,11 @@ import androidx.recyclerview.widget.RecyclerView
 import ru.vizbash.grapevine.R
 
 class NeighborAdapter : RecyclerView.Adapter<NeighborAdapter.ViewHolder>() {
-    class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-
-    }
+    class ViewHolder(view: View) : RecyclerView.ViewHolder(view)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.neighbor, parent, false)
+            .inflate(R.layout.item_neighbor, parent, false)
         return ViewHolder(view)
     }
 

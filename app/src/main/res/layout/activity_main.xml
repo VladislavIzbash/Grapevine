@@ -2,9 +2,9 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:orientation="vertical">
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/contactList"
@@ -12,17 +12,17 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:paddingHorizontal="10dp"
-        tools:listitem="@layout/contact" >
+        tools:listitem="@layout/item_contact">
 
     </androidx.recyclerview.widget.RecyclerView>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
         android:layout_gravity="bottom"
-        android:padding="5dp"
-        android:background="@color/alt_background">
+        android:background="@color/alt_background"
+        android:orientation="horizontal"
+        android:padding="5dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -51,8 +51,8 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:gravity="center"
             android:layout_weight="1"
+            android:gravity="center"
             tools:ignore="UseCompoundDrawables">
 
             <ImageView
@@ -67,8 +67,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="5"
-                android:textStyle="bold"
-                android:textColor="@color/good" />
+                android:textColor="@color/good"
+                android:textStyle="bold" />
         </LinearLayout>
 
         <LinearLayout

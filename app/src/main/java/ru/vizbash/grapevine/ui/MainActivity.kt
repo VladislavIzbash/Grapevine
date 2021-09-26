@@ -1,5 +1,6 @@
 package ru.vizbash.grapevine.ui
 
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.Menu
@@ -21,9 +22,7 @@ class MainActivity : AppCompatActivity() {
         ui.contactList.layoutManager = LinearLayoutManager(this)
         ui.contactList.adapter = ConcatAdapter(
             SectionAdapter(getString(R.string.contacts)),
-            ContactAdapter {
-                Toast.makeText(this, "Clicked $it", Toast.LENGTH_SHORT).show()
-            },
+            ContactAdapter { openChat() },
             SectionAdapter(getString(R.string.nodes)),
             NeighborAdapter(),
         )
@@ -31,6 +30,10 @@ class MainActivity : AppCompatActivity() {
         ui.contactList.addItemDecoration(contactDecoration)
 
         setContentView(ui.root)
+    }
+
+    private fun openChat() {
+        startActivity(Intent(this, ChatActivity::class.java))
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
