@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package ru.vizbash.grapevine.network.messages.routed;
+
+option java_multiple_files = true;
+
+message RoutedMessage {
+  uint64 msg_id = 1;
+  uint64 src_id = 2;
+  uint64 dest_id = 3;
+  oneof payload {
+    StatusResponse response = 4;
+    SendText send_text = 5;
+  }
+  bytes sign = 14;
+}
+
+message StatusResponse {
+  uint64 request_id = 1;
+  bool ok = 2;
+  enum Error {
+    BAD_SIGNATURE = 0;
+  }
+  Error error = 3;
+}
+
+
+message SendText {
+  string text = 1;
+}
+

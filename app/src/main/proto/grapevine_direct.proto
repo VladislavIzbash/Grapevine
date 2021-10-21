@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package ru.vizbash.grapevine.network.messages.direct;
+
+option java_multiple_files = true;
+
+message NodeMessage {
+  uint64 user_id = 1;
+  string username = 2;
+  bytes public_key = 3;
+}
+
+message HandshakeMessage {
+  NodeMessage node = 1;
+}
+
+message AskNodesReq {}
+
+message AskNodesResp {
+  repeated NodeMessage nodes = 1;
+}
+
