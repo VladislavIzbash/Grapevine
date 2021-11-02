@@ -17,4 +17,5 @@ data class Node(var id: Long, var username: String, var publicKey: PublicKey) {
         .setUserId(id)
         .setUsername(username)
         .setPublicKey(ByteString.copyFrom(publicKey.encoded))
+        .build()
 }
