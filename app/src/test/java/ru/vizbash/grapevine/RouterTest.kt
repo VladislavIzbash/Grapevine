@@ -5,57 +5,48 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.SendChannel
-import kotlinx.coroutines.channels.produce
 import kotlinx.coroutines.test.runBlockingTest
-import org.junit.Assert
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import ru.vizbash.grapevine.network.Node
 import ru.vizbash.grapevine.network.Router
-import ru.vizbash.grapevine.network.transport.DiscoveryService
 import ru.vizbash.grapevine.network.transport.Neighbor
+import java.lang.Exception
 import java.security.KeyPairGenerator
-import java.util.*
-import org.junit.Assert.*
-import kotlin.collections.ArrayDeque
 
+@ExperimentalCoroutinesApi
 class RouterTest {
-    class TestDiscovery(private val neighbors: List<Neighbor>) : DiscoveryService {
-        override fun setOnDiscovered(onDiscovered: (Neighbor) -> Unit) {
-            neighbors.forEach(onDiscovered)
-        }
-    }
-
-    class TestNeighbor(
-        private val tx: LinkedList<MessageLite>,
-        private val rx: LinkedList<MessageLite>,
-    ) : Neighbor {
-        private var onReceived: (MessageLite) -> Unit = {}
-
-        override fun send(msg: MessageLite) {
-            tx.add(msg)
-        }
-
-        override fun setOnReceived(onReceived: (MessageLite) -> Unit) {
-            this.onReceived = onReceived
-        }
-
-        fun notifyRouter() {
-            while (!rx.isEmpty()) {
-                onReceived(rx.remove())
+    private class TestNeighbor(
+        private val tx: SendChannel<MessageLite>,
+        private val rx: ReceiveChannel<MessageLite>,
+    ): Neighbor {
+        override suspend fun send(msg: MessageLite) {
+            try {
+                println("sending using ${hashCode()}")
+                tx.send(msg)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                println("sent using ${hashCode()}")
             }
         }
+
+        override suspend fun receive(): MessageLite {
+            println("recv")
+            return rx.receive()
+        }
     }
 
-    private fun createNeighborPair(): Pair<TestNeighbor, TestNeighbor> {
-        val q1 = LinkedList<MessageLite>()
-        val q2 = LinkedList<MessageLite>()
+    private fun createTestNeighbors(): Pair<Neighbor, Neighbor> {
+        val chan1 = Channel<MessageLite>()
+        val chan2 = Channel<MessageLite>()
 
-        return Pair(TestNeighbor(q1, q2), TestNeighbor(q2, q1))
+        return Pair(TestNeighbor(chan1, chan2), TestNeighbor(chan2, chan1))
     }
-
 
     @Test
-    fun router_AcceptsNeighbors() {
+    fun router_AcceptsNeighbors() = runBlocking {
         val keyGen = KeyPairGenerator.getInstance("RSA")
         keyGen.initialize(1024)
 
@@ -65,37 +56,27 @@ class RouterTest {
             Node(3, "node3", keyGen.genKeyPair().public),
         )
 
-        val routers = nodes.map(::Router).toList()
+        val discChans = List(3) { Channel<Neighbor>() }
+        val routers = nodes.zip(discChans).map { Router(it.first, it.second) }
 
-        val neighbors = List(3) { createNeighborPair() }
-
-        val discoveries = listOf(
-            TestDiscovery(listOf(neighbors[0].first)),
-            TestDiscovery(listOf(neighbors[0].second)),
-            TestDiscovery(listOf()),
-        )
-
-        val threads = mutableListOf<Thread>()
-        routers.forEachIndexed { i, router ->
-            router.addDiscovery(discoveries[i])
-            threads.add(Thread(router))
-            threads[i].start()
+        val routerJobs = mutableListOf<Job>()
+        for (router in routers) {
+            routerJobs += launch { router.run() }
         }
 
-        //Thread.sleep(100)
-        for (pair in neighbors) {
-            pair.first.notifyRouter()
-            pair.second.notifyRouter()
-        }
+        delay(100)
 
-        //Thread.sleep(100)
-        routers.forEachIndexed { i, router ->
-            router.stop()
-            threads[i].join()
-        }
+        val neighbors = List(3) { createTestNeighbors() }
 
-        assertEquals(listOf(nodes[1]), routers[0].nodes.toList())
-        assertEquals(listOf(nodes[0]), routers[1].nodes.toList())
-        assertTrue(routers[2].nodes.isEmpty())
+        discChans[0].send(neighbors[0].first)
+        discChans[1].send(neighbors[0].second)
+
+        delay(200)
+
+//        routerJobs.forEach {job -> job.cancelAndJoin() }
+
+        assertEquals(listOf(nodes[1]), routers[0].nodes().toList())
+//        assertEquals(listOf(nodes[0]), routers[1].nodes().toList())
+//        assertTrue(routers[2].nodes().isEmpty())
     }
 }

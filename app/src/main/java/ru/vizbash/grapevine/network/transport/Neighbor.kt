@@ -3,7 +3,7 @@ package ru.vizbash.grapevine.network.transport
 import com.google.protobuf.MessageLite
 
 interface Neighbor {
-    fun send(msg: MessageLite)
+    suspend fun send(msg: MessageLite)
 
-    fun setOnReceived(onReceived: (MessageLite) -> Unit)
+    suspend fun receive(): MessageLite
 }
