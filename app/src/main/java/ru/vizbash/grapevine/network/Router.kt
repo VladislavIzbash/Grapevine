@@ -1,14 +1,10 @@
 package ru.vizbash.grapevine.network
 
-import com.google.protobuf.MessageLite
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import ru.vizbash.grapevine.network.messages.direct.AskNodesReq
 import ru.vizbash.grapevine.network.messages.direct.AskNodesResp
 import ru.vizbash.grapevine.network.messages.direct.HandshakeMessage
