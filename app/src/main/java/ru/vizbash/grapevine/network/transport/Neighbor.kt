@@ -1,9 +1,13 @@
 package ru.vizbash.grapevine.network.transport
 
-import com.google.protobuf.MessageLite
+import ru.vizbash.grapevine.network.messages.direct.DirectMessage
 
 interface Neighbor {
-    suspend fun send(msg: MessageLite)
+    fun send(msg: DirectMessage)
 
-    suspend fun receive(): MessageLite
+    fun setOnReceive(cb: (DirectMessage) -> Unit)
+
+    fun setOnDisconnect(cb: () -> Unit)
+
+    fun disconnect()
 }

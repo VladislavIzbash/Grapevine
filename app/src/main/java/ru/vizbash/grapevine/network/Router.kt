@@ -1,90 +1,43 @@
 package ru.vizbash.grapevine.network
 
-import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import ru.vizbash.grapevine.network.messages.direct.AskNodesReq
-import ru.vizbash.grapevine.network.messages.direct.AskNodesResp
-import ru.vizbash.grapevine.network.messages.direct.HandshakeMessage
+import com.google.protobuf.MessageLite
+import ru.vizbash.grapevine.network.messages.direct.AskNodesRequest
+import ru.vizbash.grapevine.network.messages.direct.AskNodesResponse
+import ru.vizbash.grapevine.network.messages.direct.DirectMessage
+import ru.vizbash.grapevine.network.messages.direct.HelloMessage
+import ru.vizbash.grapevine.network.messages.routed.StatusResponse
 import ru.vizbash.grapevine.network.transport.Neighbor
+import java.util.*
+import kotlin.collections.ArrayList
 
-private const val ASK_NODES_INTERVAL_MS = 5000L
-
-class Router(
-    private val selfNode: Node,
-    private val discoveries: ReceiveChannel<Neighbor>,
-) {
-    private data class KnownNeighbor(val neighbor: Neighbor, val node: Node)
-
-    private val neighbors = mutableListOf<KnownNeighbor>()
-    private val nodes = mutableMapOf<Long, Node>()
-    private val nodesMutex = Mutex()
-
-    suspend fun run() = coroutineScope {
-//        launch {
-//            while (true) {
-//                delay(ASK_NODES_INTERVAL_MS)
-//                askNodes()
-//            }
-//        }
-
-        for (neighbor in discoveries) {
-            launch { neighborHandler(neighbor) }
-        }
+class Router(private val selfNode: Node) {
+    private data class KnownNeighbor(val neighbor: Neighbor, val node: Node) {
+        val nodes = mutableListOf<Node>()
     }
 
-    suspend fun nodes() = nodesMutex.withLock { nodes.values }
+    private val neighbors: MutableList<KnownNeighbor> = Collections.synchronizedList(ArrayList())
 
-    private suspend fun neighborHandler(neighbor: Neighbor) {
-        val handshake = HandshakeMessage.newBuilder()
+    fun addNeighbor(neighbor: Neighbor) {
+        val helloMessage = HelloMessage.newBuilder()
             .setNode(selfNode.toMessage())
             .build()
-
-        neighbor.send(handshake)
-
-        if (!acceptNeighbor(neighbor)) {
-            return
-        }
-
-        val msg = neighbor.receive()
-        when (msg) {
-            is AskNodesReq -> {
-                val resp = AskNodesResp.newBuilder()
-                    .addAllNodes(nodes.values.map(Node::toMessage))
-                    .build()
-                neighbor.send(resp)
-            }
-            is AskNodesResp -> nodesMutex.withLock {
-                for (nodeMsg in msg.nodesList) {
-                    nodes[nodeMsg.userId] = Node(nodeMsg)
-                }
-            }
-        }
+        neighbor.send(DirectMessage.newBuilder().setHello(helloMessage).build())
     }
 
-    private suspend fun acceptNeighbor(neighbor: Neighbor): Boolean {
-        val msg = neighbor.receive()
-        if (msg !is HandshakeMessage) {
-            return false
-        }
-
-        val node = Node(msg.node)
-
-        nodesMutex.withLock {
-            neighbors.add(KnownNeighbor(neighbor, node))
-            nodes[node.id] = node
-        }
-
-        return true
+    @Synchronized
+    fun updateNodeList() {
+//        for (neighbor in neighbors) {
+//            neighbor.neighbor.send(AskNodesRequest.newBuilder().build())
+//
+//            val resp = neighbor.neighbor.receive()
+//            if (resp is AskNodesResponse) {
+//                neighbor.nodes.addAll(resp.nodesList.map(::Node))
+//            }
+//        }
     }
 
-    private suspend fun askNodes() {
-        nodesMutex.withLock {
-            for (neighbor in neighbors) {
-                neighbor.neighbor.send(AskNodesReq.newBuilder().build())
-            }
-        }
+    @Synchronized
+    fun sendMessage(msg: MessageLite): StatusResponse {
+        TODO()
     }
 }

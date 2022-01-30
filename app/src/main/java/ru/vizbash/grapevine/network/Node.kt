@@ -10,7 +10,9 @@ data class Node(var id: Long, var username: String, var publicKey: PublicKey) {
     constructor(msg: NodeMessage) : this(
         msg.userId,
         msg.username,
-        KeyFactory.getInstance("RSA").generatePublic(X509EncodedKeySpec(msg.publicKey.toByteArray()))
+        KeyFactory
+            .getInstance("RSA")
+            .generatePublic(X509EncodedKeySpec(msg.publicKey.toByteArray()))
     )
 
     fun toMessage() = NodeMessage.newBuilder()
