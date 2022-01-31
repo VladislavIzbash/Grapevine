@@ -1,8 +1,10 @@
 package ru.vizbash.grapevine.network.transport
 
 import android.bluetooth.BluetoothManager
+import android.bluetooth.BluetoothServerSocket
 import android.bluetooth.BluetoothSocket
 import android.content.Context
+import android.os.CountDownTimer
 import android.util.Log
 import com.google.protobuf.InvalidProtocolBufferException
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -16,6 +18,8 @@ import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.concurrent.thread
+
+private const val PAIRED_SCAN_INTERVAL_MS = 10000;
 
 private const val MAX_CONNECTIONS = 4
 
@@ -36,8 +40,10 @@ class BluetoothService @Inject constructor(
 
     private val sendQueue = ArrayBlockingQueue<SendRequest>(MAX_CONNECTIONS * 10)
 
+    private var serverSocket: BluetoothServerSocket? = null
+
     private val threads = Collections.synchronizedList(mutableListOf<Thread>())
-    private val neighbors = Collections.synchronizedList(mutableListOf<BluetoothNeighbor>())
+    private val neighbors = Collections.synchronizedSet(mutableSetOf<BluetoothNeighbor>())
 
     fun start() {
         if (isRunning) {
@@ -63,7 +69,19 @@ class BluetoothService @Inject constructor(
         }
 
         threads += thread {
+            var elapsedMs = 0;
+
             addPairedDevices()
+
+            while (isRunning) {
+                Thread.sleep(100)
+                elapsedMs += 100
+
+                if (elapsedMs >= PAIRED_SCAN_INTERVAL_MS) {
+                    addPairedDevices()
+                    elapsedMs = 0
+                }
+            }
         }
 
         threads += thread {
@@ -75,6 +93,8 @@ class BluetoothService @Inject constructor(
 
     fun stop() {
         isRunning = false
+        serverSocket?.close()
+        serverSocket = null
 
         threads.forEach(Thread::join)
         threads.clear()
@@ -90,6 +110,11 @@ class BluetoothService @Inject constructor(
 
     private fun addNeighbor(socket: BluetoothSocket){
         val neighbor = BluetoothNeighbor(socket)
+        if (neighbors.contains(neighbor)) {
+            socket.close()
+            return
+        }
+
         neighbors.add(neighbor)
 
         threads += thread {
@@ -109,8 +134,20 @@ class BluetoothService @Inject constructor(
 
             try {
                 val socket = device.createRfcommSocketToServiceRecord(BT_SERVICE_UUID)
+
                 socket.connect()
+                object : CountDownTimer(1000, 1000) {
+                    override fun onTick(millisUntilFinished: Long) {}
+
+                    override fun onFinish() {
+                        if (!socket.isConnected) {
+                            socket.close()
+                        }
+                    }
+                }.start()
+
                 addNeighbor(socket)
+                Log.d(TAG, "Connected to ${device.address}")
             } catch (e: IOException) {
                 Log.d(TAG, "Failed to connect to ${device.address}: ${e.message}")
             }
@@ -118,21 +155,20 @@ class BluetoothService @Inject constructor(
     }
 
     private fun acceptLoop() {
-        val serverSocket = bluetoothAdapter.listenUsingRfcommWithServiceRecord(
+        serverSocket = bluetoothAdapter.listenUsingRfcommWithServiceRecord(
             BT_SERVICE_NAME,
             BT_SERVICE_UUID,
         )
 
         while (isRunning && neighbors.size < MAX_CONNECTIONS) {
             try {
-                val socket = serverSocket.accept(200) ?: continue
+                val socket = serverSocket!!.accept()
                 addNeighbor(socket)
-            } catch (e: IOException) {
-                Log.w(TAG, "Failted to accept: ${e.message}")
-            }
+                Log.d(TAG, "Accepted ${socket.remoteDevice.address}")
+            } catch (e: IOException) {}
         }
 
-        serverSocket.close()
+        serverSocket?.close()
     }
 
     private fun senderLoop() {
@@ -162,16 +198,23 @@ class BluetoothService @Inject constructor(
                 if (read <= 0) {
                     Log.d(TAG, "$addr closed connection")
 
-                    neighbors.remove(neighbor)
-                    neighbor.disconnectCb()
+
                     break
                 }
 
                 val msg = DirectMessage.parseFrom(buffer.sliceArray(0 until read))
                 neighbor.receiveCb(msg)
             } catch (e: Exception) {
-                if (e is IOException || e is InvalidProtocolBufferException) {
-                    Log.w(TAG, "Error reading from $addr: ${e.message}")
+                when (e) {
+                    is IOException -> {
+                        Log.d(TAG, "$addr closed connection: ${e.message}")
+                        neighbors.remove(neighbor)
+                        neighbor.disconnectCb()
+                        break
+                    }
+                    is InvalidProtocolBufferException -> {
+                        Log.w(TAG, "$addr sent invalid message")
+                    }
                 }
             }
         }
@@ -200,6 +243,14 @@ class BluetoothService @Inject constructor(
         override fun disconnect() {
             socket.close()
         }
+
+        override fun hashCode(): Int {
+            return socket.remoteDevice.address.hashCode()
+        }
+
+        override fun equals(other: Any?) = other is BluetoothNeighbor &&
+                socket.remoteDevice.address == other.socket.remoteDevice.address
+
     }
 
 //    private fun discoverAndConnect() {
