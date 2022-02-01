@@ -1,6 +1,8 @@
 package ru.vizbash.grapevine.network
 
 import com.google.protobuf.ByteString
+import ru.vizbash.grapevine.AuthService
+import ru.vizbash.grapevine.decodePublicKey
 import ru.vizbash.grapevine.network.messages.direct.NodeMessage
 import java.security.KeyFactory
 import java.security.PublicKey
@@ -10,9 +12,7 @@ data class Node(var id: Long, var username: String, var publicKey: PublicKey) {
     constructor(msg: NodeMessage) : this(
         msg.userId,
         msg.username,
-        KeyFactory
-            .getInstance("RSA")
-            .generatePublic(X509EncodedKeySpec(msg.publicKey.toByteArray()))
+        decodePublicKey(msg.publicKey.toByteArray()),
     )
 
     fun toMessage() = NodeMessage.newBuilder()

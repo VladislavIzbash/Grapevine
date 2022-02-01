@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="primary">#A33263</color>
-    <color name="secondary">#600C30</color>
-    <color name="background">#FFF0F0</color>
-    <color name="alt_background">#F0E1E1</color>
+    <color name="statusBar">#80274D</color>
+    <color name="onPrimary">#FFFFFF</color>
+    <color name="background">#FFF5F5</color>
+    <color name="textInputBackground">#FAF0F0</color>
     <color name="error">#B50000</color>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
-    <color name="good">#4DB800</color>
-    <color name="faded_text">#989898</color>
+    <color name="passwordScore0">#FF1B1B</color>
+    <color name="passwordScore1">#FF7E1B</color>
+    <color name="passwordScore2">#FFD91B</color>
+    <color name="passwordScore3">#C2FF1B</color>
+    <color name="passwordScore4">#2AFF1B</color>
 </resources>
