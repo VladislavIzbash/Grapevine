@@ -3,15 +3,11 @@ syntax = "proto3";
 option java_multiple_files = true;
 option java_package = "ru.vizbash.grapevine.network.messages.routed";
 
-message RoutedMessage {
-  uint64 msg_id = 1;
-  uint64 src_id = 2;
-  uint64 dest_id = 3;
+message EncryptedPayload {
   oneof payload {
     StatusResponse response = 4;
     TextMessage text = 5;
   }
-  bytes sign = 14;
 }
 
 enum Error {

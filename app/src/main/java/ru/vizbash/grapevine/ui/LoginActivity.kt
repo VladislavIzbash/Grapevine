@@ -65,7 +65,7 @@ class LoginActivity : AppCompatActivity() {
         ui.spinnerUsername.adapter = ArrayAdapter(
             this,
             android.R.layout.simple_spinner_dropdown_item,
-            if (!empty) idents.map(Identity::username::get) else listOf("Нет личностей"),
+            if (!empty) idents.map(Identity::username) else listOf("Нет личностей"),
         )
     }
 

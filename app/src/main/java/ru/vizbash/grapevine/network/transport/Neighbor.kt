@@ -9,5 +9,5 @@ interface Neighbor {
 
     fun setOnDisconnect(cb: () -> Unit)
 
-    fun disconnect()
+    fun identify(): String
 }

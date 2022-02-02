@@ -116,6 +116,7 @@ class BluetoothService @Inject constructor(
         }
 
         neighbors.add(neighbor)
+        router.addNeighbor(neighbor)
 
         threads += thread {
             receiverLoop(neighbor)
@@ -197,8 +198,6 @@ class BluetoothService @Inject constructor(
                 val read = neighbor.socket.inputStream.read(buffer)
                 if (read <= 0) {
                     Log.d(TAG, "$addr closed connection")
-
-
                     break
                 }
 
@@ -240,35 +239,12 @@ class BluetoothService @Inject constructor(
             disconnectCb = cb
         }
 
-        override fun disconnect() {
-            socket.close()
-        }
+        override fun identify(): String = socket.remoteDevice.address
 
-        override fun hashCode(): Int {
-            return socket.remoteDevice.address.hashCode()
-        }
+        override fun hashCode() = socket.remoteDevice.address.hashCode()
 
-        override fun equals(other: Any?) = other is BluetoothNeighbor &&
-                socket.remoteDevice.address == other.socket.remoteDevice.address
+        override fun equals(other: Any?) = other is BluetoothNeighbor
+                && socket.remoteDevice.address == other.socket.remoteDevice.address
 
     }
-
-//    private fun discoverAndConnect() {
-//        if (!bluetoothAdapter.startDiscovery()) {
-//            Log.e(TAG, "Failed to start discovery")
-//            return
-//        }
-//    }
-
-
-//    private class BtBroadcastReceiver : BroadcastReceiver() {
-//        override fun onReceive(context: Context, intent: Intent) {
-//            if (intent.action == BluetoothDevice.ACTION_FOUND) {
-//                val device = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
-//
-//                Log.d(TAG, "Found device $device")
-//
-//            }
-//        }
-//    }
 }
