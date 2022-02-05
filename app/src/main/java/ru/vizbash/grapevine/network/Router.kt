@@ -4,7 +4,6 @@ import android.util.Log
 import ru.vizbash.grapevine.AuthService
 import ru.vizbash.grapevine.TAG
 import ru.vizbash.grapevine.network.messages.direct.*
-import ru.vizbash.grapevine.network.messages.routed.RoutedMessage
 import ru.vizbash.grapevine.network.transport.Neighbor
 import javax.inject.Inject
 
@@ -14,9 +13,14 @@ class Router @Inject constructor(private val authService: AuthService) {
     private val routingTable = mutableMapOf<Node, MutableSet<NodeRoute>>()
 
     private val myNode
+        @Synchronized
         get() = Node(authService.currentIdent!!.base)
 
-    private var receiveCb: (RoutedMessage, Node) -> Unit = { _, _ -> }
+    @Volatile private var receiveCb: (RoutedMessage, Node) -> Unit = { _, _ -> }
+
+    val nodes: Collection<Node>
+        @Synchronized
+        get() = routingTable.keys
 
     fun addNeighbor(neighbor: Neighbor) {
         sendHello(neighbor)
@@ -29,7 +33,7 @@ class Router @Inject constructor(private val authService: AuthService) {
             throw IllegalArgumentException("Dest node is unknown to router")
         }
 
-        Log.d(TAG, "Sening message to $dest")
+        Log.d(TAG, "Sending message to $dest")
 
         val neighbor = routingTable[dest]!!.minByOrNull(NodeRoute::hops)!!.neighbor
         neighbor.send(DirectMessage.newBuilder().setRouted(message).build())
@@ -39,6 +43,16 @@ class Router @Inject constructor(private val authService: AuthService) {
         receiveCb = cb
     }
 
+    @Synchronized
+    fun askForNodes() {
+        Log.d(TAG, "Asking neighbors for nodes")
+
+        routingTable.values.flatten().map(NodeRoute::neighbor).distinct().forEach { neighbor ->
+            val askNodesReq = AskNodesRequest.newBuilder().build()
+            neighbor.send(DirectMessage.newBuilder().setAskNodesReq(askNodesReq).build())
+        }
+    }
+
     private fun sendHello(neighbor: Neighbor) {
         val msg = DirectMessage.newBuilder()
             .setHello(myNode.toMessage())
@@ -46,9 +60,10 @@ class Router @Inject constructor(private val authService: AuthService) {
         neighbor.send(msg)
     }
 
+    @Synchronized
     private fun onNeighborDisconnected(neighbor: Neighbor) {
         routingTable.values.forEach { it.removeIf { it.neighbor == neighbor } }
-        routingTable.values.removeIf(Set<NodeRoute>::isEmpty) // ????!!!!!
+        routingTable.values.removeIf(Set<NodeRoute>::isEmpty)
     }
 
     @Synchronized
@@ -70,8 +85,9 @@ class Router @Inject constructor(private val authService: AuthService) {
         if (routed.destId == myNode.id) {
             val sender = routingTable.keys.find { it.id == routed.srcId }
             if (sender == null) {
-                Log.w(TAG, "Sender with id ${routed.srcId} is unknown")
+                Log.w(TAG, "Cannot receive message from unknown sender ${routed.srcId}")
             } else {
+                Log.d(TAG, "Received message from node: $sender")
                 receiveCb(routed, sender)
             }
             return
@@ -90,7 +106,7 @@ class Router @Inject constructor(private val authService: AuthService) {
 
         val nodeRoute = NodeRoute(neighbor, 0)
         if (!nodeRoutes.contains(nodeRoute)) {
-            Log.d(TAG, "Discovered neighbor ${neighbor.identify()} with $node")
+            Log.d(TAG, "Discovered neighbor ${neighbor.identify()} with node: $node")
             nodeRoutes.add(nodeRoute)
         }
     }
@@ -121,16 +137,4 @@ class Router @Inject constructor(private val authService: AuthService) {
             nodeRoutes.add(NodeRoute(neighbor, nodeHops.hops))
         }
     }
-
-
-    @Synchronized
-    fun askForNodes() {
-        Log.d(TAG, "Asking neighbors for nodes")
-
-        routingTable.values.flatten().map(NodeRoute::neighbor).distinct().forEach { neighbor ->
-            val askNodesReq = AskNodesRequest.newBuilder().build()
-            neighbor.send(DirectMessage.newBuilder().setAskNodesReq(askNodesReq).build())
-        }
-    }
-
 }
