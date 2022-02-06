@@ -99,7 +99,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/newLayoutPasswordRepeat"
-        android:text="@string/create_identity"
+        android:text="@string/create_profile"
         android:enabled="false"/>
 
     <ProgressBar

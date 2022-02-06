@@ -1,4 +1,4 @@
-package ru.vizbash.grapevine.db
+package ru.vizbash.grapevine.storage
 
 import android.content.Context
 import androidx.room.Room
@@ -7,7 +7,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import ru.vizbash.grapevine.db.identity.IdentityDatabase
+import ru.vizbash.grapevine.storage.profile.ProfileDatabase
 import javax.inject.Singleton
 
 @Module
@@ -15,13 +15,13 @@ import javax.inject.Singleton
 class DbModule {
     @Singleton
     @Provides
-    fun provideIdentityDb(@ApplicationContext context: Context) = Room.databaseBuilder(
+    fun provideProfileDatabase(@ApplicationContext context: Context) = Room.databaseBuilder(
         context,
-        IdentityDatabase::class.java,
+        ProfileDatabase::class.java,
         "identities",
-    ).allowMainThreadQueries().build()
+    ).build()
 
     @Singleton
     @Provides
-    fun provideIdentityDao(db: IdentityDatabase) = db.identityDao()
+    fun provideProfileDao(db: ProfileDatabase) = db.profileDao()
 }

@@ -4,8 +4,8 @@ import com.google.protobuf.ByteString
 import org.junit.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
-import ru.vizbash.grapevine.db.identity.DecryptedIdentity
-import ru.vizbash.grapevine.db.identity.Identity
+import ru.vizbash.grapevine.storage.profile.DecryptedProfile
+import ru.vizbash.grapevine.storage.profile.Profile
 import ru.vizbash.grapevine.network.Router
 import ru.vizbash.grapevine.network.messages.direct.DirectMessage
 import ru.vizbash.grapevine.network.transport.Neighbor
@@ -68,8 +68,8 @@ class RouterTest {
 
     private fun createRouter(nodeId: Long): Pair<Router, Node> {
         val keyPair = keyGen.genKeyPair()
-        val ident = DecryptedIdentity(
-            Identity(nodeId, "node$nodeId", keyPair.public, ByteArray(0), null),
+        val ident = DecryptedProfile(
+            Profile(nodeId, "node$nodeId", keyPair.public, ByteArray(0), null),
             keyPair.private,
         )
 
@@ -97,8 +97,8 @@ class RouterTest {
      */
     @Test
     fun twoNodesCanReachEachOtherDirectly() {
-        val (router1, node1) = createRouter(1);
-        val (router2, node2) = createRouter(2);
+        val (router1, node1) = createRouter(1)
+        val (router2, node2) = createRouter(2)
 
         connect(router1, router2)
 
@@ -114,9 +114,9 @@ class RouterTest {
      */
     @Test
     fun routersHandleDisconnectedNeighbor() {
-        val (router1, node1) = createRouter(1);
-        val (router2, node2) = createRouter(2);
-        val (router3, node3) = createRouter(3);
+        val (router1, node1) = createRouter(1)
+        val (router2, node2) = createRouter(2)
+        val (router3, node3) = createRouter(3)
 
         connect(router1, router2)
         val conn13 = connect(router1, router3)
@@ -142,9 +142,9 @@ class RouterTest {
      */
     @Test
     fun nodesCanReachEachOtherIndirectly() {
-        val (router1, node1) = createRouter(1);
-        val (router2, node2) = createRouter(2);
-        val (router3, node3) = createRouter(3);
+        val (router1, node1) = createRouter(1)
+        val (router2, node2) = createRouter(2)
+        val (router3, node3) = createRouter(3)
 
         connect(router1, router2)
         connect(router2, router3)
@@ -167,8 +167,8 @@ class RouterTest {
      */
     @Test
     fun routerDeliversMessageToDirectNode() {
-        val (router1, node1) = createRouter(1);
-        val (router2, node2) = createRouter(2);
+        val (router1, node1) = createRouter(1)
+        val (router2, node2) = createRouter(2)
 
         connect(router1, router2)
 
@@ -199,10 +199,10 @@ class RouterTest {
      */
     @Test
     fun routerDeliversMessageToIndirectNode() {
-        val (router1, node1) = createRouter(1);
-        val (router2, node2) = createRouter(2);
-        val (router3, node3) = createRouter(3);
-        val (router4, node4) = createRouter(4);
+        val (router1, node1) = createRouter(1)
+        val (router2, node2) = createRouter(2)
+        val (router3, node3) = createRouter(3)
+        val (router4, node4) = createRouter(4)
 
         connect(router1, router2)
         connect(router1, router3)

@@ -1,4 +1,4 @@
-package ru.vizbash.grapevine.db
+package ru.vizbash.grapevine.storage
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory

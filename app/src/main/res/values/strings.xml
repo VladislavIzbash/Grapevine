@@ -16,16 +16,13 @@
     <string name="zero_time">00:00</string>
     <string name="password">Пароль</string>
     <string name="auto_login">Автоматический вход</string>
-    <string name="create_identity">Создать личность</string>
-    <string name="identity_creation">Создание личности</string>
+    <string name="create_profile">Создать профиль</string>
+    <string name="identity_creation">Создание профиля</string>
     <string name="repeat_password">Повторите пароль</string>
     <string name="error_invalid_username">Имя слишком короткое или содержит спецсимволы</string>
     <string name="passwords_dont_match">Пароли не совпадают</string>
     <string name="password_too_short">Пароль слишком короткий</string>
     <string name="password_is_blank">Пароль не может быть пустым</string>
     <string name="error_invalid_password">Неверный пароль</string>
-    <string name="login_prefs">login</string>
-    <string name="prefs_last_username">last_username</string>
-    <string name="prefs_autologin_username">autologin_username</string>
-    <string name="prefs_autologin_password">autologin_password</string>
+    <string name="no_profiles">Нет профилей</string>
 </resources>

@@ -6,10 +6,8 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.Bundle
 import android.os.IBinder
-import android.view.Menu
 import androidx.appcompat.app.AppCompatActivity
 import ru.vizbash.grapevine.GrapevineService
-import ru.vizbash.grapevine.R
 
 class MainActivity : AppCompatActivity() {
 //    private lateinit var ui: ActivityMainBinding
@@ -17,7 +15,7 @@ class MainActivity : AppCompatActivity() {
     private val serviceConn = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
             val service = (binder as GrapevineService.GrapevineBinder).getService()
-            service.bluetoothService.start();
+            service.bluetoothService.start()
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {}
@@ -34,8 +32,8 @@ class MainActivity : AppCompatActivity() {
 //        setContentView(ui.root)
     }
 
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.appbar, menu)
-        return true
-    }
+//    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+//        menuInflater.inflate(R.menu.appbar, menu)
+//        return true
+//    }
 }

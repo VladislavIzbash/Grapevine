@@ -1,4 +1,13 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Theme.Grapevine.NoDisplay" parent="Theme.AppCompat">
+        <item name="android:windowBackground">@null</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:windowDisablePreview">true</item>
+        <item name="android:windowNoDisplay">true</item>
+    </style>
+
     <style name="Theme.Grapevine" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
         <item name="colorPrimary">@color/primary</item>
         <item name="colorPrimaryVariant">@color/primary</item>
@@ -9,7 +18,7 @@
         <item name="android:windowBackground">@color/background</item>
         <item name="android:statusBarColor" tools:targetApi="l">@color/statusBar</item>
     </style>
-    <style name="Theme.ImagePicker" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <style name="Theme.Grapevine.ImagePicker" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
         <item name="android:statusBarColor" tools:targetApi="l">@color/statusBar</item>
     </style>

@@ -19,24 +19,28 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.concurrent.thread
 
-private const val PAIRED_SCAN_INTERVAL_MS = 10000;
-
-private const val MAX_CONNECTIONS = 4
-
-private const val BT_SERVICE_NAME = "Grapevine"
-private val BT_SERVICE_UUID = UUID.fromString("f8393dd1-32a9-49ef-9768-749bafed80ed")
-
 @ServiceScoped
 class BluetoothService @Inject constructor(
     @ApplicationContext private val context: Context,
     private val router: Router,
 ) {
+    companion object {
+        private const val PAIRED_SCAN_INTERVAL_MS = 10000
+
+        private const val MAX_CONNECTIONS = 4
+
+        private const val BT_SERVICE_NAME = "Grapevine"
+        private val BT_SERVICE_UUID = UUID.fromString("f8393dd1-32a9-49ef-9768-749bafed80ed")
+    }
+
     private data class SendRequest(val neighbor: BluetoothNeighbor, val message: DirectMessage)
 
     @Volatile var isRunning = false
         private set
 
-    private val bluetoothAdapter = context.getSystemService(BluetoothManager::class.java).adapter
+    private val bluetoothAdapter by lazy {
+        context.getSystemService(BluetoothManager::class.java).adapter
+    }
 
     private val sendQueue = ArrayBlockingQueue<SendRequest>(MAX_CONNECTIONS * 10)
 
@@ -69,7 +73,7 @@ class BluetoothService @Inject constructor(
         }
 
         threads += thread {
-            var elapsedMs = 0;
+            var elapsedMs = 0
 
             addPairedDevices()
 

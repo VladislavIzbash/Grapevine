@@ -1,12 +1,14 @@
 package ru.vizbash.grapevine.network
 
 import android.util.Log
+import dagger.hilt.android.scopes.ServiceScoped
 import ru.vizbash.grapevine.AuthService
 import ru.vizbash.grapevine.TAG
 import ru.vizbash.grapevine.network.messages.direct.*
 import ru.vizbash.grapevine.network.transport.Neighbor
 import javax.inject.Inject
 
+@ServiceScoped
 class Router @Inject constructor(private val authService: AuthService) {
     private data class NodeRoute(val neighbor: Neighbor, val hops: Int)
 
@@ -17,6 +19,7 @@ class Router @Inject constructor(private val authService: AuthService) {
         get() = Node(authService.currentIdent!!.base)
 
     @Volatile private var receiveCb: (RoutedMessage, Node) -> Unit = { _, _ -> }
+    @Volatile private var nodesUpdatedCb: () -> Unit = {}
 
     val nodes: Collection<Node>
         @Synchronized
@@ -43,6 +46,10 @@ class Router @Inject constructor(private val authService: AuthService) {
         receiveCb = cb
     }
 
+    fun setOnNodesUpdated(cb: () -> Unit) {
+        nodesUpdatedCb = cb
+    }
+
     @Synchronized
     fun askForNodes() {
         Log.d(TAG, "Asking neighbors for nodes")
@@ -62,7 +69,9 @@ class Router @Inject constructor(private val authService: AuthService) {
 
     @Synchronized
     private fun onNeighborDisconnected(neighbor: Neighbor) {
-        routingTable.values.forEach { it.removeIf { it.neighbor == neighbor } }
+        routingTable.values.forEach { route ->
+            route.removeIf { it.neighbor == neighbor }
+        }
         routingTable.values.removeIf(Set<NodeRoute>::isEmpty)
     }
 
@@ -108,6 +117,7 @@ class Router @Inject constructor(private val authService: AuthService) {
         if (!nodeRoutes.contains(nodeRoute)) {
             Log.d(TAG, "Discovered neighbor ${neighbor.identify()} with node: $node")
             nodeRoutes.add(nodeRoute)
+            nodesUpdatedCb()
         }
     }
 
@@ -136,5 +146,6 @@ class Router @Inject constructor(private val authService: AuthService) {
 
             nodeRoutes.add(NodeRoute(neighbor, nodeHops.hops))
         }
+        nodesUpdatedCb()
     }
 }

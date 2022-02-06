@@ -29,7 +29,7 @@
             android:name=".StartupActivity"
             android:exported="true"
             android:noHistory="true"
-            android:theme="@android:style/Theme.NoDisplay">
+            android:theme="@style/Theme.Grapevine.NoDisplay">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -38,12 +38,13 @@
         </activity>
 
         <activity
-            android:name=".ui.LoginActivity"
+            android:name=".ui.login.LoginActivity"
+            android:windowSoftInputMode="adjustResize"
             android:label="@string/login_title" />
 
         <activity
-            android:name=".ui.NewIdentityActivity"
-            android:parentActivityName=".ui.LoginActivity"
+            android:name=".ui.newprofile.NewProfileActivity"
+            android:parentActivityName=".ui.login.LoginActivity"
             android:label="@string/identity_creation" />
 
         <activity

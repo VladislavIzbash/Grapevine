@@ -34,7 +34,6 @@ fun encryptPrivateKey(privateKey: PrivateKey, password: String): ByteArray {
     val cipher = Cipher.getInstance(SYM_ALGORITHM).apply {
         init(Cipher.ENCRYPT_MODE, createSecret(password), IvParameterSpec(AES_IV))
     }
-    println("Encoded key: ${privateKey.encoded.joinToString("") { "%02x".format(it) }}")
     return cipher.doFinal(privateKey.encoded)
 }
 
@@ -43,9 +42,7 @@ fun decryptPrivateKey(bytes: ByteArray, password: String): PrivateKey? {
         init(Cipher.DECRYPT_MODE, createSecret(password), IvParameterSpec(AES_IV))
     }
     try {
-        val key = cipher.doFinal(bytes)
-        println("Decoded key: ${key.joinToString("") { "%02x".format(it) }}")
-        return decodePrivateKey(key)
+        return decodePrivateKey(cipher.doFinal(bytes))
     } catch (e: BadPaddingException) {
         return null
     }

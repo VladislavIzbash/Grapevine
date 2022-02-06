@@ -1,10 +1,11 @@
 package ru.vizbash.grapevine
 
 import android.graphics.Bitmap
-import ru.vizbash.grapevine.db.identity.DecryptedIdentity
-import ru.vizbash.grapevine.db.identity.Identity
-import ru.vizbash.grapevine.db.identity.IdentityDao
-import java.lang.IllegalStateException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import ru.vizbash.grapevine.storage.profile.DecryptedProfile
+import ru.vizbash.grapevine.storage.profile.Profile
+import ru.vizbash.grapevine.storage.profile.ProfileDao
 import java.security.KeyPairGenerator
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -12,35 +13,43 @@ import kotlin.random.Random
 
 @Singleton
 class AuthService @Inject constructor(
-    private val identityDao: IdentityDao,
+    private val profileDao: ProfileDao,
 ) {
-    var currentIdent: DecryptedIdentity? = null
+    var currentIdent: DecryptedProfile? = null
         private set
 
-    fun identityList() = identityDao.getAll()
+    fun getProfileList() = profileDao.getAll()
 
-    fun newIdentity(username: String, password: String, photo: Bitmap?) {
+    suspend fun createProfileAndLogin(
+        username: String,
+        password: String,
+        photo: Bitmap?,
+    ) {
         val keyGen = KeyPairGenerator.getInstance("RSA").apply {
             initialize(1024)
         }
         val keyPair = keyGen.genKeyPair()
 
-        identityDao.insert(Identity(
+        val profile = Profile(
             Random.nextLong(),
             username,
             keyPair.public,
             encryptPrivateKey(keyPair.private, password),
             photo,
-        ))
+        )
+        profileDao.insert(profile)
+
+        currentIdent = DecryptedProfile(profile, keyPair.private)
     }
 
-    fun tryLogin(identity: Identity, password: String): Boolean {
-        val privKey = decryptPrivateKey(identity.privateKeyEnc, password)
+    suspend fun tryLogin(profile: Profile, password: String) = withContext(Dispatchers.Default) {
+        val privKey = decryptPrivateKey(profile.privateKeyEnc, password)
         if (privKey != null) {
-            currentIdent = DecryptedIdentity(identity, privKey)
-            return true
+            currentIdent = DecryptedProfile(profile, privKey)
+            true
         } else {
-            return false
+            false
         }
     }
+
 }
