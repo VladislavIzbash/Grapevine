@@ -1,14 +1,14 @@
 package ru.vizbash.grapevine.network
 
 import android.util.Log
-import dagger.hilt.android.scopes.ServiceScoped
 import ru.vizbash.grapevine.AuthService
 import ru.vizbash.grapevine.TAG
 import ru.vizbash.grapevine.network.messages.direct.*
 import ru.vizbash.grapevine.network.transport.Neighbor
 import javax.inject.Inject
+import javax.inject.Singleton
 
-@ServiceScoped
+@Singleton
 class Router @Inject constructor(private val authService: AuthService) {
     private data class NodeRoute(val neighbor: Neighbor, val hops: Int)
 
@@ -16,7 +16,7 @@ class Router @Inject constructor(private val authService: AuthService) {
 
     private val myNode
         @Synchronized
-        get() = Node(authService.currentIdent!!.base)
+        get() = Node(authService.currentProfile!!.base)
 
     @Volatile private var receiveCb: (RoutedMessage, Node) -> Unit = { _, _ -> }
     @Volatile private var nodesUpdatedCb: () -> Unit = {}

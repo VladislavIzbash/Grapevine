@@ -21,19 +21,20 @@ import com.esafirm.imagepicker.model.Image
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.R
-import ru.vizbash.grapevine.databinding.ActivityNewIdentityBinding
+import ru.vizbash.grapevine.databinding.ActivityNewProfileBinding
+
 import ru.vizbash.grapevine.ui.MainActivity
 
 @AndroidEntryPoint
 class NewProfileActivity : AppCompatActivity() {
-    private lateinit var ui: ActivityNewIdentityBinding
+    private lateinit var ui: ActivityNewProfileBinding
     private val model: NewProfileModel by viewModels()
 
     private var photoUri: Uri? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        ui = ActivityNewIdentityBinding.inflate(layoutInflater)
+        ui = ActivityNewProfileBinding.inflate(layoutInflater)
 
         val pickerConfig = ImagePickerConfig {
             theme = R.style.Theme_Grapevine_ImagePicker

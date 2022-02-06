@@ -15,7 +15,7 @@ import kotlin.random.Random
 class AuthService @Inject constructor(
     private val profileDao: ProfileDao,
 ) {
-    var currentIdent: DecryptedProfile? = null
+    var currentProfile: DecryptedProfile? = null
         private set
 
     fun getProfileList() = profileDao.getAll()
@@ -39,13 +39,13 @@ class AuthService @Inject constructor(
         )
         profileDao.insert(profile)
 
-        currentIdent = DecryptedProfile(profile, keyPair.private)
+        currentProfile = DecryptedProfile(profile, keyPair.private)
     }
 
     suspend fun tryLogin(profile: Profile, password: String) = withContext(Dispatchers.Default) {
         val privKey = decryptPrivateKey(profile.privateKeyEnc, password)
         if (privKey != null) {
-            currentIdent = DecryptedProfile(profile, privKey)
+            currentProfile = DecryptedProfile(profile, privKey)
             true
         } else {
             false

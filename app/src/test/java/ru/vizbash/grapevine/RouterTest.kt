@@ -74,7 +74,7 @@ class RouterTest {
         )
 
         val auth = mock<AuthService> {
-            on { currentIdent } doReturn ident
+            on { currentProfile } doReturn ident
         }
         return Pair(Router(auth), Node(ident.base))
     }

@@ -4,7 +4,8 @@
     <color name="statusBar">#80274D</color>
     <color name="onPrimary">#FFFFFF</color>
     <color name="background">#FFF5F5</color>
-    <color name="textInputBackground">#FAF0F0</color>
+    <color name="darkerBackground">#E5E0E0</color>
+    <color name="textInputBackground">#FAF5F5</color>
     <color name="error">#B50000</color>
     <color name="passwordScore0">#FF1B1B</color>
     <color name="passwordScore1">#FF7E1B</color>

@@ -48,12 +48,16 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.4.0'
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.4.0'
     implementation 'androidx.activity:activity-ktx:1.4.0'
+    implementation 'androidx.navigation:navigation-fragment-ktx:2.4.0'
+    implementation "androidx.navigation:navigation-ui-ktx:2.4.0"
+
     implementation 'com.google.android.material:material:1.5.0'
     implementation 'com.google.dagger:hilt-android:2.40.5'
     implementation 'com.google.protobuf:protobuf-javalite:3.8.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.0'
     implementation 'com.github.esafirm:android-image-picker:3.0.0-beta1'
     implementation 'me.gosimple:nbvcxz:1.5.0'
+    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
 
     kapt "androidx.room:room-compiler:2.4.1"
     kapt 'com.google.dagger:hilt-compiler:2.40.5'
