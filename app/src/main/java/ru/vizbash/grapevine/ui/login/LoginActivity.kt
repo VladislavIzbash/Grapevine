@@ -46,9 +46,8 @@ class LoginActivity : AppCompatActivity() {
         lifecycleScope.launchWhenResumed {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 model.profiles.collect { profiles ->
-                    val lastUsername = model.loginPrefs.lastUsername
-                    if (lastUsername != null) {
-                        val index = profiles.indexOfFirst { it.username == lastUsername }
+                    model.loginPrefs.lastUsername?.let { username ->
+                        val index = profiles.indexOfFirst { it.username == username }
                         if (index != -1) {
                             ui.spinnerUsername.setSelection(index)
                         }

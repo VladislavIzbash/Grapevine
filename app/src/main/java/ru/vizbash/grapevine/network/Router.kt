@@ -32,7 +32,7 @@ class Router @Inject constructor(private val authService: AuthService) {
 
     @Synchronized
     fun sendMessage(message: RoutedMessage, dest: Node) {
-        if (!routingTable.contains(dest)) {
+        if (dest !in routingTable) {
             throw IllegalArgumentException("Dest node is unknown to router")
         }
 
@@ -54,7 +54,7 @@ class Router @Inject constructor(private val authService: AuthService) {
     fun askForNodes() {
         Log.d(TAG, "Asking neighbors for nodes")
 
-        routingTable.values.flatten().map(NodeRoute::neighbor).distinct().forEach { neighbor ->
+        for (neighbor in routingTable.values.flatten().map(NodeRoute::neighbor).distinct()) {
             val askNodesReq = AskNodesRequest.newBuilder().build()
             neighbor.send(DirectMessage.newBuilder().setAskNodesReq(askNodesReq).build())
         }
@@ -69,7 +69,7 @@ class Router @Inject constructor(private val authService: AuthService) {
 
     @Synchronized
     private fun onNeighborDisconnected(neighbor: Neighbor) {
-        routingTable.values.forEach { route ->
+        for (route in routingTable.values) {
             route.removeIf { it.neighbor == neighbor }
         }
         routingTable.values.removeIf(Set<NodeRoute>::isEmpty)
@@ -114,7 +114,7 @@ class Router @Inject constructor(private val authService: AuthService) {
         val nodeRoutes = routingTable.getOrPut(node) { mutableSetOf() }
 
         val nodeRoute = NodeRoute(neighbor, 0)
-        if (!nodeRoutes.contains(nodeRoute)) {
+        if (nodeRoute !in nodeRoutes) {
             Log.d(TAG, "Discovered neighbor ${neighbor.identify()} with node: $node")
             nodeRoutes.add(nodeRoute)
             nodesUpdatedCb()

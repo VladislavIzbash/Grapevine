@@ -103,9 +103,9 @@ class BluetoothService @Inject constructor(
         threads.forEach(Thread::join)
         threads.clear()
 
-        neighbors.forEach {
-            it.disconnectCb()
-            it.socket.close()
+        for (neighbor in neighbors) {
+            neighbor.disconnectCb()
+            neighbor.socket.close()
         }
         neighbors.clear()
 
@@ -114,7 +114,7 @@ class BluetoothService @Inject constructor(
 
     private fun addNeighbor(socket: BluetoothSocket){
         val neighbor = BluetoothNeighbor(socket)
-        if (neighbors.contains(neighbor)) {
+        if (neighbor in neighbors) {
             socket.close()
             return
         }

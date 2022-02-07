@@ -26,4 +26,9 @@ data class Node(var id: Long, var username: String, var publicKey: PublicKey) {
         .build()
 
     override fun toString() = "$username ($id)"
+
+    override fun equals(other: Any?) = other is Node
+            && other.id == id
+
+    override fun hashCode() = id.hashCode()
 }
