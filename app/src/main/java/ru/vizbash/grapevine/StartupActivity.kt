@@ -3,15 +3,13 @@ package ru.vizbash.grapevine
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import ru.vizbash.grapevine.storage.LoginPrefs
 import ru.vizbash.grapevine.storage.profile.Profile
 import ru.vizbash.grapevine.ui.login.LoginActivity
-import ru.vizbash.grapevine.ui.MainActivity
+import ru.vizbash.grapevine.ui.main.MainActivity
 import javax.inject.Inject
 
 @AndroidEntryPoint

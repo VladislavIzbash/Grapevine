@@ -4,7 +4,6 @@ import android.util.Log
 import ru.vizbash.grapevine.AuthService
 import ru.vizbash.grapevine.TAG
 import ru.vizbash.grapevine.network.messages.direct.*
-import ru.vizbash.grapevine.network.transport.Neighbor
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -21,9 +20,11 @@ class Router @Inject constructor(private val authService: AuthService) {
     @Volatile private var receiveCb: (RoutedMessage, Node) -> Unit = { _, _ -> }
     @Volatile private var nodesUpdatedCb: () -> Unit = {}
 
-    val nodes: Collection<Node>
+    val nodes: Set<Node>
         @Synchronized
-        get() = routingTable.keys
+        get() = routingTable.map { (node, routes) ->
+            node.apply { primarySource = routes.minByOrNull(NodeRoute::hops)!!.neighbor.sourceType }
+        }.toSet()
 
     fun addNeighbor(neighbor: Neighbor) {
         sendHello(neighbor)
@@ -52,9 +53,11 @@ class Router @Inject constructor(private val authService: AuthService) {
 
     @Synchronized
     fun askForNodes() {
-        Log.d(TAG, "Asking neighbors for nodes")
+        val neighbors = routingTable.values.flatten().map(NodeRoute::neighbor).distinct()
 
-        for (neighbor in routingTable.values.flatten().map(NodeRoute::neighbor).distinct()) {
+        Log.d(TAG, "Asking ${neighbors.size} neighbors for nodes")
+
+        for (neighbor in neighbors) {
             val askNodesReq = AskNodesRequest.newBuilder().build()
             neighbor.send(DirectMessage.newBuilder().setAskNodesReq(askNodesReq).build())
         }
@@ -67,12 +70,17 @@ class Router @Inject constructor(private val authService: AuthService) {
         neighbor.send(msg)
     }
 
+    private fun clearEmptyRoutes() {
+        routingTable.values.removeIf(Set<NodeRoute>::isEmpty)
+    }
+
     @Synchronized
     private fun onNeighborDisconnected(neighbor: Neighbor) {
         for (route in routingTable.values) {
             route.removeIf { it.neighbor == neighbor }
         }
-        routingTable.values.removeIf(Set<NodeRoute>::isEmpty)
+        clearEmptyRoutes()
+        nodesUpdatedCb()
     }
 
     @Synchronized
@@ -83,7 +91,7 @@ class Router @Inject constructor(private val authService: AuthService) {
             DirectMessage.MsgCase.ASK_NODES_RESP -> handleNodesResponse(neighbor, msg.askNodesResp)
             DirectMessage.MsgCase.ROUTED -> routeIncomingMessage(msg)
             DirectMessage.MsgCase.MSG_NOT_SET -> {
-                Log.w(TAG, "${neighbor.identify()} sent invalid message")
+                Log.w(TAG, "$neighbor sent invalid message")
             }
         }
     }
@@ -115,7 +123,7 @@ class Router @Inject constructor(private val authService: AuthService) {
 
         val nodeRoute = NodeRoute(neighbor, 0)
         if (nodeRoute !in nodeRoutes) {
-            Log.d(TAG, "Discovered neighbor ${neighbor.identify()} with node: $node")
+            Log.d(TAG, "Discovered neighbor $neighbor with node: $node")
             nodeRoutes.add(nodeRoute)
             nodesUpdatedCb()
         }
@@ -136,6 +144,8 @@ class Router @Inject constructor(private val authService: AuthService) {
     }
 
     private fun handleNodesResponse(neighbor: Neighbor, askNodesResp: AskNodesResponse) {
+        val receivedNodes = mutableListOf<Node>()
+
         for (nodeHops in askNodesResp.nodesList) {
             val node = Node(nodeHops.node)
             if (node == myNode) {
@@ -143,9 +153,24 @@ class Router @Inject constructor(private val authService: AuthService) {
             }
 
             val nodeRoutes = routingTable.getOrPut(node) { mutableSetOf() }
-
             nodeRoutes.add(NodeRoute(neighbor, nodeHops.hops))
+
+            receivedNodes.add(node)
         }
+
+        val neighborNode = routingTable.filter { (_, routes) ->
+            routes.contains(NodeRoute(neighbor, 0))
+        }.firstNotNullOf { pair -> pair.key }
+
+        receivedNodes.add(neighborNode)
+
+        for ((node, route) in routingTable) {
+            if (node !in receivedNodes) {
+                route.removeIf { it.neighbor == neighbor }
+            }
+        }
+        clearEmptyRoutes()
+
         nodesUpdatedCb()
     }
 }

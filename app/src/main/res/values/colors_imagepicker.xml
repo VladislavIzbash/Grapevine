@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ucrop_color_toolbar">@color/primary</color>
+    <color name="ucrop_color_statusbar">@color/primary</color>
+<!--    <color name="ucrop_color_widget_text">@color/onPrimary</color>-->
+<!--    <color name="ucrop_color_widget_background">@color/background</color>-->
+    <color name="ucrop_color_toolbar_widget">@color/onPrimary</color>
+<!--    <color name="ucrop_color_widget_active">@color/primary</color>-->
+</resources>

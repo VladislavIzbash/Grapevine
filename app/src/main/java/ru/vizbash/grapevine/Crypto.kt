@@ -49,7 +49,7 @@ fun decryptPrivateKey(bytes: ByteArray, password: String): PrivateKey? {
 }
 
 private fun createSecret(password: String): SecretKey {
-    val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
+    val factory = SecretKeyFactory.getInstance("PBKDF2withHmacSHA1")
     val spec = PBEKeySpec(
         password.toCharArray(),
         AES_SALT,

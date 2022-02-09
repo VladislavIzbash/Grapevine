@@ -1,29 +1,28 @@
 package ru.vizbash.grapevine.ui.newprofile
 
+import android.app.Activity
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 import android.view.View
 import android.widget.EditText
+import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import com.esafirm.imagepicker.features.ImagePickerConfig
-import com.esafirm.imagepicker.features.ImagePickerMode
-import com.esafirm.imagepicker.features.ReturnMode
-import com.esafirm.imagepicker.features.registerImagePicker
-import com.esafirm.imagepicker.model.Image
+import com.github.dhaval2404.imagepicker.ImagePicker
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.R
+import ru.vizbash.grapevine.TAG
 import ru.vizbash.grapevine.databinding.ActivityNewProfileBinding
-
-import ru.vizbash.grapevine.ui.MainActivity
+import ru.vizbash.grapevine.ui.main.MainActivity
 
 @AndroidEntryPoint
 class NewProfileActivity : AppCompatActivity() {
@@ -36,17 +35,24 @@ class NewProfileActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         ui = ActivityNewProfileBinding.inflate(layoutInflater)
 
-        val pickerConfig = ImagePickerConfig {
-            theme = R.style.Theme_Grapevine_ImagePicker
-            mode = ImagePickerMode.SINGLE
-            language = "ru"
-            returnMode = ReturnMode.ALL
+        val pickerLauncher = registerForActivityResult(StartActivityForResult()) { res ->
+            when (res.resultCode) {
+                Activity.RESULT_OK -> {
+                    photoUri = res.data!!.data!!
+                    ui.ivPhoto.setImageURI(photoUri)
+                }
+                ImagePicker.RESULT_ERROR -> Log.e(TAG, ImagePicker.getError(res.data))
+            }
         }
 
-        val pickerLauncher = registerImagePicker(this::onPhotoPicked)
-
         ui.ivPhoto.setOnClickListener {
-            pickerLauncher.launch(pickerConfig)
+            ImagePicker.with(this)
+                .compress(256)
+                .maxResultSize(128, 128)
+                .cropSquare()
+                .createIntent {
+                    pickerLauncher.launch(it)
+                }
         }
 
         ui.newEditUsername.addTextChangedListener(ValidatingWatcher(ui.newEditUsername))
@@ -98,11 +104,6 @@ class NewProfileActivity : AppCompatActivity() {
             ui.newEditPassword.text.toString(),
             photo,
         )
-    }
-
-    private fun onPhotoPicked(images: List<Image>) {
-        ui.ivPhoto.setImageURI(images[0].uri)
-        photoUri = images[0].uri
     }
 
     private inner class ValidatingWatcher(private val editText: EditText) : TextWatcher {

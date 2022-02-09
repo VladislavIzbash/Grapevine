@@ -10,12 +10,11 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.R
 import ru.vizbash.grapevine.databinding.ActivityLoginBinding
 import ru.vizbash.grapevine.storage.profile.Profile
-import ru.vizbash.grapevine.ui.MainActivity
+import ru.vizbash.grapevine.ui.main.MainActivity
 import ru.vizbash.grapevine.ui.newprofile.NewProfileActivity
 
 @AndroidEntryPoint

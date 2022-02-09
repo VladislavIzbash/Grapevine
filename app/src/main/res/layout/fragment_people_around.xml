@@ -1,13 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ui.PeopleAroundFragment">
+    tools:context=".ui.main.PeopleAroundFragment">
 
     <TextView
+        android:id="@+id/tvNoNodes"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:text="@string/no_nodes_around"
+        android:textSize="10pt"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvNodes"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:text="@string/people_around" />
+        tools:listitem="@layout/item_node"/>
 
 </FrameLayout>

@@ -8,11 +8,12 @@ import ru.vizbash.grapevine.storage.profile.DecryptedProfile
 import ru.vizbash.grapevine.storage.profile.Profile
 import ru.vizbash.grapevine.network.Router
 import ru.vizbash.grapevine.network.messages.direct.DirectMessage
-import ru.vizbash.grapevine.network.transport.Neighbor
+import ru.vizbash.grapevine.network.Neighbor
 import java.security.KeyPairGenerator
 import kotlin.random.Random
 import org.junit.Assert.*
 import ru.vizbash.grapevine.network.Node
+import ru.vizbash.grapevine.network.SourceType
 import ru.vizbash.grapevine.network.messages.direct.RoutedMessage
 import kotlin.math.absoluteValue
 
@@ -26,6 +27,8 @@ class RouterTest {
         private var disconnectCb: () -> Unit = {}
 
         private var receiveBuffer = mutableListOf<DirectMessage>()
+
+        override val sourceType = SourceType.BLUETOOTH
 
         override fun send(msg: DirectMessage) {
             pair.receive(msg)
@@ -50,8 +53,6 @@ class RouterTest {
             }
         }
 
-        override fun identify() = "test_node_$id"
-
         fun disconnect() {
             pair.disconnectCb()
         }
@@ -60,6 +61,8 @@ class RouterTest {
                 && other.id == id
 
         override fun hashCode() = id
+
+        override fun toString() = "test_node_$id"
     }
 
     private val keyGen = KeyPairGenerator.getInstance("RSA").apply {
@@ -113,7 +116,7 @@ class RouterTest {
      *  (2)--(3)
      */
     @Test
-    fun routersHandleDisconnectedNeighbor() {
+    fun routersHandleDisconnectionDirectly() {
         val (router1, node1) = createRouter(1)
         val (router2, node2) = createRouter(2)
         val (router3, node3) = createRouter(3)
@@ -130,6 +133,32 @@ class RouterTest {
         conn13.second.disconnect()
         conn23.first.disconnect()
         conn23.second.disconnect()
+
+        assertEquals(setOf(node2), router1.nodes)
+        assertEquals(setOf(node1), router2.nodes)
+        assertEquals(emptySet<Node>(), router3.nodes)
+    }
+
+    /**
+     * Topology:
+     * (1) -- (2) -- (3)
+     */
+    @Test
+    fun routersHandleDisconnectionIndirectly() {
+        val (router1, node1) = createRouter(1)
+        val (router2, node2) = createRouter(2)
+        val (router3, node3) = createRouter(3)
+
+        connect(router1, router2)
+        val conn23 = connect(router2, router3)
+
+        router1.askForNodes()
+        router3.askForNodes()
+
+        conn23.first.disconnect()
+        conn23.second.disconnect()
+
+        router1.askForNodes()
 
         assertEquals(setOf(node2), router1.nodes)
         assertEquals(setOf(node1), router2.nodes)

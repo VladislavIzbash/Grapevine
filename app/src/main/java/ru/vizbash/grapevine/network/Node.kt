@@ -6,7 +6,12 @@ import ru.vizbash.grapevine.decodePublicKey
 import ru.vizbash.grapevine.network.messages.direct.NodeMessage
 import java.security.PublicKey
 
-data class Node(var id: Long, var username: String, var publicKey: PublicKey) {
+data class Node(
+    var id: Long,
+    var username: String,
+    var publicKey: PublicKey,
+    var primarySource: SourceType? = null,
+) {
     constructor(msg: NodeMessage) : this(
         msg.userId,
         msg.username,

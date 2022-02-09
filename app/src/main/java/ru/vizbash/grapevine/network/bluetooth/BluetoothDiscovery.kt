@@ -1,5 +1,6 @@
-package ru.vizbash.grapevine.network.transport
+package ru.vizbash.grapevine.network.bluetooth
 
+import android.annotation.SuppressLint
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothServerSocket
 import android.bluetooth.BluetoothSocket
@@ -10,7 +11,9 @@ import com.google.protobuf.InvalidProtocolBufferException
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.scopes.ServiceScoped
 import ru.vizbash.grapevine.TAG
+import ru.vizbash.grapevine.network.Neighbor
 import ru.vizbash.grapevine.network.Router
+import ru.vizbash.grapevine.network.SourceType
 import ru.vizbash.grapevine.network.messages.direct.DirectMessage
 import java.io.IOException
 import java.util.*
@@ -19,8 +22,9 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.concurrent.thread
 
+@SuppressLint("MissingPermission")
 @ServiceScoped
-class BluetoothService @Inject constructor(
+class BluetoothDiscovery @Inject constructor(
     @ApplicationContext private val context: Context,
     private val router: Router,
 ) {
@@ -61,15 +65,12 @@ class BluetoothService @Inject constructor(
             return
         }
 
-//        val filter = IntentFilter().apply {
-//            addAction(BluetoothDevice.ACTION_FOUND)
-//        }
-//        context.registerReceiver(BtBroadcastReceiver(), filter)
-
         isRunning = true
 
         threads += thread {
             acceptLoop()
+        }.apply {
+            name = "BluetoothAcceptThread"
         }
 
         threads += thread {
@@ -86,6 +87,8 @@ class BluetoothService @Inject constructor(
                     elapsedMs = 0
                 }
             }
+        }.apply {
+            name = "BluetoothPairedScanThread"
         }
 
         threads += thread {
@@ -131,25 +134,16 @@ class BluetoothService @Inject constructor(
 
     private fun addPairedDevices() {
         for (device in bluetoothAdapter.bondedDevices) {
-            Log.d(TAG, "Probing paired device ${device.address}")
-
-            if (neighbors.size > MAX_CONNECTIONS) {
+            val isConnected = neighbors.any { it.socket.remoteDevice.address == device.address }
+            if (neighbors.size > MAX_CONNECTIONS || isConnected) {
                 continue
             }
 
+            Log.d(TAG, "Probing paired device ${device.address}")
+
             try {
                 val socket = device.createRfcommSocketToServiceRecord(BT_SERVICE_UUID)
-
                 socket.connect()
-                object : CountDownTimer(1000, 1000) {
-                    override fun onTick(millisUntilFinished: Long) {}
-
-                    override fun onFinish() {
-                        if (!socket.isConnected) {
-                            socket.close()
-                        }
-                    }
-                }.start()
 
                 addNeighbor(socket)
                 Log.d(TAG, "Connected to ${device.address}")
@@ -168,9 +162,9 @@ class BluetoothService @Inject constructor(
         while (isRunning && neighbors.size < MAX_CONNECTIONS) {
             try {
                 val socket = serverSocket!!.accept()
-                addNeighbor(socket)
                 Log.d(TAG, "Accepted ${socket.remoteDevice.address}")
-            } catch (e: IOException) {}
+            } catch (e: IOException) {
+            }
         }
 
         serverSocket?.close()
@@ -231,6 +225,8 @@ class BluetoothService @Inject constructor(
         var disconnectCb: () -> Unit = {}
             private set
 
+        override val sourceType = SourceType.BLUETOOTH
+
         override fun send(msg: DirectMessage) {
             sendQueue.add(SendRequest(this, msg))
         }
@@ -243,12 +239,11 @@ class BluetoothService @Inject constructor(
             disconnectCb = cb
         }
 
-        override fun identify(): String = socket.remoteDevice.address
-
         override fun hashCode() = socket.remoteDevice.address.hashCode()
 
         override fun equals(other: Any?) = other is BluetoothNeighbor
                 && socket.remoteDevice.address == other.socket.remoteDevice.address
 
+        override fun toString(): String = socket.remoteDevice.address
     }
 }

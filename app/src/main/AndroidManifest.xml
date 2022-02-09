@@ -3,7 +3,6 @@
     package="ru.vizbash.grapevine">
 
     <uses-permission android:name="android.permission.BLUETOOTH" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
@@ -23,6 +22,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Grapevine">
 
+        <service android:name=".network.bluetooth.BluetoothService" android:exported="false" />
         <service android:name=".GrapevineService" android:exported="false" />
 
         <activity
@@ -48,7 +48,7 @@
             android:label="@string/identity_creation" />
 
         <activity
-            android:name=".ui.MainActivity"
+            android:name=".ui.main.MainActivity"
             android:label="@string/launcher_name" />
 
     </application>

@@ -1,4 +1,4 @@
-package ru.vizbash.grapevine.ui
+package ru.vizbash.grapevine.ui.main
 
 import android.os.Bundle
 import android.view.LayoutInflater
