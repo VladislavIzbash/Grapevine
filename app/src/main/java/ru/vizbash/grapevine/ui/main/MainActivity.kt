@@ -66,11 +66,11 @@ class MainActivity : AppCompatActivity() {
         setupActionBarWithNavController(navController, appBarConfig)
 
         val header = DrawerHeaderBinding.bind(ui.navView.getHeaderView(0))
-        val photo = model.currentProfile.base.photo
+        val photo = model.currentProfile.entity.photo
         if (photo != null) {
             header.ivPhoto.setImageBitmap(photo)
         }
-        header.tvUsername.text = model.currentProfile.base.username
+        header.tvUsername.text = model.currentProfile.entity.username
 
         startBluetooth()
         startService(Intent(this, GrapevineService::class.java))

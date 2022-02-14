@@ -8,8 +8,8 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ProfileDao {
     @Query("SELECT * FROM profiles")
-    fun getAll(): Flow<List<Profile>>
+    fun getAll(): Flow<List<ProfileEntity>>
 
     @Insert
-    suspend fun insert(profile: Profile)
+    suspend fun insert(profile: ProfileEntity)
 }

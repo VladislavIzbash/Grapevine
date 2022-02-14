@@ -13,7 +13,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.R
 import ru.vizbash.grapevine.databinding.ActivityLoginBinding
-import ru.vizbash.grapevine.storage.profile.Profile
+import ru.vizbash.grapevine.storage.profile.ProfileEntity
 import ru.vizbash.grapevine.ui.main.MainActivity
 import ru.vizbash.grapevine.ui.newprofile.NewProfileActivity
 
@@ -42,7 +42,7 @@ class LoginActivity : AppCompatActivity() {
                 lifecycleScope.launch { collectProfileList() }
             }
         }
-        lifecycleScope.launchWhenResumed {
+        lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 model.profiles.collect { profiles ->
                     model.loginPrefs.lastUsername?.let { username ->
@@ -84,7 +84,7 @@ class LoginActivity : AppCompatActivity() {
             ui.buttonLogin.isEnabled = !empty
 
             val options = if (!empty) {
-                profiles.map(Profile::username)
+                profiles.map(ProfileEntity::username)
             } else {
                 listOf(getString(R.string.no_profiles))
             }

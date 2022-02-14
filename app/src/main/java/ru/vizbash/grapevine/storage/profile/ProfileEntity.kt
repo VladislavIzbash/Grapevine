@@ -7,7 +7,7 @@ import androidx.room.PrimaryKey
 import java.security.PublicKey
 
 @Entity(tableName = "profiles")
-data class Profile(
+data class ProfileEntity(
     @ColumnInfo(name = "node_id") @PrimaryKey val nodeId: Long,
     @ColumnInfo(name = "username") val username: String,
     @ColumnInfo(name = "public_key", typeAffinity = ColumnInfo.BLOB) val publicKey: PublicKey,

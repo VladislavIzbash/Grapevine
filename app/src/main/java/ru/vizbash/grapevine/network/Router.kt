@@ -1,23 +1,25 @@
 package ru.vizbash.grapevine.network
 
 import android.util.Log
-import ru.vizbash.grapevine.AuthService
+import com.google.protobuf.ByteString
+import ru.vizbash.grapevine.ProfileService
 import ru.vizbash.grapevine.TAG
 import ru.vizbash.grapevine.network.messages.direct.*
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.random.Random
 
 @Singleton
-class Router @Inject constructor(private val authService: AuthService) {
+class Router @Inject constructor(private val profileService: ProfileService) {
     private data class NodeRoute(val neighbor: Neighbor, val hops: Int)
+
+    class ReceivedMessage(val id: Long, val payload: ByteArray, val sign: ByteArray, val sender: Node)
 
     private val routingTable = mutableMapOf<Node, MutableSet<NodeRoute>>()
 
-    private val myNode
-        @Synchronized
-        get() = Node(authService.currentProfile!!.base)
+    private val myNode get() = Node(profileService.currentProfile)
 
-    @Volatile private var receiveCb: (RoutedMessage, Node) -> Unit = { _, _ -> }
+    @Volatile private var receiveCb: (ReceivedMessage) -> Unit = { _ -> }
     @Volatile private var nodesUpdatedCb: () -> Unit = {}
 
     val nodes: Set<Node>
@@ -27,23 +29,35 @@ class Router @Inject constructor(private val authService: AuthService) {
         }.toSet()
 
     fun addNeighbor(neighbor: Neighbor) {
-        sendHello(neighbor)
+        val hello = HelloRequest.newBuilder().setNode(myNode.toMessage()).build()
+        val helloMsg = DirectMessage.newBuilder().setHelloReq(hello).build()
+        neighbor.send(helloMsg)
+
         neighbor.setOnReceive { msg -> onMessageReceived(neighbor, msg) }
     }
 
     @Synchronized
-    fun sendMessage(message: RoutedMessage, dest: Node) {
-        if (dest !in routingTable) {
-            throw IllegalArgumentException("Dest node is unknown to router")
-        }
+    fun sendMessage(payload: ByteArray, sign: ByteArray, dest: Node): Long {
+        val routes = routingTable[dest]
+            ?: throw IllegalArgumentException("Dest node is unknown to router")
 
-        Log.d(TAG, "Sending message to $dest")
+        Log.d(TAG, "Sending routed message to $dest")
 
-        val neighbor = routingTable[dest]!!.minByOrNull(NodeRoute::hops)!!.neighbor
-        neighbor.send(DirectMessage.newBuilder().setRouted(message).build())
+        val id = Random.nextLong()
+
+        val neighbor = routes.minByOrNull(NodeRoute::hops)!!.neighbor
+        val routed = RoutedMessage.newBuilder()
+            .setMsgId(id)
+            .setSrcId(myNode.id)
+            .setDestId(dest.id)
+            .setPayload(ByteString.copyFrom(payload))
+            .setSign(ByteString.copyFrom(sign))
+        neighbor.send(DirectMessage.newBuilder().setRouted(routed).build())
+
+        return id
     }
 
-    fun setOnMessageReceived(cb: (RoutedMessage, Node) -> Unit) {
+    fun setOnMessageReceived(cb: (ReceivedMessage) -> Unit) {
         receiveCb = cb
     }
 
@@ -63,13 +77,6 @@ class Router @Inject constructor(private val authService: AuthService) {
         }
     }
 
-    private fun sendHello(neighbor: Neighbor) {
-        val msg = DirectMessage.newBuilder()
-            .setHello(myNode.toMessage())
-            .build()
-        neighbor.send(msg)
-    }
-
     private fun clearEmptyRoutes() {
         routingTable.values.removeIf(Set<NodeRoute>::isEmpty)
     }
@@ -86,7 +93,12 @@ class Router @Inject constructor(private val authService: AuthService) {
     @Synchronized
     private fun onMessageReceived(neighbor: Neighbor, msg: DirectMessage) {
         when (msg.msgCase!!) {
-            DirectMessage.MsgCase.HELLO -> handleHello(neighbor, msg.hello)
+            DirectMessage.MsgCase.HELLO_REQ -> {
+                val hello = HelloResponse.newBuilder().setNode(myNode.toMessage()).build()
+                val helloMsg = DirectMessage.newBuilder().setHelloResp(hello).build()
+                neighbor.send(helloMsg)
+            }
+            DirectMessage.MsgCase.HELLO_RESP -> handleHelloResponse(neighbor, msg.helloResp)
             DirectMessage.MsgCase.ASK_NODES_REQ -> handleNodesRequest(neighbor)
             DirectMessage.MsgCase.ASK_NODES_RESP -> handleNodesResponse(neighbor, msg.askNodesResp)
             DirectMessage.MsgCase.ROUTED -> routeIncomingMessage(msg)
@@ -104,8 +116,8 @@ class Router @Inject constructor(private val authService: AuthService) {
             if (sender == null) {
                 Log.w(TAG, "Cannot receive message from unknown sender ${routed.srcId}")
             } else {
-                Log.d(TAG, "Received message from node: $sender")
-                receiveCb(routed, sender)
+                Log.d(TAG, "Received routed message from node: $sender")
+                receiveCb(ReceivedMessage(routed.msgId, routed.payload.toByteArray(), routed.sign.toByteArray(), sender))
             }
             return
         }
@@ -115,18 +127,18 @@ class Router @Inject constructor(private val authService: AuthService) {
         nextHop.send(msg)
     }
 
-    private fun handleHello(neighbor: Neighbor, nodeMsg: NodeMessage) {
+    private fun handleHelloResponse(neighbor: Neighbor, nodeMsg: HelloResponse) {
         neighbor.setOnDisconnect { onNeighborDisconnected(neighbor) }
 
-        val node = Node(nodeMsg)
+        val node = Node(nodeMsg.node)
         val nodeRoutes = routingTable.getOrPut(node) { mutableSetOf() }
 
         val nodeRoute = NodeRoute(neighbor, 0)
         if (nodeRoute !in nodeRoutes) {
             Log.d(TAG, "Discovered neighbor $neighbor with node: $node")
             nodeRoutes.add(nodeRoute)
-            nodesUpdatedCb()
         }
+        nodesUpdatedCb()
     }
 
     private fun handleNodesRequest(neighbor: Neighbor) {

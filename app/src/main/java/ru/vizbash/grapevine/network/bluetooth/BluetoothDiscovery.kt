@@ -1,13 +1,14 @@
 package ru.vizbash.grapevine.network.bluetooth
 
 import android.annotation.SuppressLint
+import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
-import android.bluetooth.BluetoothServerSocket
 import android.bluetooth.BluetoothSocket
+import android.content.BroadcastReceiver
 import android.content.Context
-import android.os.CountDownTimer
+import android.content.Intent
+import android.os.ParcelUuid
 import android.util.Log
-import com.google.protobuf.InvalidProtocolBufferException
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.scopes.ServiceScoped
 import ru.vizbash.grapevine.TAG
@@ -16,206 +17,215 @@ import ru.vizbash.grapevine.network.Router
 import ru.vizbash.grapevine.network.SourceType
 import ru.vizbash.grapevine.network.messages.direct.DirectMessage
 import java.io.IOException
+import java.nio.ByteBuffer
 import java.util.*
-import java.util.concurrent.ArrayBlockingQueue
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.concurrent.thread
 
-@SuppressLint("MissingPermission")
+@SuppressLint("MissingPermission", "HardwareIds")
 @ServiceScoped
 class BluetoothDiscovery @Inject constructor(
     @ApplicationContext private val context: Context,
     private val router: Router,
 ) {
     companion object {
-        private const val PAIRED_SCAN_INTERVAL_MS = 10000
+        private const val BONDED_SCAN_INTERVAL_MS = 10000L
 
-        private const val MAX_CONNECTIONS = 4
-
-        private const val BT_SERVICE_NAME = "Grapevine"
-        private val BT_SERVICE_UUID = UUID.fromString("f8393dd1-32a9-49ef-9768-749bafed80ed")
+        private const val SERVICE_NAME = "Grapevine"
+        private val SERVICE_UUID = UUID.fromString("f8393dd1-32a9-49ef-9768-749bafed80ed")
     }
 
-    private data class SendRequest(val neighbor: BluetoothNeighbor, val message: DirectMessage)
-
-    @Volatile var isRunning = false
-        private set
-
-    private val bluetoothAdapter by lazy {
+    private val adapter by lazy {
         context.getSystemService(BluetoothManager::class.java).adapter
     }
 
-    private val sendQueue = ArrayBlockingQueue<SendRequest>(MAX_CONNECTIONS * 10)
+    private val myAddress by lazy {
+        macToInt(adapter.address)
+    }
 
-    private var serverSocket: BluetoothServerSocket? = null
+    private enum class State { STOPPED, SEARCHING, CONNECTED }
 
-    private val threads = Collections.synchronizedList(mutableListOf<Thread>())
-    private val neighbors = Collections.synchronizedSet(mutableSetOf<BluetoothNeighbor>())
+    @Volatile
+    private var state = State.STOPPED
 
-    fun start() {
-        if (isRunning) {
-            return
-        }
+    @Volatile
+    private var neighbor: BluetoothNeighbor? = null
 
-        Log.i(TAG, "Starting bluetooth service")
+    private val searchThreads = mutableListOf<Thread>()
 
-        if (!bluetoothAdapter.isEnabled) {
-            Log.e(TAG, "Bluetooth adapter is disabled, stopping")
-            return
-        }
+    private val scanReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.action) {
+                BluetoothDevice.ACTION_UUID -> {
+                    val device = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
+                    val uuids = intent.getParcelableArrayListExtra<ParcelUuid>(BluetoothDevice.EXTRA_UUID)
 
-        isRunning = true
-
-        threads += thread {
-            acceptLoop()
-        }.apply {
-            name = "BluetoothAcceptThread"
-        }
-
-        threads += thread {
-            var elapsedMs = 0
-
-            addPairedDevices()
-
-            while (isRunning) {
-                Thread.sleep(100)
-                elapsedMs += 100
-
-                if (elapsedMs >= PAIRED_SCAN_INTERVAL_MS) {
-                    addPairedDevices()
-                    elapsedMs = 0
+                    println("${device!!.name} has ${uuids!!.map(ParcelUuid::getUuid)}")
                 }
             }
-        }.apply {
-            name = "BluetoothPairedScanThread"
+        }
+    }
+
+    private fun changeState(newState: State) {
+        val oldState = state
+        state = newState
+
+        when (oldState) {
+            State.STOPPED-> when (state) {
+                State.SEARCHING -> {
+//                    context.registerReceiver(scanReceiver, IntentFilter(BluetoothDevice.ACTION_UUID))
+                    enterDiscoverState()
+                }
+                State.CONNECTED -> throw IllegalStateException()
+                State.STOPPED -> {}
+            }
+            State.SEARCHING -> when (state) {
+                State.STOPPED -> {
+//                    context.unregisterReceiver(scanReceiver)
+                    searchThreads.forEach(Thread::join)
+                    searchThreads.clear()
+                }
+                State.CONNECTED -> {
+//                    context.unregisterReceiver(scanReceiver)
+
+
+                    enterConnectedState()
+                }
+                State.SEARCHING -> {}
+            }
+            State.CONNECTED -> when (state) {
+                State.STOPPED -> {
+                    neighbor!!.disconnectCb()
+                    neighbor!!.socket.close()
+                    neighbor = null
+                }
+                State.SEARCHING -> {
+                    neighbor!!.disconnectCb()
+                    neighbor!!.socket.close()
+                    neighbor = null
+                    enterDiscoverState()
+                }
+                State.CONNECTED -> {}
+            }
+        }
+    }
+
+    fun start() {
+        if (!adapter.isEnabled) {
+            Log.i(TAG, "Bluetooth is not enabled")
+            return
         }
 
-        threads += thread {
-            senderLoop()
-        }.apply {
-            name = "BluetoothSenderThread"
+        if (state == State.STOPPED) {
+            Log.i(TAG, "Starting bluetooth dicovery")
+            changeState(State.SEARCHING)
         }
     }
 
     fun stop() {
-        isRunning = false
-        serverSocket?.close()
-        serverSocket = null
-
-        threads.forEach(Thread::join)
-        threads.clear()
-
-        for (neighbor in neighbors) {
-            neighbor.disconnectCb()
-            neighbor.socket.close()
-        }
-        neighbors.clear()
-
-        Log.i(TAG, "Stopped bluetooth service")
+        changeState(State.STOPPED)
     }
 
-    private fun addNeighbor(socket: BluetoothSocket){
-        val neighbor = BluetoothNeighbor(socket)
-        if (neighbor in neighbors) {
-            socket.close()
-            return
-        }
+    private fun enterDiscoverState() {
+        val serverSocket = adapter.listenUsingInsecureRfcommWithServiceRecord(
+            SERVICE_NAME,
+            SERVICE_UUID,
+        )
 
-        neighbors.add(neighbor)
-        router.addNeighbor(neighbor)
-
-        threads += thread {
-            receiverLoop(neighbor)
+        searchThreads += thread {
+            while (state == State.SEARCHING) {
+                scanBondedDevices()?.let {
+                    neighbor = it
+                    router.addNeighbor(it)
+                    changeState(State.CONNECTED)
+                }
+            }
+            serverSocket.close()
         }.apply {
-            name = "BluetoothReceiverThread_${socket.remoteDevice.address}"
+            name = "BtDiscoveryThread"
+        }
+
+        searchThreads += thread {
+            try {
+                val socket = serverSocket.accept()
+                neighbor = BluetoothNeighbor(socket)
+
+                Log.i(TAG, "Accepted ${socket.remoteDevice.address} (${socket.remoteDevice.name})")
+                router.addNeighbor(neighbor!!)
+
+                changeState(State.CONNECTED)
+            } catch (e: IOException) {
+            }
+            serverSocket.close()
+        }.apply {
+            name = "BtAcceptThread"
         }
     }
 
-    private fun addPairedDevices() {
-        for (device in bluetoothAdapter.bondedDevices) {
-            val isConnected = neighbors.any { it.socket.remoteDevice.address == device.address }
-            if (neighbors.size > MAX_CONNECTIONS || isConnected) {
+    private fun scanBondedDevices(): BluetoothNeighbor? {
+        for (device in adapter.bondedDevices) {
+            if (state != State.SEARCHING) {
+                return null
+            }
+
+            val deviceAddress = macToInt(device.address)
+            if (myAddress > deviceAddress) {
+                Log.d(TAG, "Waiting ${device.address} (${device.name}) to connect")
                 continue
             }
 
-            Log.d(TAG, "Probing paired device ${device.address}")
+            Log.d(TAG, "Connecting to bonded device ${device.address} (${device.name})")
 
+            val socket = device.createInsecureRfcommSocketToServiceRecord(SERVICE_UUID)
             try {
-                val socket = device.createRfcommSocketToServiceRecord(BT_SERVICE_UUID)
                 socket.connect()
-
-                addNeighbor(socket)
-                Log.d(TAG, "Connected to ${device.address}")
+                Log.i(TAG, "Connected to ${device.address} (${device.name})")
+                return BluetoothNeighbor(socket)
             } catch (e: IOException) {
-                Log.d(TAG, "Failed to connect to ${device.address}: ${e.message}")
-            }
-        }
-    }
-
-    private fun acceptLoop() {
-        serverSocket = bluetoothAdapter.listenUsingRfcommWithServiceRecord(
-            BT_SERVICE_NAME,
-            BT_SERVICE_UUID,
-        )
-
-        while (isRunning && neighbors.size < MAX_CONNECTIONS) {
-            try {
-                val socket = serverSocket!!.accept()
-                Log.d(TAG, "Accepted ${socket.remoteDevice.address}")
-            } catch (e: IOException) {
+                socket.close()
             }
         }
 
-        serverSocket?.close()
+        return null
     }
 
-    private fun senderLoop() {
-        while (isRunning) {
-            val (neighbor, msg) = sendQueue.poll(200, TimeUnit.MILLISECONDS) ?: continue
+    private fun enterConnectedState() {
+        thread {
+            searchThreads.forEach(Thread::join)
+            searchThreads.clear()
+
+            val buffer = ByteArray(1024)
 
             try {
-                neighbor.socket.outputStream.write(msg.toByteArray())
-            } catch (e: IOException) {
-                val addr = neighbor.socket.remoteDevice.address
-                Log.d(TAG, "$addr closed connection: ${e.message}")
+                while (state == State.CONNECTED) {
+                    val size = neighbor!!.socket.inputStream.read(buffer)
 
-                neighbors.remove(neighbor)
-                neighbor.disconnectCb()
-            }
-        }
-    }
-
-    private fun receiverLoop(neighbor: BluetoothNeighbor) {
-        val addr = neighbor.socket.remoteDevice.address
-
-        while (isRunning) {
-            val buffer = ByteArray(512)
-
-            try {
-                val read = neighbor.socket.inputStream.read(buffer)
-                if (read <= 0) {
-                    Log.d(TAG, "$addr closed connection")
-                    break
+                    val msg = DirectMessage.parseFrom(buffer.sliceArray(0 until size))
+                    neighbor!!.receiveCb(msg)
                 }
-
-                val msg = DirectMessage.parseFrom(buffer.sliceArray(0 until read))
-                neighbor.receiveCb(msg)
             } catch (e: Exception) {
-                when (e) {
-                    is IOException -> {
-                        Log.d(TAG, "$addr closed connection: ${e.message}")
-                        neighbors.remove(neighbor)
-                        neighbor.disconnectCb()
-                        break
-                    }
-                    is InvalidProtocolBufferException -> {
-                        Log.w(TAG, "$addr sent invalid message")
-                    }
+                if (e is IOException) {
+                    val addr = neighbor!!.socket.remoteDevice.address
+                    Log.d(TAG, "$addr closed connection: ${e.message}")
+                    changeState(State.SEARCHING)
+                    return@thread
                 }
             }
         }
     }
+
+    private fun macToInt(mac: String): Int {
+        val addressBytes = mac.split(':')
+            .map { it.toUByte(16).toByte() }
+            .toByteArray()
+
+        return ByteBuffer.allocate(Long.SIZE_BYTES).run {
+            put(addressBytes)
+            rewind()
+            getInt()
+        }
+    }
+
 
     private inner class BluetoothNeighbor(
         val socket: BluetoothSocket,
@@ -228,7 +238,12 @@ class BluetoothDiscovery @Inject constructor(
         override val sourceType = SourceType.BLUETOOTH
 
         override fun send(msg: DirectMessage) {
-            sendQueue.add(SendRequest(this, msg))
+            try {
+                socket.outputStream.write(msg.toByteArray())
+            } catch (e: IOException) {
+                Log.d(TAG, "${socket.remoteDevice.address} closed connection: ${e.message}")
+                changeState(State.SEARCHING)
+            }
         }
 
         override fun setOnReceive(cb: (DirectMessage) -> Unit) {

@@ -5,17 +5,27 @@ option java_package = "ru.vizbash.grapevine.network.messages.direct";
 
 message DirectMessage {
   oneof msg {
-    NodeMessage hello = 1;
-    AskNodesRequest ask_nodes_req = 2;
-    AskNodesResponse ask_nodes_resp = 3;
-    RoutedMessage routed = 4;
+    HelloRequest hello_req = 1;
+    HelloResponse hello_resp = 2;
+    AskNodesRequest ask_nodes_req = 3;
+    AskNodesResponse ask_nodes_resp = 4;
+    RoutedMessage routed = 5;
   }
+}
+
+message HelloRequest {
+  NodeMessage node = 1;
+}
+
+message HelloResponse {
+  NodeMessage node = 1;
 }
 
 message NodeMessage {
   uint64 user_id = 1;
   string username = 2;
   bytes public_key = 3;
+  bytes dh_public_key = 4;
 }
 
 message NodeRouteMessage {

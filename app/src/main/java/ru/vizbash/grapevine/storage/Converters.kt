@@ -3,13 +3,13 @@ package ru.vizbash.grapevine.storage
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.room.TypeConverter
-import ru.vizbash.grapevine.decodePublicKey
+import ru.vizbash.grapevine.decodeRsaPublicKey
 import java.io.ByteArrayOutputStream
 import java.security.PublicKey
 
 class Converters {
     @TypeConverter
-    fun publicKeyFromBytes(bytes: ByteArray?) = bytes?.let { decodePublicKey(bytes) }
+    fun publicKeyFromBytes(bytes: ByteArray?) = bytes?.let { decodeRsaPublicKey(bytes) }
 
     @TypeConverter
     fun publicKeyToBytes(publicKey: PublicKey?) = publicKey?.encoded

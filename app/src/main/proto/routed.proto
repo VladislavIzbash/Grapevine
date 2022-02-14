@@ -5,22 +5,34 @@ option java_package = "ru.vizbash.grapevine.network.messages.routed";
 
 message EncryptedPayload {
   oneof payload {
-    StatusResponse response = 4;
-    TextMessage text = 5;
+    RoutedResponse response = 1;
+    PhotoRequest photo_req = 2;
+    TextMessage text = 3;
   }
 }
 
 enum Error {
-  BAD_SIGNATURE = 0;
+  NO_ERROR = 0;
+  BAD_SIGNATURE = 1;
+  CANNOT_DECRYPT = 2;
 }
 
-message StatusResponse {
+message RoutedResponse {
   uint64 request_id = 1;
-  bool ok = 2;
-  Error error = 3;
+  Error error = 2;
+  oneof response {
+    PhotoResponse photo_resp = 3;
+  }
+}
+
+message PhotoRequest {}
+message PhotoResponse {
+  bool hasPhoto = 1;
+  bytes photo = 2;
 }
 
 message TextMessage {
   string text = 1;
+  int64 timestamp = 2;
 }
 
