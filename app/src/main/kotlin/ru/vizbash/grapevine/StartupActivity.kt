@@ -14,7 +14,7 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class StartupActivity : AppCompatActivity() {
-    @Inject lateinit var profileService: ProfileService
+    @Inject lateinit var profileService: IProfileService
     @Inject lateinit var loginPrefs: LoginPrefs
 
     override fun onCreate(savedInstanceState: Bundle?) {

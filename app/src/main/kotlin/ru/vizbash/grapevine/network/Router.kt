@@ -2,27 +2,20 @@ package ru.vizbash.grapevine.network
 
 import android.util.Log
 import com.google.protobuf.ByteString
-import ru.vizbash.grapevine.ProfileService
+import ru.vizbash.grapevine.IProfileService
 import ru.vizbash.grapevine.TAG
 import ru.vizbash.grapevine.network.messages.direct.*
-import java.nio.ByteBuffer
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.random.Random
 
 @Singleton
-class Router @Inject constructor(private val profileService: ProfileService) {
-    companion object {
-        private val CHUNK_SIZE = 512
-    }
-
+class Router @Inject constructor(private val profileService: IProfileService) {
     private data class NodeRoute(val neighbor: Neighbor, val hops: Int)
 
     class ReceivedMessage(val id: Long, val payload: ByteArray, val sign: ByteArray, val sender: Node)
 
     private val routingTable = mutableMapOf<Node, MutableSet<NodeRoute>>()
-
-    private val multipartBuffers = mutableMapOf<Long, Pair<ByteBuffer, Int>>()
 
     private val myNode get() = Node(profileService.currentProfile)
 
@@ -53,43 +46,15 @@ class Router @Inject constructor(private val profileService: ProfileService) {
         val id = Random.nextLong()
         val neighbor = routes.minByOrNull(NodeRoute::hops)!!.neighbor
 
-        if (payload.size <= CHUNK_SIZE) {
-            Log.d(TAG, "Sending routed message to $dest")
+        Log.d(TAG, "Sending routed message to $dest")
 
-            val msg = RoutedMessage.newBuilder()
-                .setMsgId(id)
-                .setSrcId(myNode.id)
-                .setDestId(dest.id)
-                .setTotalChunks(1)
-                .setChunkNum(0)
-                .setPayload(ByteString.copyFrom(payload))
-                .setSign(ByteString.copyFrom(sign))
-            neighbor.send(DirectMessage.newBuilder().setRouted(msg).build())
-        } else {
-            val totalChunks = Math.ceil(payload.size.toDouble() / CHUNK_SIZE.toDouble()).toInt()
-
-            for (offset in 0 until payload.size step CHUNK_SIZE) {
-                val chunkNum = offset / CHUNK_SIZE
-                val chunkSize = if (payload.size - offset >= CHUNK_SIZE) {
-                    CHUNK_SIZE
-                } else {
-                    payload.size - offset
-                }
-                val chunk = payload.sliceArray(offset until (offset + chunkSize))
-
-                Log.d(TAG, "Sending multipart routed message to $dest (chunk ${chunkNum + 1} of $totalChunks)")
-
-                val msg = RoutedMessage.newBuilder()
-                    .setMsgId(id)
-                    .setSrcId(myNode.id)
-                    .setDestId(dest.id)
-                    .setTotalChunks(totalChunks)
-                    .setChunkNum(chunkNum)
-                    .setPayload(ByteString.copyFrom(chunk))
-                    .setSign(ByteString.copyFrom(sign))
-                neighbor.send(DirectMessage.newBuilder().setRouted(msg).build())
-            }
-        }
+        val msg = RoutedMessage.newBuilder()
+            .setMsgId(id)
+            .setSrcId(myNode.id)
+            .setDestId(dest.id)
+            .setPayload(ByteString.copyFrom(payload))
+            .setSign(ByteString.copyFrom(sign))
+        neighbor.send(DirectMessage.newBuilder().setRouted(msg).build())
 
         return id
     }
@@ -125,6 +90,8 @@ class Router @Inject constructor(private val profileService: ProfileService) {
         }
         clearEmptyRoutes()
         nodesUpdatedCb()
+
+        Log.d(TAG, "$neighbor disconnected, ${routingTable.values.size} nodes remaining")
     }
 
     @Synchronized
@@ -153,7 +120,13 @@ class Router @Inject constructor(private val profileService: ProfileService) {
             if (sender == null) {
                 Log.w(TAG, "Cannot receive message from unknown sender ${routed.srcId}")
             } else {
-                receiveRoutedMessage(routed, sender)
+                receiveCb(ReceivedMessage(
+                    routed.msgId,
+                    routed.payload.toByteArray(),
+                    routed.sign.toByteArray(),
+                    sender,
+                ))
+                Log.d(TAG, "Received routed message from $sender")
             }
             return
         }
@@ -161,50 +134,6 @@ class Router @Inject constructor(private val profileService: ProfileService) {
         val destNode = routingTable.keys.find { it.id == routed.destId } ?: return
         val nextHop = routingTable[destNode]!!.minByOrNull(NodeRoute::hops)!!.neighbor
         nextHop.send(msg)
-    }
-
-    private fun receiveRoutedMessage(routed: RoutedMessage, sender: Node) {
-        val payload = routed.payload.toByteArray()
-
-        if (routed.totalChunks == 1) {
-            receiveCb(ReceivedMessage(routed.msgId, payload, routed.sign.toByteArray(), sender))
-            return
-        }
-
-        if (routed.chunkNum == 0) {
-            if (routed.totalChunks > 1048576) {
-                return
-            }
-            val buffer = ByteBuffer.allocate(routed.totalChunks * CHUNK_SIZE)
-            buffer.put(payload)
-            multipartBuffers[routed.msgId] = Pair(buffer, 0)
-        } else {
-            val buffer = multipartBuffers[routed.msgId]
-            if (buffer == null) {
-                Log.w(TAG, "Message ${routed.msgId} started with chunk ${routed.chunkNum}")
-                return
-            }
-            if (buffer.second != routed.chunkNum - 1) {
-                Log.w(TAG, "Message ${routed.msgId} breaks chunk order")
-                return
-            }
-
-            Log.d(TAG, "Received multipart routed message from $sender (chunk ${routed.chunkNum + 1} of ${routed.totalChunks})")
-
-            buffer.first.put(payload)
-
-            if (routed.chunkNum == routed.totalChunks - 1) {
-                multipartBuffers.remove(routed.msgId)
-                receiveCb(ReceivedMessage(
-                    routed.msgId,
-                    buffer.first.array().sliceArray(0 until buffer.first.position()),
-                    routed.sign.toByteArray(),
-                    sender,
-                ))
-            } else {
-                multipartBuffers[routed.msgId] = Pair(buffer.first, routed.chunkNum)
-            }
-        }
     }
 
     private fun handleHelloResponse(neighbor: Neighbor, nodeMsg: HelloResponse) {

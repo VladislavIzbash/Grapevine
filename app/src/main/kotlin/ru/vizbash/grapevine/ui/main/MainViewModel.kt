@@ -7,6 +7,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import ru.vizbash.grapevine.IProfileService
 import ru.vizbash.grapevine.ProfileService
 import ru.vizbash.grapevine.network.NetworkController
 import ru.vizbash.grapevine.network.Node
@@ -18,22 +19,25 @@ import javax.inject.Inject
 class MainViewModel @Inject constructor(
     private val loginPrefs: LoginPrefs,
     private val networkController: NetworkController,
-    profileService: ProfileService,
+    profileService: IProfileService,
 ) : ViewModel() {
     val currentProfile = profileService.currentProfile
 
     private val photoCache = ConcurrentHashMap<Node, Bitmap?>()
 
-    val nodeEntries = networkController.nodes.map { nodes ->
-        nodes.map { node -> NodeEntry(node) { fetchPhoto(node) } }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
+    val nodes = networkController.nodes
 
     fun disableAutologin() {
         loginPrefs.autoLoginUsername = null
         loginPrefs.autoLoginPassword = null
     }
 
-    private suspend fun fetchPhoto(node: Node): Bitmap? = photoCache.getOrPut(node) {
-        networkController.fetchNodePhoto(node)
+    suspend fun fetchPhoto(node: Node): Bitmap? = photoCache.getOrPut(node) {
+        try {
+            networkController.fetchNodePhoto(node)
+        } catch (e: NetworkController.GvException) {
+            e.printStackTrace()
+            null
+        }
     }
 }

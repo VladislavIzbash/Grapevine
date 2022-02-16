@@ -8,18 +8,18 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
-import ru.vizbash.grapevine.ProfileService
-import ru.vizbash.grapevine.network.NetworkController
+import ru.vizbash.grapevine.IProfileService
+import ru.vizbash.grapevine.TestProfileService
 
 @ExperimentalCoroutinesApi
 class NetworkControllerTest {
-    private lateinit var profiles: List<ProfileService>
+    private lateinit var profiles: List<IProfileService>
     private lateinit var routers: List<Pair<Router, Node>>
     private lateinit var controllers: List<NetworkController>
 
     @Before
     fun setup() {
-        profiles = List(3) { i -> mockProfileService(i.toLong() + 1) }
+        profiles = List(3) { i -> createProfileService(i.toLong() + 1) }
         routers = profiles.map { createRouter(it) }
 
         connect(routers[0].first, routers[1].first)

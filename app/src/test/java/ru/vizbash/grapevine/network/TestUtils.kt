@@ -1,32 +1,28 @@
 package ru.vizbash.grapevine.network
 
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.mock
-import ru.vizbash.grapevine.ProfileService
-import ru.vizbash.grapevine.createDhKeyPair
-import ru.vizbash.grapevine.createRsaKeyPair
-import ru.vizbash.grapevine.network.Node
-import ru.vizbash.grapevine.network.Profile
-import ru.vizbash.grapevine.network.Router
+import ru.vizbash.grapevine.*
 import ru.vizbash.grapevine.storage.profile.ProfileEntity
 
-fun mockProfileService(nodeId: Long): ProfileService {
+fun createProfileService(nodeId: Long): IProfileService {
     val keyPair = createRsaKeyPair()
     val dhKeyPair = createDhKeyPair()
 
     val profile = Profile(
-        ProfileEntity(nodeId, "node$nodeId", keyPair.public, ByteArray(0), null),
+        ProfileEntity(
+            nodeId,
+            "node$nodeId",
+            keyPair.public,
+            ByteArray(0),
+            null,
+        ),
         keyPair.private,
         dhKeyPair.public,
         dhKeyPair.private,
     )
-
-    return mock {
-        on { currentProfile } doReturn profile
-    }
+    return TestProfileService(profile)
 }
 
-fun createRouter(profileService: ProfileService): Pair<Router, Node> {
+fun createRouter(profileService: IProfileService): Pair<Router, Node> {
     return Pair(Router(profileService), Node(profileService.currentProfile))
 }
 

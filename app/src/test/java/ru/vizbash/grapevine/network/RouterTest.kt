@@ -2,7 +2,6 @@ package ru.vizbash.grapevine.network
 
 import org.junit.Assert.*
 import org.junit.Test
-import kotlin.random.Random
 
 class RouterTest {
     /**
@@ -11,8 +10,8 @@ class RouterTest {
      */
     @Test
     fun twoNodesCanReachEachOtherDirectly() {
-        val (router1, node1) = createRouter(mockProfileService(1))
-        val (router2, node2) = createRouter(mockProfileService(2))
+        val (router1, node1) = createRouter(createProfileService(1))
+        val (router2, node2) = createRouter(createProfileService(2))
 
         connect(router1, router2)
 
@@ -28,9 +27,9 @@ class RouterTest {
      */
     @Test
     fun routersHandleDisconnectionDirectly() {
-        val (router1, node1) = createRouter(mockProfileService(1))
-        val (router2, node2) = createRouter(mockProfileService(2))
-        val (router3, node3) = createRouter(mockProfileService(3))
+        val (router1, node1) = createRouter(createProfileService(1))
+        val (router2, node2) = createRouter(createProfileService(2))
+        val (router3, node3) = createRouter(createProfileService(3))
 
         connect(router1, router2)
         val conn13 = connect(router1, router3)
@@ -56,9 +55,9 @@ class RouterTest {
      */
     @Test
     fun routersHandleDisconnectionIndirectly() {
-        val (router1, node1) = createRouter(mockProfileService(1))
-        val (router2, node2) = createRouter(mockProfileService(2))
-        val (router3, _) = createRouter(mockProfileService(3))
+        val (router1, node1) = createRouter(createProfileService(1))
+        val (router2, node2) = createRouter(createProfileService(2))
+        val (router3, _) = createRouter(createProfileService(3))
 
         connect(router1, router2)
         val conn23 = connect(router2, router3)
@@ -82,9 +81,9 @@ class RouterTest {
      */
     @Test
     fun nodesCanReachEachOtherIndirectly() {
-        val (router1, node1) = createRouter(mockProfileService(1))
-        val (router2, node2) = createRouter(mockProfileService(2))
-        val (router3, node3) = createRouter(mockProfileService(3))
+        val (router1, node1) = createRouter(createProfileService(1))
+        val (router2, node2) = createRouter(createProfileService(2))
+        val (router3, node3) = createRouter(createProfileService(3))
 
         connect(router1, router2)
         connect(router2, router3)
@@ -107,8 +106,8 @@ class RouterTest {
      */
     @Test
     fun routerDeliversMessageToDirectNode() {
-        val (router1, node1) = createRouter(mockProfileService(1))
-        val (router2, node2) = createRouter(mockProfileService(2))
+        val (router1, node1) = createRouter(createProfileService(1))
+        val (router2, node2) = createRouter(createProfileService(2))
 
         connect(router1, router2)
 
@@ -132,10 +131,10 @@ class RouterTest {
      */
     @Test
     fun routerDeliversMessageToIndirectNode() {
-        val (router1, node1) = createRouter(mockProfileService(1))
-        val (router2, _) = createRouter(mockProfileService(2))
-        val (router3, _) = createRouter(mockProfileService(3))
-        val (router4, node4) = createRouter(mockProfileService(4))
+        val (router1, node1) = createRouter(createProfileService(1))
+        val (router2, _) = createRouter(createProfileService(2))
+        val (router3, _) = createRouter(createProfileService(3))
+        val (router4, node4) = createRouter(createProfileService(4))
 
         connect(router1, router2)
         connect(router1, router3)
@@ -164,32 +163,5 @@ class RouterTest {
         router4.sendMessage(byteArrayOf(1), byteArrayOf(2), node1)
 
         assertNotNull(receivedMessage41)
-    }
-
-    /**
-     * Topology:
-     * (1) -- (2) -- (3)
-     */
-    @Test
-    fun routersTransferMultipartMessages() {
-        val (router1, node1) = createRouter(mockProfileService(1))
-        val (router2, node2) = createRouter(mockProfileService(2))
-        val (router3, node3) = createRouter(mockProfileService(3))
-
-        connect(router1, router2)
-        connect(router2, router3)
-
-        router1.askForNodes()
-        router3.askForNodes()
-
-        var receivedMessage13: Router.ReceivedMessage? = null
-        router3.setOnMessageReceived { msg ->
-            receivedMessage13 = msg
-        }
-
-        val payload13 = Random.nextBytes(26024)
-        router1.sendMessage(payload13, byteArrayOf(1), node3)
-
-        assertArrayEquals(payload13, receivedMessage13?.payload)
     }
 }

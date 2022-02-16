@@ -43,8 +43,6 @@ message RoutedMessage {
   uint64 msg_id = 1;
   uint64 src_id = 2;
   uint64 dest_id = 3;
-  uint32 total_chunks = 5;
-  uint32 chunk_num = 6;
   bytes payload = 7;
   bytes sign = 10;
 }

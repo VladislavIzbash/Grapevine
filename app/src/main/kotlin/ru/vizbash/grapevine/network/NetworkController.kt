@@ -19,7 +19,7 @@ import javax.inject.Singleton
 @Singleton
 class NetworkController @Inject constructor(
     private val router: Router,
-    private val profileService: ProfileService,
+    private val profileService: IProfileService,
 ) {
     open class GvException : Exception()
     class GvBadSignatureException : GvException()
@@ -86,7 +86,7 @@ class NetworkController @Inject constructor(
     fun stop() {
         if (running) {
             running = false
-            coroutineScope.cancel()
+            coroutineScope.coroutineContext.cancelChildren()
             Log.i(TAG, "Stopped controller")
         }
     }
@@ -221,9 +221,9 @@ class NetworkController @Inject constructor(
         }
 
         return if (resp.photoResp.hasPhoto) {
-            val photo = resp.photoResp.toByteArray()
+            val photo = resp.photoResp.photo.toByteArray()
 //            println("Received photo: ${photo.toHexString()}")
-            BitmapFactory.decodeByteArray(photo, 6, photo.size - 6) // TODO ??
+            BitmapFactory.decodeByteArray(photo, 0, photo.size)
         } else {
             null
         }

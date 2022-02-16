@@ -45,8 +45,8 @@ dependencies {
     implementation 'androidx.recyclerview:recyclerview:1.2.1'
     implementation "androidx.room:room-runtime:2.4.1"
     implementation "androidx.room:room-ktx:2.4.1"
-    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.4.0'
-    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.4.0'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.4.1'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.4.1'
     implementation 'androidx.activity:activity-ktx:1.4.0'
     implementation 'androidx.navigation:navigation-fragment-ktx:2.4.1'
     implementation "androidx.navigation:navigation-ui-ktx:2.4.1"
@@ -63,9 +63,8 @@ dependencies {
     kapt 'com.google.dagger:hilt-compiler:2.40.5'
 
     testImplementation 'junit:junit:4.13.2'
-    testImplementation "org.mockito.kotlin:mockito-kotlin:4.0.0"
+//    testImplementation "org.mockito.kotlin:mockito-kotlin:4.0.0"
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.0"
-//    testImplementation "org.bouncycastle:bcpkix-jdk15on:1.61"
 }
 
 protobuf {
