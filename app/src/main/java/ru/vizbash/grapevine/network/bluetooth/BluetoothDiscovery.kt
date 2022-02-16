@@ -1,13 +1,10 @@
 package ru.vizbash.grapevine.network.bluetooth
 
 import android.annotation.SuppressLint
-import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
+import android.bluetooth.BluetoothServerSocket
 import android.bluetooth.BluetoothSocket
-import android.content.BroadcastReceiver
 import android.content.Context
-import android.content.Intent
-import android.os.ParcelUuid
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.scopes.ServiceScoped
@@ -43,72 +40,24 @@ class BluetoothDiscovery @Inject constructor(
         macToInt(adapter.address)
     }
 
-    private enum class State { STOPPED, SEARCHING, CONNECTED }
-
     @Volatile
-    private var state = State.STOPPED
+    private var running = false
 
     @Volatile
     private var neighbor: BluetoothNeighbor? = null
 
-    private val searchThreads = mutableListOf<Thread>()
-
-    private val scanReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            when (intent.action) {
-                BluetoothDevice.ACTION_UUID -> {
-                    val device = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
-                    val uuids = intent.getParcelableArrayListExtra<ParcelUuid>(BluetoothDevice.EXTRA_UUID)
-
-                    println("${device!!.name} has ${uuids!!.map(ParcelUuid::getUuid)}")
-                }
-            }
-        }
-    }
-
-    private fun changeState(newState: State) {
-        val oldState = state
-        state = newState
-
-        when (oldState) {
-            State.STOPPED-> when (state) {
-                State.SEARCHING -> {
-//                    context.registerReceiver(scanReceiver, IntentFilter(BluetoothDevice.ACTION_UUID))
-                    enterDiscoverState()
-                }
-                State.CONNECTED -> throw IllegalStateException()
-                State.STOPPED -> {}
-            }
-            State.SEARCHING -> when (state) {
-                State.STOPPED -> {
-//                    context.unregisterReceiver(scanReceiver)
-                    searchThreads.forEach(Thread::join)
-                    searchThreads.clear()
-                }
-                State.CONNECTED -> {
-//                    context.unregisterReceiver(scanReceiver)
-
-
-                    enterConnectedState()
-                }
-                State.SEARCHING -> {}
-            }
-            State.CONNECTED -> when (state) {
-                State.STOPPED -> {
-                    neighbor!!.disconnectCb()
-                    neighbor!!.socket.close()
-                    neighbor = null
-                }
-                State.SEARCHING -> {
-                    neighbor!!.disconnectCb()
-                    neighbor!!.socket.close()
-                    neighbor = null
-                    enterDiscoverState()
-                }
-                State.CONNECTED -> {}
-            }
-        }
-    }
+//    private val scanReceiver = object : BroadcastReceiver() {
+//        override fun onReceive(context: Context, intent: Intent) {
+//            when (intent.action) {
+//                BluetoothDevice.ACTION_UUID -> {
+//                    val device = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
+//                    val uuids = intent.getParcelableArrayListExtra<ParcelUuid>(BluetoothDevice.EXTRA_UUID)
+//
+//                    println("${device!!.name} has ${uuids!!.map(ParcelUuid::getUuid)}")
+//                }
+//            }
+//        }
+//    }
 
     fun start() {
         if (!adapter.isEnabled) {
@@ -116,55 +65,89 @@ class BluetoothDiscovery @Inject constructor(
             return
         }
 
-        if (state == State.STOPPED) {
-            Log.i(TAG, "Starting bluetooth dicovery")
-            changeState(State.SEARCHING)
+        if (running) {
+            return
         }
-    }
 
-    fun stop() {
-        changeState(State.STOPPED)
-    }
+        running = true
+        Log.i(TAG, "Starting bluetooth discovery")
 
-    private fun enterDiscoverState() {
         val serverSocket = adapter.listenUsingInsecureRfcommWithServiceRecord(
             SERVICE_NAME,
             SERVICE_UUID,
         )
 
-        searchThreads += thread {
-            while (state == State.SEARCHING) {
-                scanBondedDevices()?.let {
-                    neighbor = it
-                    router.addNeighbor(it)
-                    changeState(State.CONNECTED)
-                }
+        startAccepting(serverSocket)
+        startBondedScan(serverSocket)
+    }
+
+    fun stop() {
+        running = false
+
+        neighbor?.disconnectCb?.invoke()
+        neighbor = null
+    }
+
+    private fun startBondedScan(serverSocket: BluetoothServerSocket) = thread {
+        while (running && neighbor == null) {
+            val ret = scanBondedDevices()
+            if (ret != null) {
+                neighbor = ret
+                router.addNeighbor(ret)
+                startReceiving()
+            } else {
+                Thread.sleep(BONDED_SCAN_INTERVAL_MS)
             }
-            serverSocket.close()
-        }.apply {
-            name = "BtDiscoveryThread"
         }
+        serverSocket.close()
+    }.apply {
+        name = "BtScanThread"
+    }
 
-        searchThreads += thread {
-            try {
-                val socket = serverSocket.accept()
-                neighbor = BluetoothNeighbor(socket)
+    private fun startAccepting(serverSocket: BluetoothServerSocket) = thread {
+        try {
+            val socket = serverSocket.accept()
+            neighbor = BluetoothNeighbor(socket)
 
-                Log.i(TAG, "Accepted ${socket.remoteDevice.address} (${socket.remoteDevice.name})")
-                router.addNeighbor(neighbor!!)
+            Log.i(TAG, "Accepted ${socket.remoteDevice.address} (${socket.remoteDevice.name})")
+            router.addNeighbor(neighbor!!)
+            startReceiving()
+        } catch (e: IOException) {
+        }
+        serverSocket.close()
+    }.apply {
+        name = "BtAcceptThread"
+    }
 
-                changeState(State.CONNECTED)
-            } catch (e: IOException) {
+    private fun startReceiving() = thread {
+        val buffer = ByteArray(1024)
+
+        try {
+            while (running && neighbor != null) {
+                val size = neighbor!!.socket.inputStream.read(buffer)
+                println("read $size bytes")
+
+                val msg = DirectMessage.parseFrom(buffer.sliceArray(0 until size))
+                neighbor!!.receiveCb(msg)
+
             }
-            serverSocket.close()
-        }.apply {
-            name = "BtAcceptThread"
+        } catch (e: Exception) {
+            if (e is IOException) {
+                if (neighbor != null) {
+                    val addr = neighbor!!.socket.remoteDevice.address
+                    Log.d(TAG, "$addr closed connection: ${e.message}")
+                    neighbor!!.disconnectCb()
+                    neighbor!!.socket.close()
+                    neighbor = null
+                }
+                return@thread
+            }
         }
     }
 
     private fun scanBondedDevices(): BluetoothNeighbor? {
         for (device in adapter.bondedDevices) {
-            if (state != State.SEARCHING) {
+            if (!running || neighbor != null) {
                 return null
             }
 
@@ -189,31 +172,6 @@ class BluetoothDiscovery @Inject constructor(
         return null
     }
 
-    private fun enterConnectedState() {
-        thread {
-            searchThreads.forEach(Thread::join)
-            searchThreads.clear()
-
-            val buffer = ByteArray(1024)
-
-            try {
-                while (state == State.CONNECTED) {
-                    val size = neighbor!!.socket.inputStream.read(buffer)
-
-                    val msg = DirectMessage.parseFrom(buffer.sliceArray(0 until size))
-                    neighbor!!.receiveCb(msg)
-                }
-            } catch (e: Exception) {
-                if (e is IOException) {
-                    val addr = neighbor!!.socket.remoteDevice.address
-                    Log.d(TAG, "$addr closed connection: ${e.message}")
-                    changeState(State.SEARCHING)
-                    return@thread
-                }
-            }
-        }
-    }
-
     private fun macToInt(mac: String): Int {
         val addressBytes = mac.split(':')
             .map { it.toUByte(16).toByte() }
@@ -225,7 +183,6 @@ class BluetoothDiscovery @Inject constructor(
             getInt()
         }
     }
-
 
     private inner class BluetoothNeighbor(
         val socket: BluetoothSocket,
@@ -240,9 +197,13 @@ class BluetoothDiscovery @Inject constructor(
         override fun send(msg: DirectMessage) {
             try {
                 socket.outputStream.write(msg.toByteArray())
+                socket.outputStream.flush()
+                println("written ${msg.toByteArray().size} bytes")
             } catch (e: IOException) {
                 Log.d(TAG, "${socket.remoteDevice.address} closed connection: ${e.message}")
-                changeState(State.SEARCHING)
+                neighbor!!.disconnectCb()
+                socket.close()
+                neighbor = null
             }
         }
 

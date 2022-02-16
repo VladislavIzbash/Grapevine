@@ -1,5 +1,7 @@
 package ru.vizbash.grapevine.network
 
+import ru.vizbash.grapevine.network.Neighbor
+import ru.vizbash.grapevine.network.SourceType
 import ru.vizbash.grapevine.network.messages.direct.DirectMessage
 import kotlin.math.absoluteValue
 import kotlin.random.Random

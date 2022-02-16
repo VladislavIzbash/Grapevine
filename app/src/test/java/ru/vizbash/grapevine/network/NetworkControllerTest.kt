@@ -3,13 +3,13 @@ package ru.vizbash.grapevine.network
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.After
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import ru.vizbash.grapevine.ProfileService
+import ru.vizbash.grapevine.network.NetworkController
 
 @ExperimentalCoroutinesApi
 class NetworkControllerTest {
@@ -28,8 +28,6 @@ class NetworkControllerTest {
         controllers = profiles.zip(routers).map { (profile, router) ->
             NetworkController(router.first, profile).apply { start() }
         }
-
-        routers.forEach { it.first.askForNodes() }
     }
 
     @After
@@ -38,23 +36,29 @@ class NetworkControllerTest {
     }
 
     @Test(timeout = 1000)
-    fun onlineNodesReturnsCorrectSet() = runBlocking {
+    fun onlineNodesReturnsCorrectSet() = runTest {
+        delay(1000)
+        routers.forEach { it.first.askForNodes() }
+
         assertEquals(
             setOf(routers[1].second, routers[2].second),
-            controllers[0].onlineNodes.value,
+            controllers[0].nodes.value,
         )
         assertEquals(
             setOf(routers[0].second, routers[2].second),
-            controllers[1].onlineNodes.value,
+            controllers[1].nodes.value,
         )
         assertEquals(
             setOf(routers[0].second, routers[1].second),
-            controllers[2].onlineNodes.value,
+            controllers[2].nodes.value,
         )
     }
 
     @Test(timeout = 1000)
-    fun controllersTransferTextMessage() = runBlocking {
+    fun controllersTransferTextMessage() = runTest {
+        delay(1000)
+        routers.forEach { it.first.askForNodes() }
+
         controllers[0].sendText("Hello", routers[2].second)
 
         val msg = controllers[2].textMessages.first()

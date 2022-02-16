@@ -5,28 +5,27 @@ import android.graphics.BitmapFactory
 import android.util.Log
 import com.google.protobuf.ByteString
 import com.google.protobuf.InvalidProtocolBufferException
-import com.google.protobuf.Timestamp
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
 import ru.vizbash.grapevine.*
 import ru.vizbash.grapevine.network.messages.routed.*
 import java.io.ByteArrayOutputStream
-import java.lang.Exception
+import java.security.Security
 import javax.crypto.SecretKey
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.random.Random
 
 @Singleton
 class NetworkController @Inject constructor(
     private val router: Router,
     private val profileService: ProfileService,
 ) {
-    class GvBadSignatureException : Exception()
-    class GvCannotDecryptException : Exception()
-    class GvInvalidResponseException : Exception()
-    class GvTimeoutException : Exception()
+    open class GvException : Exception()
+    class GvBadSignatureException : GvException()
+    class GvCannotDecryptException : GvException()
+    class GvInvalidResponseException : GvException()
+    class GvTimeoutException : GvException()
 
     private class AcceptedMessage(val id: Long, val payload: EncryptedPayload, val sender: Node)
 
@@ -39,7 +38,7 @@ class NetworkController @Inject constructor(
     private var running = false
     private val secretKeyCache = mutableMapOf<Node, SecretKey>()
 
-    val onlineNodes: StateFlow<Set<Node>> = callbackFlow {
+    val nodes: StateFlow<Set<Node>> = callbackFlow {
         router.setOnNodesUpdated {
             trySend(router.nodes)
         }
@@ -142,7 +141,9 @@ class NetworkController @Inject constructor(
             if (photo != null) {
                 val out = ByteArrayOutputStream()
                 photo.compress(Bitmap.CompressFormat.PNG, 100, out)
-                setPhoto(ByteString.copyFrom(out.toByteArray()))
+                val bytes = out.toByteArray()
+//                println("Sent photo: ${bytes.toHexString()}")
+                setPhoto(ByteString.copyFrom(bytes))
             }
             build()
         }
@@ -188,11 +189,11 @@ class NetworkController @Inject constructor(
     private suspend fun sendAndAwaitResponse(
         payload: EncryptedPayload,
         dest: Node,
-    ): RoutedResponse {
+    ) = withContext(Dispatchers.Default) {
         val id = sendMessage(payload, dest)
 
         try {
-            return withTimeout(RECEIVE_TIMEOUT_MS) {
+            withTimeout(RECEIVE_TIMEOUT_MS) {
                 incomingMessages
                     .filter { it.payload.hasResponse() && it.payload.response.requestId == id }
                     .map { msg ->
@@ -221,7 +222,8 @@ class NetworkController @Inject constructor(
 
         return if (resp.photoResp.hasPhoto) {
             val photo = resp.photoResp.toByteArray()
-            BitmapFactory.decodeByteArray(photo, 0, photo.size)
+//            println("Received photo: ${photo.toHexString()}")
+            BitmapFactory.decodeByteArray(photo, 6, photo.size - 6) // TODO ??
         } else {
             null
         }

@@ -5,6 +5,9 @@ import org.mockito.kotlin.mock
 import ru.vizbash.grapevine.ProfileService
 import ru.vizbash.grapevine.createDhKeyPair
 import ru.vizbash.grapevine.createRsaKeyPair
+import ru.vizbash.grapevine.network.Node
+import ru.vizbash.grapevine.network.Profile
+import ru.vizbash.grapevine.network.Router
 import ru.vizbash.grapevine.storage.profile.ProfileEntity
 
 fun mockProfileService(nodeId: Long): ProfileService {

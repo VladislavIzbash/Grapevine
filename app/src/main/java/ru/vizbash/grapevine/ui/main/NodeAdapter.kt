@@ -5,12 +5,11 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.R
 import ru.vizbash.grapevine.databinding.ItemNodeBinding
+import ru.vizbash.grapevine.network.NetworkController
 import ru.vizbash.grapevine.network.SourceType
 
 class NodeAdapter(
@@ -22,8 +21,10 @@ class NodeAdapter(
         private val ui = ItemNodeBinding.bind(view)
 
         fun bind(entry: NodeEntry) {
-            entry.photo?.let {
-                ui.ivPhoto.setImageBitmap(it)
+            if (entry.photo != null) {
+                ui.ivPhoto.setImageBitmap(entry.photo)
+            } else {
+                ui.ivPhoto.setImageResource(R.drawable.avatar_placeholder)
             }
             ui.tvUsername.text = entry.node.username
             ui.ivSource.setImageResource(when (entry.node.primarySource) {
@@ -56,7 +57,17 @@ class NodeAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bind(entries.value[position])
+        val entry = entries.value[position]
+        holder.bind(entry)
+
+        coroutineScope.launch {
+            try {
+                entry.photo = entry.photoFetcher()
+                holder.itemView.post { notifyDataSetChanged() }
+            } catch (e: NetworkController.GvException) {
+                e.printStackTrace()
+            }
+        }
     }
 
     override fun getItemCount() = entries.value.size

@@ -5,7 +5,8 @@ import ru.vizbash.grapevine.network.Node
 
 data class NodeEntry(
     val node: Node,
-    val photo: Bitmap?,
+    val photoFetcher: suspend () -> Bitmap?,
 ) {
-    enum class Source { BT, WIFI }
+    var photo: Bitmap? = null
 }
+

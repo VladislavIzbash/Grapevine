@@ -2,6 +2,7 @@ package ru.vizbash.grapevine.network
 
 import org.junit.Assert.*
 import org.junit.Test
+import kotlin.random.Random
 
 class RouterTest {
     /**
@@ -116,9 +117,10 @@ class RouterTest {
         router2.setOnMessageReceived { msg ->
             receivedMessage12 = msg
         }
-        router1.sendMessage(byteArrayOf(1), byteArrayOf(2), node2)
+        val payload12 = byteArrayOf(1)
+        router1.sendMessage(payload12, byteArrayOf(1), node2)
 
-        assertNotNull(receivedMessage12)
+        assertArrayEquals(payload12, receivedMessage12?.payload)
         assertEquals(node1, receivedMessage12?.sender)
     }
 
@@ -162,5 +164,32 @@ class RouterTest {
         router4.sendMessage(byteArrayOf(1), byteArrayOf(2), node1)
 
         assertNotNull(receivedMessage41)
+    }
+
+    /**
+     * Topology:
+     * (1) -- (2) -- (3)
+     */
+    @Test
+    fun routersTransferMultipartMessages() {
+        val (router1, node1) = createRouter(mockProfileService(1))
+        val (router2, node2) = createRouter(mockProfileService(2))
+        val (router3, node3) = createRouter(mockProfileService(3))
+
+        connect(router1, router2)
+        connect(router2, router3)
+
+        router1.askForNodes()
+        router3.askForNodes()
+
+        var receivedMessage13: Router.ReceivedMessage? = null
+        router3.setOnMessageReceived { msg ->
+            receivedMessage13 = msg
+        }
+
+        val payload13 = Random.nextBytes(26024)
+        router1.sendMessage(payload13, byteArrayOf(1), node3)
+
+        assertArrayEquals(payload13, receivedMessage13?.payload)
     }
 }

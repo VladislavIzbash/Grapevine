@@ -6,6 +6,8 @@ import kotlinx.coroutines.withContext
 import ru.vizbash.grapevine.network.Profile
 import ru.vizbash.grapevine.storage.profile.ProfileEntity
 import ru.vizbash.grapevine.storage.profile.ProfileDao
+import java.security.Security
+import javax.crypto.interfaces.DHPublicKey
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.random.Random
@@ -42,8 +44,8 @@ class ProfileService @Inject constructor(
 
     suspend fun tryLogin(profile: ProfileEntity, password: String) = withContext(Dispatchers.Default) {
         val privKey = aesDecrypt(profile.privateKeyEnc, generatePasswordSecret(password))
-        val dhKeyPair = createDhKeyPair()
 
+        val dhKeyPair = createDhKeyPair()
         if (privKey != null) {
             currentProfile = Profile(
                 profile,
