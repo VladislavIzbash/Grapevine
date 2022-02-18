@@ -7,7 +7,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.scopes.ServiceScoped
 import kotlinx.coroutines.*
 import ru.vizbash.grapevine.*
-import ru.vizbash.grapevine.network.NetworkController
+import ru.vizbash.grapevine.network.GrapevineNetwork
 import ru.vizbash.grapevine.network.Router
 import ru.vizbash.grapevine.network.TestNeighbor
 import ru.vizbash.grapevine.storage.profile.ProfileEntity
@@ -41,7 +41,7 @@ class TestDiscovery @Inject constructor(
                 dhKeyPair.public,
                 dhKeyPair.private,
             )
-            TestProfileService(profile)
+            TestProfileProvider(profile)
         }
     }
 
@@ -54,7 +54,7 @@ class TestDiscovery @Inject constructor(
 
         running = true
 
-        val visibleBots = mutableListOf<Pair<TestNeighbor, TestProfileService>>()
+        val visibleBots = mutableListOf<Pair<TestNeighbor, TestProfileProvider>>()
 
         coroutineScope.launch(Executors.newSingleThreadExecutor().asCoroutineDispatcher()) {
             launch {
@@ -71,7 +71,7 @@ class TestDiscovery @Inject constructor(
 
                         invisibleBots.remove(bot)
                         visibleBots.add(Pair(neighbor, bot))
-                        Log.i(this@TestDiscovery.TAG, "Added ${bot.currentProfile.entity.username}")
+                        Log.i(this@TestDiscovery.TAG, "Added ${bot.profile.entity.username}")
                     } catch (e: NoSuchElementException) {
                     }
                 }
@@ -86,7 +86,7 @@ class TestDiscovery @Inject constructor(
 
                         visibleBots.remove(visBot)
                         invisibleBots.add(visBot.second)
-                        Log.i(this@TestDiscovery.TAG, "Removed ${visBot.second.currentProfile.entity.username}")
+                        Log.i(this@TestDiscovery.TAG, "Removed ${visBot.second.profile.entity.username}")
                     } catch (e: NoSuchElementException) {
                     }
                 }
@@ -101,7 +101,7 @@ class TestDiscovery @Inject constructor(
         coroutineScope.coroutineContext.cancelChildren()
     }
 
-    private fun addNeighbor(profileService: IProfileService): TestNeighbor {
+    private fun addNeighbor(profileService: ProfileProvider): TestNeighbor {
         val testRouter = Router(profileService)
 
         val neighbor1 = TestNeighbor()
@@ -110,7 +110,7 @@ class TestDiscovery @Inject constructor(
         neighbor1.pair = neighbor2
         neighbor2.pair = neighbor1
 
-        val controller = NetworkController(testRouter, profileService)
+        val controller = GrapevineNetwork(testRouter, profileService)
 
         testRouter.addNeighbor(neighbor2)
         router.addNeighbor(neighbor1)

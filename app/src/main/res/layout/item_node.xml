@@ -42,13 +42,14 @@
             android:text="@string/username" />
 
         <ImageButton
+            android:id="@+id/buttonAddContact"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             app:layout_constraintEnd_toStartOf="@id/ivSource"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
             android:src="@drawable/ic_add"
-            android:background="@android:color/transparent"
+            android:background="?attr/selectableItemBackgroundBorderless"
             tools:ignore="ContentDescription" />
 
         <ImageView

@@ -2,7 +2,7 @@ package ru.vizbash.grapevine.network
 
 import android.util.Log
 import com.google.protobuf.ByteString
-import ru.vizbash.grapevine.IProfileService
+import ru.vizbash.grapevine.ProfileProvider
 import ru.vizbash.grapevine.TAG
 import ru.vizbash.grapevine.network.messages.direct.*
 import javax.inject.Inject
@@ -10,14 +10,14 @@ import javax.inject.Singleton
 import kotlin.random.Random
 
 @Singleton
-class Router @Inject constructor(private val profileService: IProfileService) {
+class Router @Inject constructor(private val profileService: ProfileProvider) {
     private data class NodeRoute(val neighbor: Neighbor, val hops: Int)
 
     class ReceivedMessage(val id: Long, val payload: ByteArray, val sign: ByteArray, val sender: Node)
 
     private val routingTable = mutableMapOf<Node, MutableSet<NodeRoute>>()
 
-    private val myNode get() = Node(profileService.currentProfile)
+    private val myNode get() = Node(profileService.profile)
 
     @Volatile private var receiveCb: (ReceivedMessage) -> Unit = { _ -> }
     @Volatile private var nodesUpdatedCb: () -> Unit = {}

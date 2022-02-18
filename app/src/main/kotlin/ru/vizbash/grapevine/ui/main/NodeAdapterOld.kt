@@ -11,7 +11,7 @@ import ru.vizbash.grapevine.databinding.ItemNodeBinding
 import ru.vizbash.grapevine.network.Node
 import ru.vizbash.grapevine.network.SourceType
 
-class NodeAdapter(nodes: Set<Node>) : RecyclerView.Adapter<NodeAdapter.ViewHolder>() {
+class NodeAdapterOld(nodes: Set<Node>) : RecyclerView.Adapter<NodeAdapterOld.ViewHolder>() {
     private var entries = nodes.map(::NodeEntry)
 
     class NodeEntry(val node: Node) {

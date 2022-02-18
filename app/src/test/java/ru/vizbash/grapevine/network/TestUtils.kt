@@ -3,7 +3,7 @@ package ru.vizbash.grapevine.network
 import ru.vizbash.grapevine.*
 import ru.vizbash.grapevine.storage.profile.ProfileEntity
 
-fun createProfileService(nodeId: Long): IProfileService {
+fun createProfileService(nodeId: Long): ProfileProvider {
     val keyPair = createRsaKeyPair()
     val dhKeyPair = createDhKeyPair()
 
@@ -19,11 +19,11 @@ fun createProfileService(nodeId: Long): IProfileService {
         dhKeyPair.public,
         dhKeyPair.private,
     )
-    return TestProfileService(profile)
+    return TestProfileProvider(profile)
 }
 
-fun createRouter(profileService: IProfileService): Pair<Router, Node> {
-    return Pair(Router(profileService), Node(profileService.currentProfile))
+fun createRouter(profileService: ProfileProvider): Pair<Router, Node> {
+    return Pair(Router(profileService), Node(profileService.profile))
 }
 
 fun connect(router1: Router, router2: Router): Pair<TestNeighbor, TestNeighbor> {

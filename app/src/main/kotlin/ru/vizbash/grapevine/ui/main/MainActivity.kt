@@ -1,24 +1,23 @@
 package ru.vizbash.grapevine.ui.main
 
 import android.Manifest
-import android.annotation.TargetApi
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.contract.ActivityResultContracts.RequestPermission
 import androidx.activity.viewModels
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.navigation.*
+import androidx.navigation.NavDestination
+import androidx.navigation.NavOptions
+import androidx.navigation.Navigator
+import androidx.navigation.findNavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
-import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.navigateUp
+import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import dagger.hilt.android.AndroidEntryPoint
-import ru.vizbash.grapevine.GrapevineService
 import ru.vizbash.grapevine.R
 import ru.vizbash.grapevine.databinding.ActivityMainBinding
 import ru.vizbash.grapevine.databinding.DrawerHeaderBinding
@@ -40,6 +39,7 @@ class MainActivity : AppCompatActivity() {
             navigatorExtras: Extras?,
         ): NavDestination? {
             finish()
+            stopService(Intent(this@MainActivity, BluetoothService::class.java))
             model.disableAutologin()
             return null
         }
@@ -73,7 +73,7 @@ class MainActivity : AppCompatActivity() {
         header.tvUsername.text = model.currentProfile.entity.username
 
         startBluetooth()
-        startService(Intent(this, GrapevineService::class.java))
+        model.startGrapevineNetwork()
     }
 
     override fun onSupportNavigateUp(): Boolean {

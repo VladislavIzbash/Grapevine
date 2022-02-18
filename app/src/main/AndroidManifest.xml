@@ -23,7 +23,6 @@
         android:theme="@style/Theme.Grapevine">
 
         <service android:name=".network.bluetooth.BluetoothService" android:exported="false" />
-        <service android:name=".GrapevineService" android:exported="false" />
 
         <activity
             android:name=".StartupActivity"

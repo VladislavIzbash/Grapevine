@@ -11,5 +11,5 @@ import javax.inject.Singleton
 abstract class AppModule {
     @Binds
     @Singleton
-    abstract fun bindProfileService(impl: ProfileService): IProfileService
+    abstract fun bindProfileProvider(impl: ProfileService): ProfileProvider
 }

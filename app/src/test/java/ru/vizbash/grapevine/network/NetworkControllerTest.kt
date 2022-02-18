@@ -2,20 +2,18 @@ package ru.vizbash.grapevine.network
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
-import ru.vizbash.grapevine.IProfileService
-import ru.vizbash.grapevine.TestProfileService
+import ru.vizbash.grapevine.ProfileProvider
 
 @ExperimentalCoroutinesApi
 class NetworkControllerTest {
-    private lateinit var profiles: List<IProfileService>
+    private lateinit var profiles: List<ProfileProvider>
     private lateinit var routers: List<Pair<Router, Node>>
-    private lateinit var controllers: List<NetworkController>
+    private lateinit var controllers: List<GrapevineNetwork>
 
     @Before
     fun setup() {
@@ -26,13 +24,13 @@ class NetworkControllerTest {
         connect(routers[1].first, routers[2].first)
 
         controllers = profiles.zip(routers).map { (profile, router) ->
-            NetworkController(router.first, profile).apply { start() }
+            GrapevineNetwork(router.first, profile).apply { start() }
         }
     }
 
     @After
     fun teardown() {
-        controllers.forEach(NetworkController::stop)
+        controllers.forEach(GrapevineNetwork::stop)
     }
 
     @Test(timeout = 1000)

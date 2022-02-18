@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.room.TypeConverter
 import ru.vizbash.grapevine.decodeRsaPublicKey
+import ru.vizbash.grapevine.storage.contacts.ContactEntity
 import java.io.ByteArrayOutputStream
 import java.security.PublicKey
 
@@ -25,4 +26,10 @@ class Converters {
         bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
         out.toByteArray()
     }
+
+    @TypeConverter
+    fun intToContactState(value: Int) = enumValues<ContactEntity.State>()[value]
+
+    @TypeConverter
+    fun contactStateToInt(value: ContactEntity.State) = value.ordinal
 }
