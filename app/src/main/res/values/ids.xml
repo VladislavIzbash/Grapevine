@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <item type="id" name="node_item_id" />
+    <item type="id" name="node_item" />
+    <item type="id" name="contact_item" />
+    <item type="id" name="pending_contact_item" />
+    <item type="id" name="header_item" />
 </resources>

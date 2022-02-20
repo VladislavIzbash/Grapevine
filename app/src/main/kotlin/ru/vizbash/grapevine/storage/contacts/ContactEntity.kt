@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import ru.vizbash.grapevine.network.Node
 import java.security.PublicKey
 
 @Entity(tableName = "contacts")
@@ -15,4 +16,26 @@ data class ContactEntity(
     @ColumnInfo(name = "state") val state: State,
 ) {
     enum class State { ACCEPTED, OUTGOING, INGOING }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as ContactEntity
+
+        if (nodeId != other.nodeId) return false
+        if (username != other.username) return false
+        if (publicKey != other.publicKey) return false
+        if (state != other.state) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = nodeId.hashCode()
+        result = 31 * result + username.hashCode()
+        result = 31 * result + publicKey.hashCode()
+        result = 31 * result + state.hashCode()
+        return result
+    }
 }

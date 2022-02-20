@@ -1,10 +1,11 @@
 package ru.vizbash.grapevine.ui.main
 
-import android.graphics.Bitmap
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.AnimationUtils
+import android.widget.ImageButton
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
@@ -16,11 +17,13 @@ import com.google.android.material.snackbar.Snackbar
 import com.mikepenz.fastadapter.FastAdapter
 import com.mikepenz.fastadapter.adapters.ItemAdapter
 import com.mikepenz.fastadapter.binding.AbstractBindingItem
+import com.mikepenz.fastadapter.binding.BindingViewHolder
 import com.mikepenz.fastadapter.diff.FastAdapterDiffUtil
 import com.mikepenz.fastadapter.listeners.ClickEventHook
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.cancelChildren
-import kotlinx.coroutines.coroutineScope
+import jp.wasabeef.recyclerview.animators.LandingAnimator
+import jp.wasabeef.recyclerview.animators.SlideInUpAnimator
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.R
@@ -30,92 +33,34 @@ import ru.vizbash.grapevine.network.Node
 import ru.vizbash.grapevine.network.SourceType
 
 class PeopleAroundFragment : Fragment() {
-    private var _ui: FragmentPeopleAroundBinding? = null
-    private val ui get() = _ui!!
-
+    private lateinit var ui: FragmentPeopleAroundBinding
     private val model: MainViewModel by activityViewModels()
-
-    private data class NodeItem(
-        val node: Node,
-        val isContact: Boolean,
-        val photo: Bitmap? = null
-    ) : AbstractBindingItem<ItemNodeBinding>() {
-
-        override val type = R.id.node_item_id
-
-        override fun createBinding(inflater: LayoutInflater, parent: ViewGroup?): ItemNodeBinding {
-            return ItemNodeBinding.inflate(inflater, parent, false)
-        }
-
-        override fun bindView(binding: ItemNodeBinding, payloads: List<Any>) {
-            if (photo != null) {
-                binding.ivPhoto.setImageBitmap(photo)
-            } else {
-                binding.ivPhoto.setImageResource(R.drawable.avatar_placeholder)
-            }
-            binding.tvUsername.text = node.username
-            binding.ivSource.setImageResource(when (node.primarySource!!) {
-                SourceType.BLUETOOTH -> R.drawable.ic_bluetooth
-                SourceType.WIFI -> R.drawable.ic_wifi
-            })
-
-            binding.buttonAddContact.visibility = if (isContact) View.INVISIBLE else View.VISIBLE
-        }
-    }
-
-    private inner class NodeItemClickHook : ClickEventHook<NodeItem>() {
-        override fun onBind(viewHolder: RecyclerView.ViewHolder): View? {
-            return if (viewHolder is FastAdapter.ViewHolder<*>) {
-                viewHolder.itemView.findViewById(R.id.buttonAddContact)
-            } else {
-                null
-            }
-        }
-
-        override fun onClick(
-            v: View,
-            position: Int,
-            fastAdapter: FastAdapter<NodeItem>,
-            item: NodeItem
-        ) {
-            model.addToContacts(item.node)
-        }
-    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?,
     ): View {
-        _ui = FragmentPeopleAroundBinding.inflate(inflater, container, false)
+        ui = FragmentPeopleAroundBinding.inflate(inflater, container, false)
 
         val nodeAdapter = ItemAdapter<NodeItem>()
-        val fastNodeAdapter = FastAdapter.with(nodeAdapter)
+        val fastNodeAdapter = FastAdapter.with(nodeAdapter).apply {
+            setHasStableIds(true)
+        }
+
+        fastNodeAdapter.addEventHook(NodeItemClickHook())
 
         ui.rvNodes.layoutManager = LinearLayoutManager(activity)
         ui.rvNodes.adapter = fastNodeAdapter
-
-        fastNodeAdapter.addEventHook(object : ClickEventHook<NodeItem>() {
-
-            override fun onClick(
-                v: View,
-                position: Int,
-                fastAdapter: FastAdapter<NodeItem>,
-                item: NodeItem,
-            ) {
-
-            }
-        })
+        ui.rvNodes.itemAnimator = SlideInUpAnimator()
 
         lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
-                    model.networkError.collect {
-                        it.ifPresent {
-                            Snackbar.make(ui.root, R.string.error_sending_request, Snackbar.LENGTH_LONG).apply {
-                                setTextColor(requireActivity().getColor(R.color.error))
-                                show()
-                            }
+                    model.networkError.filterNotNull().collect {
+                        Snackbar.make(ui.root, R.string.error_sending_request, Snackbar.LENGTH_LONG).apply {
+                            setTextColor(requireActivity().getColor(R.color.error))
+                            show()
                         }
                     }
                 }
@@ -132,8 +77,6 @@ class PeopleAroundFragment : Fragment() {
     }
 
     private suspend fun collectNodes(adapter: ItemAdapter<NodeItem>) {
-        var fetchScope: CoroutineScope? = null
-
         model.availableNodes.collect { nodes ->
             ui.tvNoNodes.visibility = if (nodes.isEmpty()) View.VISIBLE else View.INVISIBLE
             ui.rvNodes.visibility = if (nodes.isEmpty()) View.INVISIBLE else View.VISIBLE
@@ -146,42 +89,97 @@ class PeopleAroundFragment : Fragment() {
                     contacts.any { it.nodeId == node.id },
                 )
             }
-            FastAdapterDiffUtil.set(adapter, items) // TODO
-
-            fetchScope?.coroutineContext?.cancelChildren()
-            fetchScope = coroutineScope {
-                for (node in nodes) {
-                    launch {
-                        val pos = adapter.adapterItems.indexOfFirst { it.node == node }
-                        val item = adapter.itemList[pos]!!
-
-                        adapter.set(pos, NodeItem(
-                            item.node,
-                            item.isContact,
-                            model.fetchPhoto(node),
-                        ))
-                    }
-                }
-                this
-            }
+            FastAdapterDiffUtil.set(adapter, items)
         }
     }
 
     private suspend fun collectContacts(adapter: ItemAdapter<NodeItem>) {
         model.contacts.collect { contacts ->
-            val items = adapter.adapterItems.map { item ->
+            val items = model.availableNodes.value.map { node ->
                 NodeItem(
-                    item.node,
-                    contacts.any { it.nodeId == item.node.id },
-                    item.photo
+                    node,
+                    contacts.any { it.nodeId == node.id },
+                    false,
                 )
             }
             FastAdapterDiffUtil.set(adapter, items)
         }
     }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _ui = null
+    private inner class NodeItem(
+        val node: Node,
+        val isContact: Boolean,
+        private val animate: Boolean = true,
+    ) : AbstractBindingItem<ItemNodeBinding>() {
+        var fetchJob: Job? = null
+
+        override val type = R.id.node_item
+
+        override var identifier: Long
+            get() = node.id
+            set(_) {  }
+
+        override fun createBinding(inflater: LayoutInflater, parent: ViewGroup?): ItemNodeBinding {
+            return ItemNodeBinding.inflate(inflater, parent, false)
+        }
+
+        override fun bindView(binding: ItemNodeBinding, payloads: List<Any>) {
+            fetchJob = lifecycleScope.launch {
+                val photo = model.fetchPhoto(node)
+
+                binding.ivPhoto.post {
+                    if (photo != null) {
+                        binding.ivPhoto.setImageBitmap(photo)
+                    } else {
+                        binding.ivPhoto.setImageResource(R.drawable.avatar_placeholder)
+                    }
+                }
+            }
+
+            binding.tvUsername.text = node.username
+            binding.ivSource.setImageResource(when (node.primarySource!!) {
+                SourceType.BLUETOOTH -> R.drawable.ic_bluetooth
+                SourceType.WIFI -> R.drawable.ic_wifi
+            })
+
+            binding.buttonAddContact.visibility = if (isContact) View.INVISIBLE else View.VISIBLE
+
+//            if (animate) {
+//                binding.root.animation = AnimationUtils.loadAnimation(
+//                    binding.root.context,
+//                    R.anim.node_item,
+//                )
+//            }
+        }
+
+        override fun unbindView(binding: ItemNodeBinding) {
+            fetchJob?.cancel()
+        }
+
+        override fun equals(other: Any?) = other is NodeItem
+                && other.node == node
+                && other.isContact == isContact
+
+        override fun hashCode() = super.hashCode() + node.hashCode() + isContact.hashCode()
+
+    }
+
+    private inner class NodeItemClickHook : ClickEventHook<NodeItem>() {
+        override fun onBind(viewHolder: RecyclerView.ViewHolder): View? {
+            return if (viewHolder is BindingViewHolder<*>) {
+                viewHolder.itemView.findViewById<ImageButton>(R.id.buttonAddContact)
+            } else {
+                null
+            }
+        }
+
+        override fun onClick(
+            v: View,
+            position: Int,
+            fastAdapter: FastAdapter<NodeItem>,
+            item: NodeItem
+        ) {
+            model.addToContacts(item.node)
+        }
     }
 }

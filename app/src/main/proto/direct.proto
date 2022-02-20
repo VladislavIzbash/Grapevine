@@ -44,6 +44,7 @@ message RoutedMessage {
   uint64 src_id = 2;
   uint64 dest_id = 3;
   bytes payload = 7;
+  uint32 ttl = 8;
   bytes sign = 10;
 }
 

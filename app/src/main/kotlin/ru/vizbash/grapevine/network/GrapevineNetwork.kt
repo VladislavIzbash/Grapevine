@@ -34,7 +34,9 @@ class GrapevineNetwork @Inject constructor(
 
     private var coroutineScope = CoroutineScope(Dispatchers.IO)
     private var running = false
+
     private val secretKeyCache = mutableMapOf<Node, SecretKey>()
+    private val photoCache = mutableMapOf<Node, Bitmap?>()
 
     val availableNodes: StateFlow<Set<Node>> = callbackFlow {
         router.setOnNodesUpdated {
@@ -200,7 +202,7 @@ class GrapevineNetwork @Inject constructor(
         send(payload, req.sender)
     }
 
-    suspend fun fetchNodePhoto(node: Node): Bitmap? {
+    suspend fun fetchNodePhoto(node: Node) = photoCache.getOrPut(node) {
         val photoReq = PhotoRequest.newBuilder().build()
         val payload = EncryptedPayload.newBuilder().setPhotoReq(photoReq).build()
 
@@ -217,46 +219,46 @@ class GrapevineNetwork @Inject constructor(
         }
     }
 
-    suspend fun sendAddContactRequest(node: Node) {
-        val req = AddContactRequest.newBuilder().build()
-        val payload = EncryptedPayload.newBuilder().setAddContactReq(req).build()
+    suspend fun sendContactInvitation(node: Node) {
+        val req = ContactInvitationMessage.newBuilder().build()
+        val payload = EncryptedPayload.newBuilder().setContactInvitation(req).build()
         sendAndAwaitResponse(payload, node)
     }
 
-    private suspend fun handleAddContactRequest(req: AcceptedMessage): Node {
+    private suspend fun handleContactInvitation(req: AcceptedMessage): Node {
         sendEmptyResponse(req)
         return req.sender
     }
 
-    val addContactRequests: Flow<Node> = acceptedMessages
-        .filter { it.payload.hasAddContactReq() }
-        .map(this::handleAddContactRequest)
+    val contactInvitations: Flow<Node> = acceptedMessages
+        .filter { it.payload.hasContactInvitation() }
+        .map(this::handleContactInvitation)
         .shareIn(coroutineScope, SharingStarted.Eagerly)
 
-    suspend fun sendAddContactAnswer(node: Node, accepted: Boolean) {
-        val req = AddContactResponse.newBuilder()
+    suspend fun sendContactInvitationAnswer(node: Node, accepted: Boolean) {
+        val req = ContactInvitationAnswerMessage.newBuilder()
             .setAccepted(accepted)
             .build()
-        val payload = EncryptedPayload.newBuilder().setAddContactResp(req).build()
+        val payload = EncryptedPayload.newBuilder().setContactInvitationAnswer(req).build()
 
         sendAndAwaitResponse(payload, node)
     }
 
-    class AddContactAnswer(val node: Node, val accepted: Boolean)
+    data class ContactInvitationAnswer(val node: Node, val accepted: Boolean)
 
-    private suspend fun handleAddContactResponse(req: AcceptedMessage): AddContactAnswer {
+    private suspend fun handleContactInvitationAnswer(req: AcceptedMessage): ContactInvitationAnswer {
         sendEmptyResponse(req)
 
-        if (!req.payload.hasAddContactResp()) {
+        if (!req.payload.hasContactInvitationAnswer()) {
             throw GVInvalidResponseException()
         }
 
-        return AddContactAnswer(req.sender, req.payload.addContactResp.accepted)
+        return ContactInvitationAnswer(req.sender, req.payload.contactInvitationAnswer.accepted)
     }
 
-    val addContactAnswers: Flow<AddContactAnswer> = acceptedMessages
-        .filter { it.payload.hasAddContactReq() }
-        .map(this::handleAddContactResponse)
+    val contactInvitationAnswers: Flow<ContactInvitationAnswer> = acceptedMessages
+        .filter { it.payload.hasContactInvitationAnswer() }
+        .map(this::handleContactInvitationAnswer)
         .shareIn(coroutineScope, SharingStarted.Eagerly)
 
 

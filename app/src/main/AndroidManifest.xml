@@ -10,45 +10,51 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
-    <uses-feature android:name="android.hardware.bluetooth" android:required="true" />
+    <uses-feature
+        android:name="android.hardware.bluetooth"
+        android:required="true" />
 
     <application
         android:name=".GrapevineApp"
         android:allowBackup="true"
         android:fullBackupOnly="true"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/ic_grape"
         android:label="@string/launcher_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Grapevine">
 
-        <service android:name=".network.bluetooth.BluetoothService" android:exported="false" />
+        <service
+            android:name=".network.bluetooth.BluetoothService"
+            android:exported="false" />
+
+        <service
+            android:name=".GrapevineService"
+            android:exported="false" />
 
         <activity
             android:name=".StartupActivity"
             android:exported="true"
             android:noHistory="true"
             android:theme="@style/Theme.Grapevine.NoDisplay">
-
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
         <activity
             android:name=".ui.login.LoginActivity"
-            android:windowSoftInputMode="adjustResize"
-            android:label="@string/login_title" />
+            android:label="@string/login_title"
+            android:windowSoftInputMode="adjustResize" />
 
         <activity
             android:name=".ui.newprofile.NewProfileActivity"
-            android:parentActivityName=".ui.login.LoginActivity"
-            android:label="@string/identity_creation" />
+            android:label="@string/identity_creation"
+            android:parentActivityName=".ui.login.LoginActivity" />
 
         <activity
-            android:name=".ui.main.MainActivity"
-            android:label="@string/launcher_name" />
-
+            android:name=".ui.main.MainActivity" />
     </application>
+
 </manifest>

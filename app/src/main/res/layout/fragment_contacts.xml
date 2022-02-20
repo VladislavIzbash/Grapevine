@@ -6,8 +6,16 @@
     tools:context=".ui.main.ContactsFragment">
 
     <TextView
+        android:id="@+id/tvNoContacts"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:text="@string/no_contacts"
+        android:textSize="10pt" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvContacts"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:text="@string/contacts" />
+        android:layout_height="match_parent" />
 
 </FrameLayout>

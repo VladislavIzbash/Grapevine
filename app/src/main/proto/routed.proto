@@ -8,8 +8,8 @@ message EncryptedPayload {
     RoutedResponse response = 1;
     PhotoRequest photo_req = 2;
     TextMessage text = 3;
-    AddContactRequest add_contact_req = 4;
-    AddContactResponse add_contact_resp = 5;
+    ContactInvitationMessage contact_invitation = 4;
+    ContactInvitationAnswerMessage contact_invitation_answer = 5;
   }
 }
 
@@ -38,8 +38,8 @@ message TextMessage {
   int64 timestamp = 2;
 }
 
-message AddContactRequest {}
+message ContactInvitationMessage {}
 
-message AddContactResponse {
+message ContactInvitationAnswerMessage {
   bool accepted = 1;
 }

@@ -7,9 +7,6 @@
     <color name="darkerBackground">#E5E0E0</color>
     <color name="textInputBackground">#FAF5F5</color>
     <color name="error">#B50000</color>
-    <color name="passwordScore0">#FF1B1B</color>
-    <color name="passwordScore1">#FF7E1B</color>
-    <color name="passwordScore2">#FFD91B</color>
-    <color name="passwordScore3">#C2FF1B</color>
-    <color name="passwordScore4">#2AFF1B</color>
+    <color name="bad">#B80000</color>
+    <color name="good">#008E00</color>
 </resources>

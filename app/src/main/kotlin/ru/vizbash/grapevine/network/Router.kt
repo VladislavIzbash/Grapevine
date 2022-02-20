@@ -2,6 +2,7 @@ package ru.vizbash.grapevine.network
 
 import android.util.Log
 import com.google.protobuf.ByteString
+import ru.vizbash.grapevine.GVException
 import ru.vizbash.grapevine.ProfileProvider
 import ru.vizbash.grapevine.TAG
 import ru.vizbash.grapevine.network.messages.direct.*
@@ -14,6 +15,12 @@ class Router @Inject constructor(private val profileService: ProfileProvider) {
     private data class NodeRoute(val neighbor: Neighbor, val hops: Int)
 
     class ReceivedMessage(val id: Long, val payload: ByteArray, val sign: ByteArray, val sender: Node)
+
+    class GVNodeOfflineException : GVException()
+
+    companion object {
+        private const val DEFAULT_TTL = 16
+    }
 
     private val routingTable = mutableMapOf<Node, MutableSet<NodeRoute>>()
 
@@ -41,7 +48,7 @@ class Router @Inject constructor(private val profileService: ProfileProvider) {
     @Synchronized
     fun sendMessage(payload: ByteArray, sign: ByteArray, dest: Node): Long {
         val routes = routingTable[dest]
-            ?: throw IllegalArgumentException("Dest node is unknown to router")
+            ?: throw GVNodeOfflineException()
 
         val id = Random.nextLong()
         val neighbor = routes.minByOrNull(NodeRoute::hops)!!.neighbor
@@ -53,6 +60,7 @@ class Router @Inject constructor(private val profileService: ProfileProvider) {
             .setSrcId(myNode.id)
             .setDestId(dest.id)
             .setPayload(ByteString.copyFrom(payload))
+            .setTtl(DEFAULT_TTL)
             .setSign(ByteString.copyFrom(sign))
         neighbor.send(DirectMessage.newBuilder().setRouted(msg).build())
 
@@ -131,9 +139,17 @@ class Router @Inject constructor(private val profileService: ProfileProvider) {
             return
         }
 
+        val ttl = msg.routed.ttl - 1
+        if (ttl <= 0) {
+            return
+        }
+
+        val withTtl = msg.routed.toBuilder().setTtl(ttl).build()
+        val outMsg = DirectMessage.newBuilder().setRouted(withTtl).build()
+
         val destNode = routingTable.keys.find { it.id == routed.destId } ?: return
         val nextHop = routingTable[destNode]!!.minByOrNull(NodeRoute::hops)!!.neighbor
-        nextHop.send(msg)
+        nextHop.send(outMsg)
     }
 
     private fun handleHelloResponse(neighbor: Neighbor, nodeMsg: HelloResponse) {

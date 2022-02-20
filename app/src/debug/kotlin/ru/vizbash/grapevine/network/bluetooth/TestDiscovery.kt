@@ -8,6 +8,7 @@ import dagger.hilt.android.scopes.ServiceScoped
 import kotlinx.coroutines.*
 import ru.vizbash.grapevine.*
 import ru.vizbash.grapevine.network.GrapevineNetwork
+import ru.vizbash.grapevine.network.Node
 import ru.vizbash.grapevine.network.Router
 import ru.vizbash.grapevine.network.TestNeighbor
 import ru.vizbash.grapevine.storage.profile.ProfileEntity
@@ -18,14 +19,15 @@ import kotlin.random.Random
 @ServiceScoped
 class TestDiscovery @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val router: Router,
+    private val userRouter: Router,
+    private val userProfileProvider: ProfileProvider,
 ) {
     private val coroutineScope = CoroutineScope(Dispatchers.Default)
 
     private var running = false
     
-    private val invisibleBots by lazy {
-        MutableList(15) { i ->
+    private val profilePool by lazy {
+        MutableList(12) { i ->
             val keyPair = createRsaKeyPair()
             val dhKeyPair = createDhKeyPair()
 
@@ -54,41 +56,11 @@ class TestDiscovery @Inject constructor(
 
         running = true
 
-        val visibleBots = mutableListOf<Pair<TestNeighbor, TestProfileProvider>>()
-
         coroutineScope.launch(Executors.newSingleThreadExecutor().asCoroutineDispatcher()) {
-            launch {
-                while (true) {
-                    try {
-                        delay(Random.nextLong(2_000, 8_000))
-
-                        if (visibleBots.size > 12) {
-                            continue
-                        }
-
-                        val bot = invisibleBots.random()
-                        val neighbor = addNeighbor(bot)
-
-                        invisibleBots.remove(bot)
-                        visibleBots.add(Pair(neighbor, bot))
-                        Log.i(this@TestDiscovery.TAG, "Added ${bot.profile.entity.username}")
-                    } catch (e: NoSuchElementException) {
-                    }
-                }
-            }
-            launch {
-                while (true) {
-                    try {
-                        delay(Random.nextLong(10_000, 20_000))
-
-                        val visBot = visibleBots.random()
-                        visBot.first.disconnect()
-
-                        visibleBots.remove(visBot)
-                        invisibleBots.add(visBot.second)
-                        Log.i(this@TestDiscovery.TAG, "Removed ${visBot.second.profile.entity.username}")
-                    } catch (e: NoSuchElementException) {
-                    }
+            while (true) {
+                delay(Random.nextLong(3_000, 8_000))
+                launch {
+                    spawnBot()
                 }
             }
         }
@@ -101,8 +73,14 @@ class TestDiscovery @Inject constructor(
         coroutineScope.coroutineContext.cancelChildren()
     }
 
-    private fun addNeighbor(profileService: ProfileProvider): TestNeighbor {
-        val testRouter = Router(profileService)
+    private suspend fun spawnBot() = coroutineScope {
+        if (profilePool.isEmpty()) {
+            return@coroutineScope
+        }
+
+        val profileProvider = profilePool.random()
+
+        val botRouter = Router(profileProvider)
 
         val neighbor1 = TestNeighbor()
         val neighbor2 = TestNeighbor()
@@ -110,13 +88,35 @@ class TestDiscovery @Inject constructor(
         neighbor1.pair = neighbor2
         neighbor2.pair = neighbor1
 
-        val controller = GrapevineNetwork(testRouter, profileService)
+        val network = GrapevineNetwork(botRouter, profileProvider)
+        network.start()
 
-        testRouter.addNeighbor(neighbor2)
-        router.addNeighbor(neighbor1)
+        botRouter.addNeighbor(neighbor2)
+        userRouter.addNeighbor(neighbor1)
 
-        controller.start()
+        launch {
+            try {
+                launch {
+                    delay(20_000)
+                    network.sendContactInvitation(Node(userProfileProvider.profile))
+                }
 
-        return neighbor1
+                network.contactInvitations.collect { node ->
+                    delay(4_000)
+                    network.sendContactInvitationAnswer(node, true)
+                }
+            } catch (e: Exception) {
+            }
+        }
+
+        delay(Random.nextLong(30_000, 60_000))
+
+        network.stop()
+        neighbor1.disconnect()
+        neighbor2.disconnect()
+
+        profilePool.add(profileProvider)
+
+        cancel()
     }
 }

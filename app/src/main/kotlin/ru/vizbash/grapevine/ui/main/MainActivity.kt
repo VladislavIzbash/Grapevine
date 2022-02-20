@@ -18,6 +18,7 @@ import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import dagger.hilt.android.AndroidEntryPoint
+import ru.vizbash.grapevine.GrapevineService
 import ru.vizbash.grapevine.R
 import ru.vizbash.grapevine.databinding.ActivityMainBinding
 import ru.vizbash.grapevine.databinding.DrawerHeaderBinding
@@ -40,6 +41,7 @@ class MainActivity : AppCompatActivity() {
         ): NavDestination? {
             finish()
             stopService(Intent(this@MainActivity, BluetoothService::class.java))
+            stopService(Intent(this@MainActivity, GrapevineService::class.java))
             model.disableAutologin()
             return null
         }
@@ -74,6 +76,7 @@ class MainActivity : AppCompatActivity() {
 
         startBluetooth()
         model.startGrapevineNetwork()
+        startService(Intent(this, GrapevineService::class.java))
     }
 
     override fun onSupportNavigateUp(): Boolean {

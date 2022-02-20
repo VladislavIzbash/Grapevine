@@ -88,4 +88,12 @@ class ProfileService @Inject constructor(
             state,
         ))
     }
+
+    suspend fun deleteContact(contact: ContactEntity) {
+        userDb.contactDao().delete(contact)
+    }
+
+    suspend fun setContactState(contact: ContactEntity, state: ContactEntity.State) {
+        userDb.contactDao().update(contact.copy(state = state))
+    }
 }

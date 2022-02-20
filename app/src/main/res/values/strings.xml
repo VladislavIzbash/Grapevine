@@ -31,4 +31,7 @@
     <string name="no_profiles">Нет профилей</string>
     <string name="username">Имя пользователя</string>
     <string name="no_nodes_around">Вы совсем один</string>
+    <string name="no_contacts">У вас пока нет контактов</string>
+    <string name="last_message">Последнее сообщение</string>
+    <string name="header">Заголовок</string>
 </resources>

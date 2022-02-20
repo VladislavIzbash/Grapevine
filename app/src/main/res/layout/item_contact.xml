@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -36,34 +35,32 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="@dimen/username_left_margin"
-            app:layout_constraintStart_toEndOf="@id/cardPhoto"
-            app:layout_constraintBottom_toBottomOf="parent"
+            android:layout_marginTop="10dp"
+            app:layout_constraintStart_toEndOf="@+id/cardPhoto"
             app:layout_constraintTop_toTopOf="parent"
             android:text="@string/username"
             android:textSize="8pt"/>
 
-        <ImageButton
-            android:id="@+id/buttonAddContact"
+        <TextView
+            android:id="@+id/tvLastMessage"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            app:layout_constraintEnd_toStartOf="@id/ivSource"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            android:src="@drawable/ic_add"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            tools:ignore="ContentDescription" />
+            android:layout_marginStart="@dimen/username_left_margin"
+            android:layout_marginTop="6dp"
+            app:layout_constraintStart_toEndOf="@id/cardPhoto"
+            app:layout_constraintTop_toBottomOf="@id/tvUsername"
+            android:text="@string/last_message"
+            android:textSize="5pt" />
 
         <ImageView
-            android:id="@+id/ivSource"
+            android:id="@+id/ivOnlineIndicator"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
-            android:src="@drawable/ic_bluetooth"
-            app:tint="@color/darkerBackground"
+            android:src="@mipmap/ic_grape"
             tools:ignore="ContentDescription" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
-
 </androidx.cardview.widget.CardView>
