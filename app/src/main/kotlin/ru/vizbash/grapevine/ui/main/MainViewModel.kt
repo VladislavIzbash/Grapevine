@@ -4,6 +4,9 @@ import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -38,12 +41,14 @@ class MainViewModel @Inject constructor(
         grapevineNetwork.start()
     }
 
-    suspend fun fetchPhoto(node: Node): Bitmap? {
+    fun fetchPhotoAsync(node: Node): Deferred<Bitmap?> {
         return try {
-            grapevineNetwork.fetchNodePhoto(node)
+            viewModelScope.async {
+                grapevineNetwork.fetchNodePhoto(node)
+            }
         } catch (e: GVException) {
             e.printStackTrace()
-            null
+            CompletableDeferred(null)
         }
     }
 
@@ -52,7 +57,7 @@ class MainViewModel @Inject constructor(
             try {
                 grapevineNetwork.sendContactInvitation(node)
                 _networkError.value = null
-                profileService.addContact(node, fetchPhoto(node), ContactEntity.State.OUTGOING)
+                profileService.addContact(node, fetchPhotoAsync(node).await(), ContactEntity.State.OUTGOING)
             } catch (e: GVException) {
                 _networkError.value = e
             }

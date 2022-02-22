@@ -38,7 +38,7 @@ class GrapevineNetwork @Inject constructor(
     private val secretKeyCache = mutableMapOf<Node, SecretKey>()
     private val photoCache = mutableMapOf<Node, Bitmap?>()
 
-    val availableNodes: StateFlow<Set<Node>> = callbackFlow {
+    val availableNodes: StateFlow<List<Node>> = callbackFlow {
         router.setOnNodesUpdated {
             trySend(router.nodes)
         }
@@ -140,10 +140,10 @@ class GrapevineNetwork @Inject constructor(
         }
     }
 
-    suspend fun sendAndAwaitResponse(
+    private suspend fun sendAndAwaitResponse(
         payload: EncryptedPayload,
         dest: Node,
-    ) = withContext(Dispatchers.Default) {
+    ): RoutedResponse = withContext(Dispatchers.Default) {
         val id = send(payload, dest)
 
         try {

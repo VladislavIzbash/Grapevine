@@ -34,4 +34,7 @@
     <string name="no_contacts">У вас пока нет контактов</string>
     <string name="last_message">Последнее сообщение</string>
     <string name="header">Заголовок</string>
+    <string name="ingoing_contacts">Входящие запросы</string>
+    <string name="outgoing_contacts">Исходящие запросы</string>
+    <string name="accepted_contacts">Список контактов</string>
 </resources>

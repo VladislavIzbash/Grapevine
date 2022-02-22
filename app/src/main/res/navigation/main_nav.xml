@@ -7,7 +7,7 @@
 
     <fragment
         android:id="@+id/contactsFragment"
-        android:name="ru.vizbash.grapevine.ui.main.ContactsFragment"
+        android:name="ru.vizbash.grapevine.ui.main.contacts.ContactsFragment"
         android:label="@string/contacts"
         tools:layout="@layout/fragment_contacts" >
     </fragment>
@@ -21,7 +21,7 @@
 
     <fragment
         android:id="@+id/peopleAroundFragment"
-        android:name="ru.vizbash.grapevine.ui.main.PeopleAroundFragment"
+        android:name="ru.vizbash.grapevine.ui.main.nodes.PeopleAroundFragment"
         android:label="@string/people_around"
         tools:layout="@layout/fragment_people_around" >
     </fragment>

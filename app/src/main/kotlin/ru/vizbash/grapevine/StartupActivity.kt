@@ -20,6 +20,13 @@ class StartupActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        if (BuildConfig.DEBUG) {
+            System.setProperty(
+                kotlinx.coroutines.DEBUG_PROPERTY_NAME,
+                kotlinx.coroutines.DEBUG_PROPERTY_VALUE_ON,
+            )
+        }
+
         runBlocking {
             if (tryAutologin(profileService.profileList.first())) {
                 startActivity(Intent(this@StartupActivity, MainActivity::class.java))

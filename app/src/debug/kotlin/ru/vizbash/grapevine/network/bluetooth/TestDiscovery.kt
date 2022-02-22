@@ -95,18 +95,22 @@ class TestDiscovery @Inject constructor(
         userRouter.addNeighbor(neighbor1)
 
         launch {
-            try {
-                launch {
-                    delay(20_000)
+            launch {
+                delay(20_000)
+                try {
                     network.sendContactInvitation(Node(userProfileProvider.profile))
+                } catch (e: GVException) {
                 }
-
-                network.contactInvitations.collect { node ->
-                    delay(4_000)
-                    network.sendContactInvitationAnswer(node, true)
-                }
-            } catch (e: Exception) {
             }
+
+            network.contactInvitations.collect { node ->
+                delay(4_000)
+                try {
+                    network.sendContactInvitationAnswer(node, true)
+                } catch (e: GVException) {
+                }
+            }
+
         }
 
         delay(Random.nextLong(30_000, 60_000))

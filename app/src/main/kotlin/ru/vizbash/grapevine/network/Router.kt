@@ -29,11 +29,11 @@ class Router @Inject constructor(private val profileService: ProfileProvider) {
     @Volatile private var receiveCb: (ReceivedMessage) -> Unit = { _ -> }
     @Volatile private var nodesUpdatedCb: () -> Unit = {}
 
-    val nodes: Set<Node>
+    val nodes: List<Node>
         @Synchronized
         get() = routingTable.map { (node, routes) ->
             node.apply { primarySource = routes.minByOrNull(NodeRoute::hops)!!.neighbor.sourceType }
-        }.toSet()
+        }
 
     fun addNeighbor(neighbor: Neighbor) {
         val hello = HelloRequest.newBuilder().setNode(myNode.toMessage()).build()
