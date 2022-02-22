@@ -8,14 +8,14 @@
     <string name="logout">Выйти</string>
     <string name="wifi">Wi-fi</string>
     <string name="bluetooth">Bluetooth</string>
-    <string name="nfc">NFC</string>
     <string name="off">Off</string>
     <string name="name">Имя</string>
     <string name="login">Войти</string>
     <string name="login_title">Вход в Grapevine</string>
     <string name="error_empty_field">Поле не должно быть пустым</string>
     <string name="message_prompt">Введите сообщение</string>
-    <string name="message_text">Текст сообщения</string>
+    <string name="message_text_placeholder">Текст сообщения</string>
+    <string name="message_time_placeholder">00:00</string>
     <string name="zero_time">00:00</string>
     <string name="password">Пароль</string>
     <string name="auto_login">Автоматический вход</string>
@@ -37,4 +37,5 @@
     <string name="ingoing_contacts">Входящие запросы</string>
     <string name="outgoing_contacts">Исходящие запросы</string>
     <string name="accepted_contacts">Список контактов</string>
+    <string name="type_message">Введите сообщение</string>
 </resources>

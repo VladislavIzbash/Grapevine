@@ -36,12 +36,15 @@
             android:exported="true"
             android:noHistory="true"
             android:theme="@style/Theme.Grapevine.NoDisplay">
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity android:name=".ui.main.MainActivity" />
 
         <activity
             android:name=".ui.login.LoginActivity"
@@ -53,8 +56,8 @@
             android:label="@string/identity_creation"
             android:parentActivityName=".ui.login.LoginActivity" />
 
-        <activity
-            android:name=".ui.main.MainActivity" />
+        <activity android:name=".ui.chat.ChatActivity" />
+
     </application>
 
 </manifest>

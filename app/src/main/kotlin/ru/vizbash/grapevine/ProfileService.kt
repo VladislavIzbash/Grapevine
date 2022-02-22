@@ -2,13 +2,19 @@ package ru.vizbash.grapevine
 
 import android.content.Context
 import android.graphics.Bitmap
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
 import androidx.room.Room
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import ru.vizbash.grapevine.network.Node
 import ru.vizbash.grapevine.storage.UserDatabase
 import ru.vizbash.grapevine.storage.contacts.ContactEntity
+import ru.vizbash.grapevine.storage.messages.MessageWithOrig
 import ru.vizbash.grapevine.storage.profile.ProfileEntity
 import ru.vizbash.grapevine.storage.profile.ProfileDao
 import javax.inject.Inject
@@ -27,9 +33,6 @@ class ProfileService @Inject constructor(
         get() = profileDao.getAll()
 
     private lateinit var userDb: UserDatabase
-
-    val contactList
-        get() = userDb.contactDao().getAll()
 
     suspend fun createProfileAndLogin(
         username: String,
@@ -79,6 +82,10 @@ class ProfileService @Inject constructor(
         ).build()
     }
 
+    val contactList get() = userDb.contactDao().getAll()
+
+    suspend fun getContact(id: Long) = userDb.contactDao().getById(id)
+
     suspend fun addContact(node: Node, photo: Bitmap?, state: ContactEntity.State) {
         userDb.contactDao().insert(ContactEntity(
             node.id,
@@ -95,5 +102,13 @@ class ProfileService @Inject constructor(
 
     suspend fun setContactState(contact: ContactEntity, state: ContactEntity.State) {
         userDb.contactDao().update(contact.copy(state = state))
+    }
+
+    fun getContactMessages(contact: ContactEntity, pageSize: Int): Flow<PagingData<MessageWithOrig>> {
+        val pager = Pager(PagingConfig(pageSize)) {
+            userDb.messageDao().getAllForContact(contact.nodeId)
+        }
+
+        return pager.flow
     }
 }
