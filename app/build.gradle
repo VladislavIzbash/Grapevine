@@ -45,6 +45,7 @@ dependencies {
     implementation "androidx.recyclerview:recyclerview:1.2.1"
     implementation "androidx.room:room-runtime:2.4.1"
     implementation "androidx.room:room-ktx:2.4.1"
+    implementation 'androidx.room:room-paging:2.4.1'
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.4.1"
     implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.4.1"
     implementation "androidx.activity:activity-ktx:1.4.0"

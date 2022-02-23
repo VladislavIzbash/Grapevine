@@ -1,5 +1,6 @@
 package ru.vizbash.grapevine.ui.main.contacts
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -12,6 +13,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.databinding.FragmentContactsBinding
 import ru.vizbash.grapevine.storage.contacts.ContactEntity
+import ru.vizbash.grapevine.ui.chat.ChatActivity
 import ru.vizbash.grapevine.ui.main.MainViewModel
 
 class ContactsFragment : Fragment() {
@@ -27,7 +29,10 @@ class ContactsFragment : Fragment() {
 
         val contactAdapter = ContactAdapter(object : ContactAdapter.ContactListener {
             override fun onSelected(contact: ContactEntity) {
-                TODO("Not yet implemented")
+                val intent = Intent(requireContext(), ChatActivity::class.java).apply {
+                    putExtra(ChatActivity.EXTRA_CONTACT_ID, contact.nodeId)
+                }
+                startActivity(intent)
             }
 
             override fun onAccepted(contact: ContactEntity) {

@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="primary">#A33263</color>
-    <color name="statusBar">#80274D</color>
     <color name="onPrimary">#FFFFFF</color>
     <color name="background">#FFF5F5</color>
     <color name="chatBackground">#f7e5e5</color>
@@ -10,5 +9,5 @@
     <color name="error">#B50000</color>
     <color name="bad">#B80000</color>
     <color name="good">#008E00</color>
-    <color name="secondaryText">#9E9E9E</color>
+    <color name="fadedText">#9E9E9E</color>
 </resources>

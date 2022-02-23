@@ -37,7 +37,7 @@
             android:layout_gravity="bottom"
             android:text="@string/message_time_placeholder"
             android:textSize="5pt"
-            android:textColor="@color/secondaryText"/>
+            android:textColor="@color/fadedText"/>
 
         <ImageView
             android:id="@+id/ivMessageStatus"

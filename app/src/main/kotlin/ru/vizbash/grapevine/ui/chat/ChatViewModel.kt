@@ -14,7 +14,7 @@ class ChatViewModel @Inject constructor(
     private val profileService: ProfileService,
     savedState: SavedStateHandle,
 ) : ViewModel() {
-    private val contact = runBlocking {
+    val contact = runBlocking {
         profileService.getContact(savedState.get<Long>(ChatActivity.EXTRA_CONTACT_ID)!!)
     }
 
