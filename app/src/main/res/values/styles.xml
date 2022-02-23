@@ -3,21 +3,22 @@
         <item name="android:windowBackground">@color/background</item>
     </style>
 
-    <style name="Theme.Grapevine" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+    <style name="Theme.Grapevine" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
-        <item name="colorPrimaryVariant">@color/primary</item>
+        <item name="colorPrimaryVariant">?attr/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/primaryDark</item>
         <item name="colorOnPrimary">@color/onPrimary</item>
         <item name="colorSecondary">?attr/colorPrimary</item>
         <item name="colorSecondaryVariant">?attr/colorPrimary</item>
         <item name="colorOnSecondary">?attr/colorOnPrimary</item>
         <item name="colorControlNormal">?attr/colorOnPrimary</item>
         <item name="android:windowBackground">@color/background</item>
-        <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimary</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@color/primaryDark</item>
     </style>
 
-    <style name="Theme.Grapevine.NoActionBar" parent="Theme.Grapevine">
-        <item name="windowActionBar">false</item>
-        <item name="windowNoTitle">true</item>
+    <style name="Theme.Grapevine.TranslucentStatus" parent="Theme.Grapevine">
+        <item name="android:windowTranslucentStatus">true</item>
     </style>
 
     <style name="Theme.Grapevine.ImagePicker" parent="Theme.MaterialComponents.DayNight.NoActionBar">
@@ -25,16 +26,25 @@
         <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimary</item>
     </style>
 
-    <style name="TextInput">
+    <style name="Grapevine" />
+    <style name="Grapevine.Widget" parent="Grapevine" />
+
+    <style name="Grapevine.Widget.TextInput" parent="Grapevine.Widget">
         <item name="android:background">@color/textInputBackground</item>
     </style>
 
-    <style name="ItemHeader">
+    <style name="Grapevine.Widget.ItemHeader" parent="Grapevine.Widget">
         <item name="android:textSize">8pt</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textColor">@color/primary</item>
         <item name="android:paddingStart">5dp</item>
         <item name="android:paddingEnd">5dp</item>
+    </style>
+
+    <style name="Grapevine.Widget.Toolbar" parent="Grapevine.Widget">
+        <item name="android:background">?attr/colorPrimary</item>
+        <item name="android:elevation">4dp</item>
+        <item name="titleTextColor">?attr/colorOnPrimary</item>
     </style>
 
 </resources>

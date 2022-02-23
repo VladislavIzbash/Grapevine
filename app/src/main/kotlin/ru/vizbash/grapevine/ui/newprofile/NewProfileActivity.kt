@@ -34,6 +34,8 @@ class NewProfileActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ui = ActivityNewProfileBinding.inflate(layoutInflater)
+        setSupportActionBar(ui.toolbar)
+        setContentView(ui.root)
 
         val pickerLauncher = registerForActivityResult(StartActivityForResult()) { res ->
             when (res.resultCode) {
@@ -89,8 +91,6 @@ class NewProfileActivity : AppCompatActivity() {
                 }
             }
         }
-
-        setContentView(ui.root)
     }
 
     private fun onCreateClicked() {

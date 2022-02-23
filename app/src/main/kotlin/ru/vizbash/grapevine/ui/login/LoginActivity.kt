@@ -25,6 +25,8 @@ class LoginActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ui = ActivityLoginBinding.inflate(layoutInflater)
+        setSupportActionBar(ui.toolbar)
+        setContentView(ui.root)
 
         ui.checkAutoLogin.isChecked = model.loginPrefs.autoLoginUsername != null
 
@@ -54,8 +56,6 @@ class LoginActivity : AppCompatActivity() {
                 }
             }
         }
-
-        setContentView(ui.root)
     }
 
     private suspend fun collectLoginState() {
@@ -95,11 +95,5 @@ class LoginActivity : AppCompatActivity() {
                 options,
             )
         }
-    }
-
-    override fun onResume() {
-        super.onResume()
-
-
     }
 }

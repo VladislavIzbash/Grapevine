@@ -8,14 +8,14 @@ import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts.RequestPermission
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.navigation.NavDestination
 import androidx.navigation.NavOptions
 import androidx.navigation.Navigator
-import androidx.navigation.findNavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
-import androidx.navigation.ui.navigateUp
-import androidx.navigation.ui.setupActionBarWithNavController
+import androidx.navigation.ui.NavigationUI
 import androidx.navigation.ui.setupWithNavController
 import dagger.hilt.android.AndroidEntryPoint
 import ru.vizbash.grapevine.GrapevineService
@@ -27,6 +27,7 @@ import ru.vizbash.grapevine.network.bluetooth.BluetoothService
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
     private lateinit var appBarConfig: AppBarConfiguration
+
     private val model: MainViewModel by viewModels()
 
     @Navigator.Name("logout")
@@ -52,6 +53,8 @@ class MainActivity : AppCompatActivity() {
         val ui = ActivityMainBinding.inflate(layoutInflater)
         setContentView(ui.root)
 
+        setSupportActionBar(ui.toolbar)
+
         val navHost = supportFragmentManager.findFragmentById(R.id.navHostFragment) as NavHostFragment
         val navController = navHost.navController
         navController.navigatorProvider.addNavigator(LogoutNavigator())
@@ -65,23 +68,26 @@ class MainActivity : AppCompatActivity() {
             R.id.peopleAroundFragment,
         )
         appBarConfig = AppBarConfiguration(topLevel, ui.drawerLayout)
-        setupActionBarWithNavController(navController, appBarConfig)
+        NavigationUI.setupWithNavController(ui.toolbar, navController, appBarConfig)
 
-        val header = DrawerHeaderBinding.bind(ui.navView.getHeaderView(0))
+        val headerView = ui.navView.getHeaderView(0)
+        val header = DrawerHeaderBinding.bind(headerView)
+
         val photo = model.currentProfile.entity.photo
         if (photo != null) {
             header.ivPhoto.setImageBitmap(photo)
         }
         header.tvUsername.text = model.currentProfile.entity.username
 
+        ViewCompat.setOnApplyWindowInsetsListener(headerView) { view, insets ->
+            val top = insets.getInsets(WindowInsetsCompat.Type.systemBars()).top
+            view.setPadding(0, top, 0, 0)
+            insets
+        }
+
         startBluetooth()
         model.startGrapevineNetwork()
         startService(Intent(this, GrapevineService::class.java))
-    }
-
-    override fun onSupportNavigateUp(): Boolean {
-        val navController = findNavController(R.id.navHostFragment)
-        return navController.navigateUp(appBarConfig) || super.onSupportNavigateUp()
     }
 
     private fun startBluetooth() {

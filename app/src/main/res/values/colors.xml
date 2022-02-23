@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="primary">#A33263</color>
+    <color name="primaryDark">#671A3B</color>
     <color name="onPrimary">#FFFFFF</color>
     <color name="background">#FFF5F5</color>
     <color name="chatBackground">#f7e5e5</color>

@@ -44,7 +44,9 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".ui.main.MainActivity" />
+        <activity
+            android:name=".ui.main.MainActivity"
+            android:theme="@style/Theme.Grapevine.TranslucentStatus" />
 
         <activity
             android:name=".ui.login.LoginActivity"
@@ -58,8 +60,7 @@
 
         <activity
             android:name=".ui.chat.ChatActivity"
-            android:parentActivityName=".ui.main.MainActivity"
-            android:theme="@style/Theme.Grapevine.NoActionBar" />
+            android:parentActivityName=".ui.main.MainActivity" />
 
     </application>
 

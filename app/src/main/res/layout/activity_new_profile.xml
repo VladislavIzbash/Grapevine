@@ -6,12 +6,21 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        style="@style/Grapevine.Widget.Toolbar" />
+
     <androidx.cardview.widget.CardView
         android:id="@+id/cardPhoto"
         android:layout_width="80dp"
         android:layout_height="80dp"
         android:layout_marginTop="@dimen/form_horizontal_margin"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:cardCornerRadius="40dp">
@@ -38,7 +47,7 @@
         app:errorEnabled="true">
 
         <com.google.android.material.textfield.TextInputEditText
-            style="@style/TextInput"
+            style="@style/Grapevine.Widget.TextInput"
             android:id="@+id/newEditUsername"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -60,7 +69,7 @@
         app:errorEnabled="true">
 
         <com.google.android.material.textfield.TextInputEditText
-            style="@style/TextInput"
+            style="@style/Grapevine.Widget.TextInput"
             android:id="@+id/newEditPassword"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -81,7 +90,7 @@
         app:errorEnabled="true">
 
         <com.google.android.material.textfield.TextInputEditText
-            style="@style/TextInput"
+            style="@style/Grapevine.Widget.TextInput"
             android:id="@+id/newEditPasswordRepeat"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
