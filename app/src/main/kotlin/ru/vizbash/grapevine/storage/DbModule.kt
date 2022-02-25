@@ -18,7 +18,7 @@ class DbModule {
     fun provideProfileDatabase(@ApplicationContext context: Context) = Room.databaseBuilder(
         context,
         ProfileDatabase::class.java,
-        "identities",
+        "profiles",
     ).build()
 
     @Singleton

@@ -68,8 +68,8 @@ class LoginActivity : AppCompatActivity() {
                 LoginViewModel.LoginState.FAILED -> {
                     Snackbar.make(ui.root, R.string.error_invalid_password, Snackbar.LENGTH_LONG).apply {
                         setTextColor(getColor(R.color.error))
-                        show()
-                    }
+                        view.setBackgroundColor(getColor(R.color.white))
+                    }.show()
                 }
                 else -> {}
             }

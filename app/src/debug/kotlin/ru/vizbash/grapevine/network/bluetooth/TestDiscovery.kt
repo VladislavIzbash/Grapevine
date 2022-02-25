@@ -58,10 +58,11 @@ class TestDiscovery @Inject constructor(
 
         coroutineScope.launch(Executors.newSingleThreadExecutor().asCoroutineDispatcher()) {
             while (true) {
-                delay(Random.nextLong(3_000, 8_000))
+                delay(2_000)
                 launch {
                     spawnBot()
                 }
+                delay(Random.nextLong(20_000, 30_000))
             }
         }
     }
@@ -103,17 +104,37 @@ class TestDiscovery @Inject constructor(
                 }
             }
 
-            network.contactInvitations.collect { node ->
-                delay(4_000)
-                try {
-                    network.sendContactInvitationAnswer(node, true)
-                } catch (e: GVException) {
+            launch {
+                network.contactInvitations.collect { node ->
+                    delay(4_000)
+                    try {
+                        network.sendContactInvitationAnswer(node, true)
+                    } catch (e: GVException) {
+                    }
                 }
             }
 
+            launch {
+                try {
+                    network.textMessages.collect { (msg, node) ->
+                        delay(1_000)
+                        network.sendReadConfirmation(msg.msgId, node)
+
+                        delay(2_000)
+                        if (Random.nextInt(0, 2) == 0) {
+                            network.sendTextMessage(
+                                "Тестируй в другую сторону",
+                                node,
+                                Random.nextLong(),
+                            )
+                        }
+                    }
+                } catch (e: GVException) {
+                }
+            }
         }
 
-        delay(Random.nextLong(30_000, 60_000))
+        delay(Random.nextLong(60_000, 120_000))
 
         network.stop()
         neighbor1.disconnect()

@@ -27,7 +27,7 @@
     <string name="password_too_short">Пароль слишком короткий</string>
     <string name="password_is_blank">Пароль не может быть пустым</string>
     <string name="error_invalid_password">Неверный пароль</string>
-    <string name="error_sending_request">Не удалось отправить запрос</string>
+    <string name="error_network">Ошибка сети</string>
     <string name="no_profiles">Нет профилей</string>
     <string name="username">Имя пользователя</string>
     <string name="no_nodes_around">Вы совсем один</string>

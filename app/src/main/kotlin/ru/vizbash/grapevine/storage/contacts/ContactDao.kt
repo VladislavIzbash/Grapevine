@@ -9,9 +9,9 @@ interface ContactDao {
     fun getAll(): Flow<List<ContactEntity>>
 
     @Query("SELECT * FROM contacts WHERE node_id = :nodeId")
-    suspend fun getById(nodeId: Long): ContactEntity
+    suspend fun getById(nodeId: Long): ContactEntity?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(contact: ContactEntity)
 
     @Delete

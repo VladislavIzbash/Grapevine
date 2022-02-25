@@ -3,13 +3,14 @@ syntax = "proto3";
 option java_multiple_files = true;
 option java_package = "ru.vizbash.grapevine.network.messages.routed";
 
-message EncryptedPayload {
+message RoutedPayload {
   oneof payload {
     RoutedResponse response = 1;
     PhotoRequest photo_req = 2;
     TextMessage text = 3;
-    ContactInvitationMessage contact_invitation = 4;
-    ContactInvitationAnswerMessage contact_invitation_answer = 5;
+    ReadConfirmationMessage read_confirmation = 4;
+    ContactInvitationMessage contact_invitation = 5;
+    ContactInvitationAnswerMessage contact_invitation_answer = 6;
   }
 }
 
@@ -33,13 +34,19 @@ message PhotoResponse {
   bytes photo = 2;
 }
 
-message TextMessage {
-  string text = 1;
-  int64 timestamp = 2;
-}
-
 message ContactInvitationMessage {}
 
 message ContactInvitationAnswerMessage {
   bool accepted = 1;
 }
+
+message TextMessage {
+  uint64 msg_id = 1;
+  string text = 2;
+  int64 timestamp = 3;
+}
+
+message ReadConfirmationMessage {
+  uint64 msg_id = 1;
+}
+

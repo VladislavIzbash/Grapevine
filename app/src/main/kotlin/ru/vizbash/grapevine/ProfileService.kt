@@ -5,20 +5,23 @@ import android.graphics.Bitmap
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
-import androidx.paging.cachedIn
+import androidx.paging.PagingSource
 import androidx.room.Room
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import ru.vizbash.grapevine.network.Node
+import ru.vizbash.grapevine.network.messages.routed.TextMessage
 import ru.vizbash.grapevine.storage.UserDatabase
 import ru.vizbash.grapevine.storage.contacts.ContactEntity
-import ru.vizbash.grapevine.storage.messages.MessageWithOrig
+import ru.vizbash.grapevine.storage.messages.MessageEntity
 import ru.vizbash.grapevine.storage.profile.ProfileEntity
 import ru.vizbash.grapevine.storage.profile.ProfileDao
+import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.absoluteValue
 import kotlin.random.Random
 
 @Singleton
@@ -78,7 +81,7 @@ class ProfileService @Inject constructor(
         userDb = Room.databaseBuilder(
             context,
             UserDatabase::class.java,
-            "profile_${profile.entity.nodeId}",
+            "profile_${profile.entity.nodeId.absoluteValue}",
         ).build()
     }
 
@@ -104,11 +107,39 @@ class ProfileService @Inject constructor(
         userDb.contactDao().update(contact.copy(state = state))
     }
 
-    fun getContactMessages(contact: ContactEntity, pageSize: Int): Flow<PagingData<MessageWithOrig>> {
-        val pager = Pager(PagingConfig(pageSize)) {
-            userDb.messageDao().getAllForContact(contact.nodeId)
-        }
+    fun getContactMessages(contact: ContactEntity): PagingSource<Int, MessageEntity> {
+        return userDb.messageDao().getAllForChat(contact.nodeId)
+    }
 
-        return pager.flow
+    suspend fun addReceivedMessage(contact: ContactEntity, message: TextMessage) {
+        userDb.messageDao().insert(MessageEntity(
+            id = message.msgId,
+            timestamp = Date(message.timestamp * 1000),
+            chatId = contact.nodeId,
+            isIngoing = true,
+            text = message.text,
+            originalMessageId = null,
+            state = MessageEntity.State.DELIVERED,
+            hasFile = false,
+            filePath = null,
+        ))
+    }
+
+    suspend fun addSentMessage(contact: ContactEntity, text: String, id: Long) {
+        userDb.messageDao().insert(MessageEntity(
+            id = id,
+            timestamp = Calendar.getInstance().time,
+            chatId = contact.nodeId,
+            isIngoing = false,
+            text = text,
+            originalMessageId = null,
+            state = MessageEntity.State.SENT,
+            hasFile = false,
+            filePath = null,
+        ))
+    }
+
+    suspend fun setMessageState(msgId: Long, state: MessageEntity.State) {
+        userDb.messageDao().setState(msgId, state)
     }
 }

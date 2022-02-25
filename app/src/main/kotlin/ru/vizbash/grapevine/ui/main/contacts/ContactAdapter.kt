@@ -13,6 +13,11 @@ import ru.vizbash.grapevine.storage.contacts.ContactEntity
 class ContactAdapter(
     private val listener: ContactListener,
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+    companion object {
+        private const val TYPE_PENDING = 0
+        private const val TYPE_ACCEPTED = 1
+    }
+
     interface ContactListener {
         fun onSelected(contact: ContactEntity)
         fun onAccepted(contact: ContactEntity)
@@ -84,11 +89,6 @@ class ContactAdapter(
 
             ui.root.setOnClickListener { listener.onSelected(item.contact) }
         }
-    }
-
-    companion object {
-        private const val TYPE_PENDING = 0
-        private const val TYPE_ACCEPTED = 1
     }
 
     var items = emptyList<ContactItem>()

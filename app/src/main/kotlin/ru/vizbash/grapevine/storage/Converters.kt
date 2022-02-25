@@ -5,8 +5,11 @@ import android.graphics.BitmapFactory
 import androidx.room.TypeConverter
 import ru.vizbash.grapevine.decodeRsaPublicKey
 import ru.vizbash.grapevine.storage.contacts.ContactEntity
+import ru.vizbash.grapevine.storage.messages.MessageEntity
 import java.io.ByteArrayOutputStream
 import java.security.PublicKey
+import java.time.Instant
+import java.util.*
 
 class Converters {
     @TypeConverter
@@ -32,4 +35,16 @@ class Converters {
 
     @TypeConverter
     fun contactStateToInt(value: ContactEntity.State) = value.ordinal
+
+    @TypeConverter
+    fun intToMessageState(value: Int) = enumValues<MessageEntity.State>()[value]
+
+    @TypeConverter
+    fun messageStateToInt(value: MessageEntity.State) = value.ordinal
+
+    @TypeConverter
+    fun dateToLong(date: Date): Long = date.time / 1000
+
+    @TypeConverter
+    fun longToDate(value: Long): Date = Date(value * 1000)
 }

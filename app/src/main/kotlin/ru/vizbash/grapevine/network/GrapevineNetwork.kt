@@ -14,6 +14,7 @@ import java.io.ByteArrayOutputStream
 import javax.crypto.SecretKey
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.random.Random
 
 @Singleton
 class GrapevineNetwork @Inject constructor(
@@ -25,7 +26,7 @@ class GrapevineNetwork @Inject constructor(
     class GVInvalidResponseException : GVException()
     class GVTimeoutException : GVException()
 
-    private class AcceptedMessage(val id: Long, val payload: EncryptedPayload, val sender: Node)
+    private class AcceptedMessage(val id: Long, val payload: RoutedPayload, val sender: Node)
 
     companion object {
         private const val ASK_INTERVAL_MS = 30_000L
@@ -99,7 +100,7 @@ class GrapevineNetwork @Inject constructor(
                 .setRequestId(msg.id)
                 .setError(Error.BAD_SIGNATURE)
                 .build()
-            val payload = EncryptedPayload.newBuilder().setResponse(routed).build()
+            val payload = RoutedPayload.newBuilder().setResponse(routed).build()
 
             send(payload, msg.sender)
             return@transform
@@ -113,14 +114,14 @@ class GrapevineNetwork @Inject constructor(
                 .setRequestId(msg.id)
                 .setError(Error.CANNOT_DECRYPT)
                 .build()
-            val payload = EncryptedPayload.newBuilder().setResponse(routed).build()
+            val payload = RoutedPayload.newBuilder().setResponse(routed).build()
 
             send(payload, msg.sender)
             return@transform
         }
 
         try {
-            val payload = EncryptedPayload.parseFrom(payloadBytes)
+            val payload = RoutedPayload.parseFrom(payloadBytes)
             Log.d(this@GrapevineNetwork.TAG, "Accepted message ${msg.id} from ${msg.sender}")
             emit(AcceptedMessage(msg.id, payload, msg.sender))
         } catch (e: InvalidProtocolBufferException) {
@@ -129,7 +130,7 @@ class GrapevineNetwork @Inject constructor(
     }
 
     private suspend fun send(
-        payload: EncryptedPayload,
+        payload: RoutedPayload,
         dest: Node,
     ) = withContext(Dispatchers.Default) {
         val payloadEnc = aesEncrypt(payload.toByteArray(), getSecret(dest))
@@ -141,7 +142,7 @@ class GrapevineNetwork @Inject constructor(
     }
 
     private suspend fun sendAndAwaitResponse(
-        payload: EncryptedPayload,
+        payload: RoutedPayload,
         dest: Node,
     ): RoutedResponse = withContext(Dispatchers.Default) {
         val id = send(payload, dest)
@@ -170,7 +171,7 @@ class GrapevineNetwork @Inject constructor(
             .setRequestId(req.id)
             .setError(Error.NO_ERROR)
             .build()
-        val payload = EncryptedPayload.newBuilder()
+        val payload = RoutedPayload.newBuilder()
             .setResponse(resp)
             .build()
         send(payload, req.sender)
@@ -196,7 +197,7 @@ class GrapevineNetwork @Inject constructor(
             .setPhotoResp(photoResp)
             .build()
 
-        val payload = EncryptedPayload.newBuilder()
+        val payload = RoutedPayload.newBuilder()
             .setResponse(resp)
             .build()
         send(payload, req.sender)
@@ -204,7 +205,7 @@ class GrapevineNetwork @Inject constructor(
 
     suspend fun fetchNodePhoto(node: Node) = photoCache.getOrPut(node) {
         val photoReq = PhotoRequest.newBuilder().build()
-        val payload = EncryptedPayload.newBuilder().setPhotoReq(photoReq).build()
+        val payload = RoutedPayload.newBuilder().setPhotoReq(photoReq).build()
 
         val resp = sendAndAwaitResponse(payload, node)
         if (!resp.hasPhotoResp()) {
@@ -221,13 +222,8 @@ class GrapevineNetwork @Inject constructor(
 
     suspend fun sendContactInvitation(node: Node) {
         val req = ContactInvitationMessage.newBuilder().build()
-        val payload = EncryptedPayload.newBuilder().setContactInvitation(req).build()
+        val payload = RoutedPayload.newBuilder().setContactInvitation(req).build()
         sendAndAwaitResponse(payload, node)
-    }
-
-    private suspend fun handleContactInvitation(req: AcceptedMessage): Node {
-        sendEmptyResponse(req)
-        return req.sender
     }
 
     val contactInvitations: Flow<Node> = acceptedMessages
@@ -235,16 +231,17 @@ class GrapevineNetwork @Inject constructor(
         .map(this::handleContactInvitation)
         .shareIn(coroutineScope, SharingStarted.Eagerly)
 
-    suspend fun sendContactInvitationAnswer(node: Node, accepted: Boolean) {
-        val req = ContactInvitationAnswerMessage.newBuilder()
-            .setAccepted(accepted)
-            .build()
-        val payload = EncryptedPayload.newBuilder().setContactInvitationAnswer(req).build()
-
-        sendAndAwaitResponse(payload, node)
+    private suspend fun handleContactInvitation(req: AcceptedMessage): Node {
+        sendEmptyResponse(req)
+        return req.sender
     }
 
     data class ContactInvitationAnswer(val node: Node, val accepted: Boolean)
+
+    val contactInvitationAnswers: Flow<ContactInvitationAnswer> = acceptedMessages
+        .filter { it.payload.hasContactInvitationAnswer() }
+        .map(this::handleContactInvitationAnswer)
+        .shareIn(coroutineScope, SharingStarted.Eagerly)
 
     private suspend fun handleContactInvitationAnswer(req: AcceptedMessage): ContactInvitationAnswer {
         sendEmptyResponse(req)
@@ -256,41 +253,52 @@ class GrapevineNetwork @Inject constructor(
         return ContactInvitationAnswer(req.sender, req.payload.contactInvitationAnswer.accepted)
     }
 
-    val contactInvitationAnswers: Flow<ContactInvitationAnswer> = acceptedMessages
-        .filter { it.payload.hasContactInvitationAnswer() }
-        .map(this::handleContactInvitationAnswer)
+    suspend fun sendContactInvitationAnswer(node: Node, accepted: Boolean) {
+        val req = ContactInvitationAnswerMessage.newBuilder()
+            .setAccepted(accepted)
+            .build()
+        val payload = RoutedPayload.newBuilder().setContactInvitationAnswer(req).build()
+
+        sendAndAwaitResponse(payload, node)
+    }
+
+    val textMessages: Flow<Pair<TextMessage, Node>> = acceptedMessages
+        .filter { it.payload.hasText() }
+        .map(this::handleTextMessage)
+        .shareIn(coroutineScope, SharingStarted.Eagerly, replay = 5)
+
+    private suspend fun handleTextMessage(req: AcceptedMessage): Pair<TextMessage, Node> {
+        sendEmptyResponse(req)
+        return Pair(req.payload.text, req.sender)
+    }
+
+    suspend fun sendTextMessage(text: String, dest: Node, msgId: Long) {
+        val req = TextMessage.newBuilder()
+            .setMsgId(msgId)
+            .setText(text)
+            .setTimestamp(System.currentTimeMillis() / 1000)
+        val payload = RoutedPayload.newBuilder().setText(req).build()
+
+        sendAndAwaitResponse(payload, dest)
+    }
+
+    val readConfirmations: Flow<Long> = acceptedMessages
+        .filter { it.payload.hasReadConfirmation() }
+        .map(this::handleReadConfirmation)
         .shareIn(coroutineScope, SharingStarted.Eagerly)
 
+    private suspend fun handleReadConfirmation(req: AcceptedMessage): Long {
+        sendEmptyResponse(req)
+        return req.payload.readConfirmation.msgId
+    }
 
-    //    suspend fun sendText(text: String, node: Node) {
-//        val textMsg = TextMessage
-//            .newBuilder()
-//            .setText(text)
-//            .setTimestamp(System.currentTimeMillis() / 1000L)
-//            .build()
-//        val payload = EncryptedPayload.newBuilder().setText(textMsg).build()
-//
-//        sendAndAwaitResponse(payload, node)
-//    }
+    suspend fun sendReadConfirmation(msgId: Long, dest: Node) {
+        val req = ReadConfirmationMessage.newBuilder()
+            .setMsgId(msgId)
+            .build()
+        val payload = RoutedPayload.newBuilder().setReadConfirmation(req).build()
 
-//    val textMessages: Flow<TextMessage> = incomingMessages
-//        .filter { it.payload.hasText() }
-//        .map(this::handleTextMessage)
-//        .shareIn(coroutineScope, SharingStarted.Eagerly, replay = 5)
-
-//    private suspend fun handleTextMessage(req: MessageHandler.AcceptedMessage): TextMessage {
-//        val resp = RoutedResponse.newBuilder()
-//            .setRequestId(req.id)
-//            .setError(Error.NO_ERROR)
-//            .build()
-//        val payload = EncryptedPayload.newBuilder()
-//            .setResponse(resp)
-//            .build()
-//        sendMessage(payload, req.sender)
-//
-//        Log.d(TAG, "Received text message ${req.id} from ${req.sender}")
-//
-//        return req.payload.text
-//    }
+        sendAndAwaitResponse(payload, dest)
+    }
 }
 

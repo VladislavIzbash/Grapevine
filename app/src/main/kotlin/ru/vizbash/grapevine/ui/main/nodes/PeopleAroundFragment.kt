@@ -10,12 +10,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.google.android.material.snackbar.Snackbar
 import jp.wasabeef.recyclerview.animators.SlideInUpAnimator
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import ru.vizbash.grapevine.R
 import ru.vizbash.grapevine.databinding.FragmentPeopleAroundBinding
 import ru.vizbash.grapevine.ui.main.MainViewModel
 
@@ -38,14 +35,6 @@ class PeopleAroundFragment : Fragment() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                launch {
-                    model.networkError.filterNotNull().collect {
-                        Snackbar.make(ui.root, R.string.error_sending_request, Snackbar.LENGTH_LONG).apply {
-                            setTextColor(requireActivity().getColor(R.color.error))
-                            show()
-                        }
-                    }
-                }
                 launch {
                     collectNodes(nodeAdapter)
                 }

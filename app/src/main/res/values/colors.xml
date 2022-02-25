@@ -11,4 +11,6 @@
     <color name="bad">#B80000</color>
     <color name="good">#008E00</color>
     <color name="fadedText">#9E9E9E</color>
+    <color name="white">#ffffff</color>
+    <color name="black">#000000</color>
 </resources>

@@ -10,6 +10,9 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavDestination
 import androidx.navigation.NavOptions
 import androidx.navigation.Navigator
@@ -17,7 +20,10 @@ import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.NavigationUI
 import androidx.navigation.ui.setupWithNavController
+import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.GrapevineService
 import ru.vizbash.grapevine.R
 import ru.vizbash.grapevine.databinding.ActivityMainBinding
@@ -88,6 +94,16 @@ class MainActivity : AppCompatActivity() {
         startBluetooth()
         model.startGrapevineNetwork()
         startService(Intent(this, GrapevineService::class.java))
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                model.networkError.filterNotNull().collect {
+                    Snackbar.make(ui.root, R.string.error_network, Snackbar.LENGTH_LONG).apply {
+                        setTextColor(getColor(R.color.error))
+                    }.show()
+                }
+            }
+        }
     }
 
     private fun startBluetooth() {
