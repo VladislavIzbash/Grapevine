@@ -18,7 +18,8 @@
         android:name=".GrapevineApp"
         android:allowBackup="true"
         android:fullBackupOnly="true"
-        android:icon="@mipmap/ic_grape"
+        android:icon="@mipmap/ic_launcher_round"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/launcher_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.Grapevine">

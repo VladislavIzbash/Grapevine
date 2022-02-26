@@ -8,6 +8,7 @@ import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.R
 import ru.vizbash.grapevine.databinding.ItemContactBinding
@@ -33,7 +34,7 @@ class ContactAdapter(
 
     data class ContactItem(
         val contact: ContactEntity,
-        val isOnline: Boolean,
+        val isOnline: Flow<Boolean>,
         val lastMessage: Flow<MessageEntity?>,
         var headerRes: Int? = null,
     )
@@ -92,22 +93,29 @@ class ContactAdapter(
             ui.tvUsername.text = item.contact.username
 
             updateJob = coroutineScope.launch {
-                item.lastMessage.collect { msg ->
-                    if (msg == null) {
-                        ui.tvLastMessage.text = ""
-                    } else {
-                        ui.tvLastMessage.text = if (!msg.isIngoing) {
-                            "> ${msg.text}"
+                launch {
+                    item.lastMessage.collect { msg ->
+                        if (msg == null) {
+                            ui.tvLastMessage.text = ""
                         } else {
-                            msg.text
+                            ui.tvLastMessage.text = if (!msg.isIngoing) {
+                                "> ${msg.text}"
+                            } else {
+                                msg.text
+                            }
                         }
                     }
                 }
-            }
-
-            if (!item.isOnline) {
-                val bg = ui.root.context.getColor(R.color.darkerBackground)
-                ui.ivOnlineIndicator.setColorFilter(bg)
+                launch {
+                    item.isOnline.collect { online ->
+                        if (online) {
+                            ui.ivOnlineIndicator.clearColorFilter()
+                        } else {
+                            val bg = ui.root.context.getColor(R.color.darkerBackground)
+                            ui.ivOnlineIndicator.setColorFilter(bg)
+                        }
+                    }
+                }
             }
 
             ui.root.setOnClickListener { listener.onSelected(item.contact) }

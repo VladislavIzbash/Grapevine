@@ -18,7 +18,6 @@ import androidx.navigation.NavOptions
 import androidx.navigation.Navigator
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
-import androidx.navigation.ui.NavigationUI
 import androidx.navigation.ui.setupWithNavController
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
@@ -74,7 +73,10 @@ class MainActivity : AppCompatActivity() {
             R.id.peopleAroundFragment,
         )
         appBarConfig = AppBarConfiguration(topLevel, ui.drawerLayout)
-        NavigationUI.setupWithNavController(ui.toolbar, navController, appBarConfig)
+        ui.toolbar.setupWithNavController(navController, appBarConfig)
+
+        // Иначе в начале отображается имя приложения
+        supportActionBar?.title = navController.currentBackStackEntry?.destination?.label
 
         val headerView = ui.navView.getHeaderView(0)
         val header = DrawerHeaderBinding.bind(headerView)

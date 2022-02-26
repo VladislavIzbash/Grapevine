@@ -10,6 +10,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.databinding.FragmentContactsBinding
 import ru.vizbash.grapevine.storage.contacts.ContactEntity
@@ -60,12 +61,14 @@ class ContactsFragment : Fragment() {
                 ui.rvContacts.visibility =
                     if (contacts.isEmpty()) View.INVISIBLE else View.VISIBLE
 
-                val nodes = model.availableNodes.value
-
                 contactAdapter.items = contacts.map{ contact ->
+                    val onlineFlow = model.availableNodes.map { nodes ->
+                        nodes.any { it.id == contact.nodeId }
+                    }
+
                     ContactAdapter.ContactItem(
                         contact,
-                        nodes.any { it.id == contact.nodeId },
+                        onlineFlow,
                         model.getLastMessage(contact),
                     )
                 }
