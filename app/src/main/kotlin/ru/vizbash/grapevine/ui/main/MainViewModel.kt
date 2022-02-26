@@ -7,6 +7,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -16,6 +17,7 @@ import ru.vizbash.grapevine.network.GrapevineNetwork
 import ru.vizbash.grapevine.network.Node
 import ru.vizbash.grapevine.storage.LoginPrefs
 import ru.vizbash.grapevine.storage.contacts.ContactEntity
+import ru.vizbash.grapevine.storage.messages.MessageEntity
 import javax.inject.Inject
 
 @HiltViewModel
@@ -88,5 +90,9 @@ class MainViewModel @Inject constructor(
                 _networkError.value = e
             }
         }
+    }
+
+    fun getLastMessage(contact: ContactEntity): Flow<MessageEntity?> {
+        return profileService.getLastMessage(contact)
     }
 }

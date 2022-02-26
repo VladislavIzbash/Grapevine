@@ -20,6 +20,27 @@ class ContactsFragment : Fragment() {
     private lateinit var ui: FragmentContactsBinding
     private val model: MainViewModel by activityViewModels()
 
+    private val contactListener = object : ContactAdapter.ContactListener {
+        override fun onSelected(contact: ContactEntity) {
+            val intent = Intent(requireContext(), ChatActivity::class.java).apply {
+                putExtra(ChatActivity.EXTRA_CONTACT_ID, contact.nodeId)
+            }
+            startActivity(intent)
+        }
+
+        override fun onAccepted(contact: ContactEntity) {
+            model.answerContactInvitation(contact, true)
+        }
+
+        override fun onRejected(contact: ContactEntity) {
+            model.answerContactInvitation(contact, false)
+        }
+
+        override fun onCanceled(contact: ContactEntity) {
+            model.cancelContactInvitation(contact)
+        }
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -27,26 +48,7 @@ class ContactsFragment : Fragment() {
     ): View {
         ui = FragmentContactsBinding.inflate(inflater, container, false)
 
-        val contactAdapter = ContactAdapter(object : ContactAdapter.ContactListener {
-            override fun onSelected(contact: ContactEntity) {
-                val intent = Intent(requireContext(), ChatActivity::class.java).apply {
-                    putExtra(ChatActivity.EXTRA_CONTACT_ID, contact.nodeId)
-                }
-                startActivity(intent)
-            }
-
-            override fun onAccepted(contact: ContactEntity) {
-                model.answerContactInvitation(contact, true)
-            }
-
-            override fun onRejected(contact: ContactEntity) {
-                model.answerContactInvitation(contact, false)
-            }
-
-            override fun onCanceled(contact: ContactEntity) {
-                model.cancelContactInvitation(contact)
-            }
-        })
+        val contactAdapter = ContactAdapter(viewLifecycleOwner.lifecycleScope, contactListener)
 
         ui.rvContacts.layoutManager = LinearLayoutManager(activity)
         ui.rvContacts.adapter = contactAdapter
@@ -60,10 +62,11 @@ class ContactsFragment : Fragment() {
 
                 val nodes = model.availableNodes.value
 
-                contactAdapter.items = contacts.map { contact ->
+                contactAdapter.items = contacts.map{ contact ->
                     ContactAdapter.ContactItem(
                         contact,
                         nodes.any { it.id == contact.nodeId },
+                        model.getLastMessage(contact),
                     )
                 }
             }

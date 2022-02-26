@@ -5,12 +5,18 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.R
 import ru.vizbash.grapevine.databinding.ItemContactBinding
 import ru.vizbash.grapevine.databinding.ItemPendingContactBinding
 import ru.vizbash.grapevine.storage.contacts.ContactEntity
+import ru.vizbash.grapevine.storage.messages.MessageEntity
 
 class ContactAdapter(
+    private val coroutineScope: CoroutineScope,
     private val listener: ContactListener,
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     companion object {
@@ -28,7 +34,8 @@ class ContactAdapter(
     data class ContactItem(
         val contact: ContactEntity,
         val isOnline: Boolean,
-        var headerRes: Int? = null
+        val lastMessage: Flow<MessageEntity?>,
+        var headerRes: Int? = null,
     )
 
     inner class PendingViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -66,6 +73,8 @@ class ContactAdapter(
     inner class AcceptedViewHolder(view: View): RecyclerView.ViewHolder(view) {
         private val ui = ItemContactBinding.bind(view)
 
+        lateinit var updateJob: Job
+
         fun bind(item: ContactItem) {
             if (item.headerRes != null) {
                 ui.itemHeader.setText(item.headerRes!!)
@@ -81,6 +90,20 @@ class ContactAdapter(
             }
 
             ui.tvUsername.text = item.contact.username
+
+            updateJob = coroutineScope.launch {
+                item.lastMessage.collect { msg ->
+                    if (msg == null) {
+                        ui.tvLastMessage.text = ""
+                    } else {
+                        ui.tvLastMessage.text = if (!msg.isIngoing) {
+                            "> ${msg.text}"
+                        } else {
+                            msg.text
+                        }
+                    }
+                }
+            }
 
             if (!item.isOnline) {
                 val bg = ui.root.context.getColor(R.color.darkerBackground)
@@ -108,8 +131,6 @@ class ContactAdapter(
 
             val callback = ContactDiffCallback(items, sorted)
             DiffUtil.calculateDiff(callback, true).dispatchUpdatesTo(this)
-
-//            notifyDataSetChanged()
 
             field = sorted
         }
@@ -159,6 +180,14 @@ class ContactAdapter(
     }
 
     override fun getItemCount() = items.size
+
+    override fun onViewDetachedFromWindow(holder: RecyclerView.ViewHolder) {
+        super.onViewDetachedFromWindow(holder)
+
+        if (holder is AcceptedViewHolder) {
+            holder.updateJob.cancel()
+        }
+    }
 
     private class ContactDiffCallback(
         private val oldItems: List<ContactItem>,

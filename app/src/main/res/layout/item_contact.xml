@@ -64,7 +64,7 @@
                 app:layout_constraintStart_toEndOf="@id/cardPhoto"
                 app:layout_constraintTop_toBottomOf="@id/tvUsername"
                 android:text="@string/last_message"
-                android:textSize="5pt" />
+                android:textSize="6pt" />
 
             <ImageView
                 android:id="@+id/ivOnlineIndicator"

@@ -142,4 +142,8 @@ class ProfileService @Inject constructor(
     suspend fun setMessageState(msgId: Long, state: MessageEntity.State) {
         userDb.messageDao().setState(msgId, state)
     }
+
+    fun getLastMessage(contact: ContactEntity): Flow<MessageEntity?> {
+        return userDb.messageDao().getLastMessage(contact.nodeId)
+    }
 }
