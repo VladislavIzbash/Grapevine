@@ -7,6 +7,7 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import ru.vizbash.grapevine.GVException
@@ -26,18 +27,22 @@ class ChatViewModel @Inject constructor(
         profileService.getContact(savedState.get<Long>(ChatActivity.EXTRA_CONTACT_ID)!!)!!
     }
 
+    val currentProfile = profileService.profile.entity
+
     val pagedMessages = Pager(PagingConfig(pageSize = 25, enablePlaceholders = false)) {
         profileService.getContactMessages(contact)
     }.flow.cachedIn(viewModelScope)
 
+    val forwardedMessage: MutableStateFlow<MessageEntity?> = MutableStateFlow(null)
+
     fun sendMessage(text: String) {
         viewModelScope.launch {
             val id = Random.nextLong()
-            profileService.addSentMessage(contact, text, id)
+            profileService.addSentMessage(id, contact, text, forwardedMessage.value)
 
             grapevineNetwork.availableNodes.value.find { it.id == contact.nodeId }?.let {
                 try {
-                    grapevineNetwork.sendTextMessage(text, it, id)
+                    grapevineNetwork.sendTextMessage(id, text, it, forwardedMessage.value?.id)
                     profileService.setMessageState(id, MessageEntity.State.DELIVERED)
                 } catch (e: GVException) {
                     profileService.setMessageState(id, MessageEntity.State.DELIVERY_FAILED)

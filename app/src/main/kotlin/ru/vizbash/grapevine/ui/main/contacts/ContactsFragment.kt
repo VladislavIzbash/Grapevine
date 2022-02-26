@@ -49,7 +49,11 @@ class ContactsFragment : Fragment() {
     ): View {
         ui = FragmentContactsBinding.inflate(inflater, container, false)
 
-        val contactAdapter = ContactAdapter(viewLifecycleOwner.lifecycleScope, contactListener)
+        val contactAdapter = ContactAdapter(
+            viewLifecycleOwner.lifecycleScope,
+            model.currentProfile.entity.nodeId,
+            contactListener,
+        )
 
         ui.rvContacts.layoutManager = LinearLayoutManager(activity)
         ui.rvContacts.adapter = contactAdapter

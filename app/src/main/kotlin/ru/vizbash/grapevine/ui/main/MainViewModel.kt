@@ -18,6 +18,7 @@ import ru.vizbash.grapevine.network.Node
 import ru.vizbash.grapevine.storage.LoginPrefs
 import ru.vizbash.grapevine.storage.contacts.ContactEntity
 import ru.vizbash.grapevine.storage.messages.MessageEntity
+import ru.vizbash.grapevine.storage.messages.MessageWithOrig
 import javax.inject.Inject
 
 @HiltViewModel

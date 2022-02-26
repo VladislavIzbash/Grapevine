@@ -44,6 +44,7 @@ message TextMessage {
   uint64 msg_id = 1;
   string text = 2;
   int64 timestamp = 3;
+  uint64 original_msg_id = 4;
 }
 
 message ReadConfirmationMessage {

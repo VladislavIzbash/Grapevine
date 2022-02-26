@@ -4,6 +4,7 @@
     <color name="primaryDark">#671A3B</color>
     <color name="onPrimary">#FFFFFF</color>
     <color name="background">#FFF5F5</color>
+    <color name="attachmentBackground">#FFF0F0</color>
     <color name="chatBackground">#f7e5e5</color>
     <color name="darkerBackground">#E5E0E0</color>
     <color name="textInputBackground">#FAF5F5</color>
@@ -12,5 +13,5 @@
     <color name="good">#008E00</color>
     <color name="fadedText">#9E9E9E</color>
     <color name="white">#ffffff</color>
-    <color name="black">#000000</color>
+    <color name="messageText">#000000</color>
 </resources>

@@ -47,4 +47,11 @@
         <item name="titleTextColor">?attr/colorOnPrimary</item>
     </style>
 
+    <style name="Grapevine.TextAppearance" parent="Grapevine" />
+
+    <style name="Grapevine.TextAppearance.Timestamp" parent="Grapevine.TextAppearance">
+        <item name="android:textSize">5pt</item>
+        <item name="android:textColor">@color/fadedText</item>
+    </style>
+
 </resources>

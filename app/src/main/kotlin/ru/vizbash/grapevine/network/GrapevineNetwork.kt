@@ -14,7 +14,6 @@ import java.io.ByteArrayOutputStream
 import javax.crypto.SecretKey
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.random.Random
 
 @Singleton
 class GrapevineNetwork @Inject constructor(
@@ -272,11 +271,12 @@ class GrapevineNetwork @Inject constructor(
         return Pair(req.payload.text, req.sender)
     }
 
-    suspend fun sendTextMessage(text: String, dest: Node, msgId: Long) {
+    suspend fun sendTextMessage(msgId: Long, text: String, dest: Node, origId: Long?) {
         val req = TextMessage.newBuilder()
             .setMsgId(msgId)
             .setText(text)
             .setTimestamp(System.currentTimeMillis() / 1000)
+            .setOriginalMsgId(origId ?: 0)
         val payload = RoutedPayload.newBuilder().setText(req).build()
 
         sendAndAwaitResponse(payload, dest)

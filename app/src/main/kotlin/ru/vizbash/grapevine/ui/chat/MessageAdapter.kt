@@ -8,35 +8,77 @@ import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import ru.vizbash.grapevine.R
+import ru.vizbash.grapevine.databinding.ForwardedMessageBinding
 import ru.vizbash.grapevine.databinding.ItemIngoingMessageBinding
 import ru.vizbash.grapevine.databinding.ItemOutgoingMessageBinding
+import ru.vizbash.grapevine.storage.contacts.ContactEntity
 import ru.vizbash.grapevine.storage.messages.MessageEntity
+import ru.vizbash.grapevine.storage.messages.MessageWithOrig
+import ru.vizbash.grapevine.storage.profile.ProfileEntity
 import java.text.SimpleDateFormat
 import java.util.*
 
-class MessageAdapter : PagingDataAdapter<MessageEntity, RecyclerView.ViewHolder>(MessageDiffCallback()) {
+class MessageAdapter(
+    private val currentProfile: ProfileEntity,
+    private val contact: ContactEntity,
+) : PagingDataAdapter<MessageWithOrig, MessageAdapter.MessageViewHolder>(MessageDiffCallback()) {
     companion object {
-        private val DATE_FORMAT = SimpleDateFormat("k:mm", Locale.US)
+        val TIMESTAMP_FORMAT = SimpleDateFormat("k:mm", Locale.US)
         private const val TYPE_OUTGOING = 0
         private const val TYPE_INGOING = 2
     }
 
-    class OutgoingViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+
+    private fun ForwardedMessageBinding.bindOriginalMessage(message: MessageEntity?) {
+        if (message != null) {
+            tvForwardedUsername.text = if (message.senderId == currentProfile.nodeId) {
+                currentProfile.username
+            } else {
+                contact.username
+            }
+            tvForwardedText.text = message.text
+            tvForwardedTime.text = TIMESTAMP_FORMAT.format(message.timestamp)
+
+            root.visibility = View.VISIBLE
+        } else {
+            root.visibility = View.GONE
+        }
+    }
+
+    abstract class MessageViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        abstract var boundItem: MessageWithOrig?
+            protected set
+
+        abstract fun bind(item: MessageWithOrig)
+
+        open fun unbind() {
+            boundItem = null
+        }
+    }
+
+    inner class OutgoingViewHolder(view: View) : MessageViewHolder(view) {
         private val ui = ItemOutgoingMessageBinding.bind(view)
 
-        fun bind(message: MessageEntity) {
-            ui.tvMessageText.text = message.text
+        override var boundItem: MessageWithOrig? = null
+
+        override fun bind(item: MessageWithOrig) {
+            boundItem = item
+
+            ui.layoutForwardedMessage.bindOriginalMessage(item.orig_msg)
+
+            ui.tvMessageText.text = item.msg.text
             ui.layoutMessageBody.post {
-                ui.layoutMessageBody.orientation = if (ui.tvMessageText.lineCount > 1) {
+                val expand = ui.tvMessageText.lineCount > 1 || item.orig_msg != null
+                ui.layoutMessageBody.orientation = if (expand) {
                     LinearLayout.VERTICAL
                 } else {
                     LinearLayout.HORIZONTAL
                 }
             }
 
-            ui.tvMessageTime.text = DATE_FORMAT.format(message.timestamp)
+            ui.tvMessageTime.text = TIMESTAMP_FORMAT.format(item.msg.timestamp)
 
-            val res = when (message.state) {
+            val res = when (item.msg.state) {
                 MessageEntity.State.SENT -> R.drawable.ic_msg_time
                 MessageEntity.State.DELIVERED -> R.drawable.ic_msg_check
                 MessageEntity.State.READ -> R.drawable.ic_msg_double_check
@@ -46,42 +88,48 @@ class MessageAdapter : PagingDataAdapter<MessageEntity, RecyclerView.ViewHolder>
         }
     }
 
-    class IngoingViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+    inner class IngoingViewHolder(view: View) : MessageViewHolder(view) {
         private val ui = ItemIngoingMessageBinding.bind(view)
 
-        fun bind(message: MessageEntity) {
+        override var boundItem: MessageWithOrig? = null
+
+        override fun bind(item: MessageWithOrig) {
+            boundItem = item
+
+            ui.layoutForwardedMessage.bindOriginalMessage(item.orig_msg)
+
             ui.cardPhoto.visibility = View.GONE
 
-            ui.tvMessageText.text = message.text
+            ui.tvMessageText.text = item.msg.text
             ui.layoutMessageBody.post {
-                ui.layoutMessageBody.orientation = if (ui.tvMessageText.lineCount > 1) {
+                val expand = ui.tvMessageText.lineCount > 1 || item.orig_msg != null
+                ui.layoutMessageBody.orientation = if (expand) {
                     LinearLayout.VERTICAL
                 } else {
                     LinearLayout.HORIZONTAL
                 }
             }
 
-            ui.tvMessageTime.text = DATE_FORMAT.format(message.timestamp)
+            ui.tvMessageTime.text = TIMESTAMP_FORMAT.format(item.msg.timestamp)
         }
     }
 
     override fun getItemViewType(position: Int): Int {
         val msg = getItem(position) ?: throw IllegalArgumentException()
 
-        return if (msg.isIngoing) { TYPE_INGOING } else { TYPE_OUTGOING }
-    }
-
-    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        val msg = getItem(position) ?: return
-
-        if (msg.isIngoing) {
-            (holder as IngoingViewHolder).bind(msg)
+        return if (msg.msg.senderId == currentProfile.nodeId) {
+            TYPE_OUTGOING
         } else {
-            (holder as OutgoingViewHolder).bind(msg)
+            TYPE_INGOING
         }
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+    override fun onBindViewHolder(holder: MessageViewHolder, position: Int) {
+        val msg = getItem(position) ?: return
+        holder.bind(msg)
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MessageViewHolder {
         return when (viewType) {
             TYPE_INGOING -> {
                 val view = LayoutInflater.from(parent.context)
@@ -97,11 +145,16 @@ class MessageAdapter : PagingDataAdapter<MessageEntity, RecyclerView.ViewHolder>
         }
     }
 
-    private class MessageDiffCallback : DiffUtil.ItemCallback<MessageEntity>() {
-        override fun areItemsTheSame(oldItem: MessageEntity, newItem: MessageEntity)
-            = oldItem.id == newItem.id
+    override fun onViewDetachedFromWindow(holder: MessageViewHolder) {
+        super.onViewDetachedFromWindow(holder)
+        holder.unbind()
+    }
 
-        override fun areContentsTheSame(oldItem: MessageEntity, newItem: MessageEntity)
+    private class MessageDiffCallback : DiffUtil.ItemCallback<MessageWithOrig>() {
+        override fun areItemsTheSame(oldItem: MessageWithOrig, newItem: MessageWithOrig): Boolean
+            = oldItem.msg.id == newItem.msg.id
+
+        override fun areContentsTheSame(oldItem: MessageWithOrig, newItem: MessageWithOrig): Boolean
             = oldItem == newItem
     }
 }

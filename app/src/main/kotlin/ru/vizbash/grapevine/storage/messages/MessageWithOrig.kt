@@ -6,8 +6,8 @@ import androidx.room.Relation
 data class MessageWithOrig(
     @Embedded val msg: MessageEntity,
     @Relation(
-        parentColumn = "id",
-        entityColumn = "orig_msg_id",
+        parentColumn = "orig_msg_id",
+        entityColumn = "id",
     )
-    val orig_msg: MessageEntity,
+    val orig_msg: MessageEntity?,
 )

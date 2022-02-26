@@ -19,7 +19,7 @@ data class MessageEntity(
     @PrimaryKey @ColumnInfo(name = "id") val id: Long,
     @ColumnInfo(name = "timestamp") val timestamp: Date,
     @ColumnInfo(name = "chat_id") val chatId: Long,
-    @ColumnInfo(name = "is_ingoing") val isIngoing: Boolean,
+    @ColumnInfo(name = "sender_id") val senderId: Long,
     @ColumnInfo(name = "text") val text: String,
     @ColumnInfo(name = "orig_msg_id") val originalMessageId: Long?,
     @ColumnInfo(name = "state") val state: State,

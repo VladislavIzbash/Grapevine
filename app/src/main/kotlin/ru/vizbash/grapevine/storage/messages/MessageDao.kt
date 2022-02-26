@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface MessageDao {
     @Query("SELECT * FROM messages WHERE chat_id = :chatId ORDER BY timestamp DESC")
-    fun getAllForChat(chatId: Long): PagingSource<Int, MessageEntity>
+    fun getAllForChat(chatId: Long): PagingSource<Int, MessageWithOrig>
 
     @Query("SELECT * FROM messages WHERE chat_id = :chatId ORDER BY timestamp DESC LIMIT 1")
     fun getLastMessage(chatId: Long): Flow<MessageEntity?>

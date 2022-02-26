@@ -8,7 +8,6 @@ import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.R
 import ru.vizbash.grapevine.databinding.ItemContactBinding
@@ -18,6 +17,7 @@ import ru.vizbash.grapevine.storage.messages.MessageEntity
 
 class ContactAdapter(
     private val coroutineScope: CoroutineScope,
+    private val myId: Long,
     private val listener: ContactListener,
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     companion object {
@@ -98,7 +98,7 @@ class ContactAdapter(
                         if (msg == null) {
                             ui.tvLastMessage.text = ""
                         } else {
-                            ui.tvLastMessage.text = if (!msg.isIngoing) {
+                            ui.tvLastMessage.text = if (msg.senderId == myId) {
                                 "> ${msg.text}"
                             } else {
                                 msg.text
