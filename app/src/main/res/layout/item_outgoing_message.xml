@@ -32,6 +32,14 @@
                 android:text="@string/message_text_placeholder"
                 android:textColor="@color/messageText" />
 
+            <include layout="@layout/file_attachment"
+                android:id="@+id/layoutFileAttachment"
+                android:visibility="gone"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_marginHorizontal="5dp"
+                android:layout_marginVertical="2dp"/>
+
             <include layout="@layout/forwarded_message"
                 android:id="@+id/layoutForwardedMessage"
                 android:visibility="gone"

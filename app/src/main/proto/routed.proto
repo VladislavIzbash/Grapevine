@@ -45,6 +45,9 @@ message TextMessage {
   string text = 2;
   int64 timestamp = 3;
   uint64 original_msg_id = 4;
+  bool has_file = 5;
+  string file_name = 6;
+  uint32 file_size = 7;
 }
 
 message ReadConfirmationMessage {

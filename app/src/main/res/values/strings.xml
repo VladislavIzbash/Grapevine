@@ -38,4 +38,6 @@
     <string name="outgoing_contacts">Исходящие запросы</string>
     <string name="accepted_contacts">Список контактов</string>
     <string name="type_message">Введите сообщение</string>
+    <string name="file_name_placeholder">Название</string>
+    <string name="file_size_placeholder">2.2 МиБ</string>
 </resources>
