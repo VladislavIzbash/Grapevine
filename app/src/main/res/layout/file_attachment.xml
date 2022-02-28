@@ -4,7 +4,8 @@
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:background="@color/attachmentBackground">
+    android:background="@color/attachmentBackground"
+    android:padding="5dp">
 
     <ImageView
         android:id="@+id/ivFileIcon"
@@ -18,18 +19,19 @@
 
     <TextView
         android:id="@+id/tvFileName"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         app:layout_constraintStart_toEndOf="@id/ivFileIcon"
         app:layout_constraintTop_toTopOf="parent"
         android:text="@string/file_name_placeholder"
         android:ellipsize="end"
         android:singleLine="true"
+        android:maxEms="10"
         android:textColor="@color/primary"
         android:textStyle="bold" />
 
     <TextView
-        android:id="@+id/fileSize"
+        android:id="@+id/tvFileSize"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:layout_constraintTop_toBottomOf="@id/tvFileName"
@@ -37,10 +39,13 @@
         android:text="@string/file_size_placeholder" />
 
     <FrameLayout
+        android:id="@+id/frameDownload"
+        android:visibility="visible"
         android:layout_width="40dp"
         android:layout_height="40dp"
         android:layout_marginStart="20dp"
         app:layout_constraintStart_toEndOf="@id/tvFileName"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent">
 
@@ -53,6 +58,8 @@
             tools:ignore="ContentDescription" />
 
         <com.google.android.material.progressindicator.CircularProgressIndicator
+            android:id="@+id/piDownload"
+            android:visibility="invisible"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             app:indicatorSize="32dp"

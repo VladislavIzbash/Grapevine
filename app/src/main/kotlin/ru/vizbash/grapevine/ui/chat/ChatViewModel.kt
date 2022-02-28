@@ -1,5 +1,6 @@
 package ru.vizbash.grapevine.ui.chat
 
+import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -14,6 +15,7 @@ import ru.vizbash.grapevine.GVException
 import ru.vizbash.grapevine.ProfileService
 import ru.vizbash.grapevine.network.GrapevineNetwork
 import ru.vizbash.grapevine.storage.messages.MessageEntity
+import ru.vizbash.grapevine.storage.messages.MessageFile
 import javax.inject.Inject
 import kotlin.random.Random
 
@@ -33,16 +35,30 @@ class ChatViewModel @Inject constructor(
         profileService.getContactMessages(contact)
     }.flow.cachedIn(viewModelScope)
 
-    val forwardedMessage: MutableStateFlow<MessageEntity?> = MutableStateFlow(null)
+    val forwardedMessage = MutableStateFlow<MessageEntity?>(null)
+
+    val attachedFile = MutableStateFlow<MessageFile?>(null)
 
     fun sendMessage(text: String) {
         viewModelScope.launch {
             val id = Random.nextLong()
-            profileService.addSentMessage(id, contact, text, forwardedMessage.value)
+            profileService.addSentMessage(
+                id,
+                contact,
+                text,
+                forwardedMessage.value,
+                attachedFile.value,
+            )
 
             grapevineNetwork.availableNodes.value.find { it.id == contact.nodeId }?.let {
                 try {
-                    grapevineNetwork.sendTextMessage(id, text, it, forwardedMessage.value?.id)
+                    grapevineNetwork.sendTextMessage(
+                        id,
+                        text,
+                        it,
+                        forwardedMessage.value?.id,
+                        attachedFile.value,
+                    )
                     profileService.setMessageState(id, MessageEntity.State.DELIVERED)
                 } catch (e: GVException) {
                     profileService.setMessageState(id, MessageEntity.State.DELIVERY_FAILED)

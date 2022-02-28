@@ -10,6 +10,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
 import ru.vizbash.grapevine.*
 import ru.vizbash.grapevine.network.messages.routed.*
+import ru.vizbash.grapevine.storage.messages.MessageFile
 import java.io.ByteArrayOutputStream
 import javax.crypto.SecretKey
 import javax.inject.Inject
@@ -271,13 +272,26 @@ class GrapevineNetwork @Inject constructor(
         return Pair(req.payload.text, req.sender)
     }
 
-    suspend fun sendTextMessage(msgId: Long, text: String, dest: Node, origId: Long?) {
+    suspend fun sendTextMessage(
+        msgId: Long,
+        text: String,
+        dest: Node,
+        origId: Long?,
+        file: MessageFile?,
+    ) {
         val req = TextMessage.newBuilder()
             .setMsgId(msgId)
             .setText(text)
             .setTimestamp(System.currentTimeMillis() / 1000)
             .setOriginalMsgId(origId ?: 0)
-        val payload = RoutedPayload.newBuilder().setText(req).build()
+            .setHasFile(file != null)
+
+        if (file != null) {
+            req.fileName = file.name
+            req.fileSize = file.size
+        }
+
+        val payload = RoutedPayload.newBuilder().setText(req.build()).build()
 
         sendAndAwaitResponse(payload, dest)
     }

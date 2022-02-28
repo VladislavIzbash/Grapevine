@@ -11,11 +11,11 @@
         android:layout_height="wrap_content"
         android:layout_alignParentEnd="true"
         android:layout_marginVertical="@dimen/msg_vertical_margin"
-        android:layout_marginEnd="@dimen/msg_start_margin"
         android:layout_marginStart="@dimen/msg_end_margin"
+        android:layout_marginEnd="@dimen/msg_start_margin"
         android:background="@drawable/bg_chat_message"
-        android:padding="@dimen/msg_padding"
         android:orientation="horizontal"
+        android:padding="@dimen/msg_padding"
         tools:ignore="UselessParent">
 
         <LinearLayout
@@ -27,25 +27,27 @@
                 android:id="@+id/tvMessageText"
                 android:layout_width="wrap_content"
                 android:layout_height="0dp"
-                android:padding="5dp"
                 android:layout_weight="1"
+                android:padding="5dp"
                 android:text="@string/message_text_placeholder"
                 android:textColor="@color/messageText" />
 
-            <include layout="@layout/file_attachment"
+            <include
                 android:id="@+id/layoutFileAttachment"
-                android:visibility="gone"
+                layout="@layout/file_attachment"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:layout_marginHorizontal="5dp"
-                android:layout_marginVertical="2dp"/>
+                android:layout_marginVertical="2dp"
+                android:visibility="gone" />
 
-            <include layout="@layout/forwarded_message"
+            <include
                 android:id="@+id/layoutForwardedMessage"
-                android:visibility="gone"
+                layout="@layout/forwarded_message"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
-                android:layout_marginHorizontal="5dp" />
+                android:layout_marginHorizontal="5dp"
+                android:visibility="gone" />
         </LinearLayout>
 
         <LinearLayout
@@ -57,12 +59,12 @@
 
             <TextView
                 android:id="@+id/tvMessageTime"
+                style="@style/Grapevine.TextAppearance.Timestamp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="5dp"
                 android:layout_gravity="bottom"
-                android:text="@string/message_time_placeholder"
-                style="@style/Grapevine.TextAppearance.Timestamp" />
+                android:layout_marginHorizontal="5dp"
+                android:text="@string/message_time_placeholder" />
 
             <ImageView
                 android:id="@+id/ivMessageStatus"

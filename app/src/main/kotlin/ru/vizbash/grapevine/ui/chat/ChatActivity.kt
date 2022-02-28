@@ -4,8 +4,10 @@ import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
+import androidx.activity.result.contract.ActivityResultContracts.GetContent
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -15,8 +17,11 @@ import androidx.recyclerview.widget.RecyclerView
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import ru.vizbash.grapevine.R
 import ru.vizbash.grapevine.databinding.ActivityChatBinding
+import ru.vizbash.grapevine.storage.messages.MessageFile
 import ru.vizbash.grapevine.storage.messages.MessageWithOrig
+import ru.vizbash.grapevine.toHumanSize
 
 @AndroidEntryPoint
 class ChatActivity : AppCompatActivity() {
@@ -35,6 +40,19 @@ class ChatActivity : AppCompatActivity() {
         override fun afterTextChanged(s: Editable?) {
             ui.buttonSend.isEnabled = !s.isNullOrBlank()
         }
+    }
+
+    private val openFile = registerForActivityResult(GetContent()) { uri ->
+        if (uri == null) {
+            return@registerForActivityResult
+        }
+
+        val doc = DocumentFile.fromSingleUri(this, uri)!!
+        model.attachedFile.value = MessageFile(
+            doc.name!!,
+            doc.length().toInt(),
+            false,
+        )
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,17 +85,27 @@ class ChatActivity : AppCompatActivity() {
         ui.buttonSend.setOnClickListener {
             model.sendMessage(ui.editMessage.text.toString().trim())
             ui.editMessage.text.clear()
+
             model.forwardedMessage.value = null
+            model.attachedFile.value = null
+        }
+
+        ui.buttonAttachFile.setOnClickListener {
+            openFile.launch("*/*")
         }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                collectForwardedMessage()
+                launch { collectForwardedMessage() }
+                launch { collectAttachment() }
             }
         }
 
         ui.buttonForwardedRemove.setOnClickListener {
             model.forwardedMessage.value = null
+        }
+        ui.buttonAttachmentRemove.setOnClickListener {
+            model.attachedFile.value = null
         }
     }
 
@@ -94,9 +122,25 @@ class ChatActivity : AppCompatActivity() {
                         model.contact.username
                     }
 
-                    ui.layoutForwardedFrame.visibility = View.VISIBLE
+                    ui.cardForwardedMessage.visibility = View.VISIBLE
                 } else {
-                    ui.layoutForwardedFrame.visibility = View.GONE
+                    ui.cardForwardedMessage.visibility = View.GONE
+                }
+            }
+        }
+    }
+
+    private suspend fun collectAttachment() {
+        model.attachedFile.collect { file ->
+            ui.layoutFileAttachment.apply {
+                if (file != null) {
+                    tvFileName.text = file.name
+                    tvFileSize.text = file.size.toHumanSize(resources.getStringArray(R.array.size_units))
+
+                    frameDownload.visibility = View.GONE
+                    ui.cardFileAttachment.visibility = View.VISIBLE
+                } else {
+                    ui.cardFileAttachment.visibility = View.GONE
                 }
             }
         }

@@ -13,6 +13,7 @@ import ru.vizbash.grapevine.network.messages.routed.TextMessage
 import ru.vizbash.grapevine.storage.UserDatabase
 import ru.vizbash.grapevine.storage.contacts.ContactEntity
 import ru.vizbash.grapevine.storage.messages.MessageEntity
+import ru.vizbash.grapevine.storage.messages.MessageFile
 import ru.vizbash.grapevine.storage.messages.MessageWithOrig
 import ru.vizbash.grapevine.storage.profile.ProfileDao
 import ru.vizbash.grapevine.storage.profile.ProfileEntity
@@ -118,8 +119,11 @@ class ProfileService @Inject constructor(
             text = message.text,
             originalMessageId = if (message.originalMsgId == 0L) null else message.originalMsgId,
             state = MessageEntity.State.DELIVERED,
-            hasFile = false,
-            filePath = null,
+            file = MessageFile(
+                name = message.fileName,
+                size = message.fileSize,
+                downloaded = false,
+            )
         ))
     }
 
@@ -128,6 +132,7 @@ class ProfileService @Inject constructor(
         contact: ContactEntity,
         text: String,
         orig: MessageEntity?,
+        file: MessageFile?,
     ) {
         userDb.messageDao().insert(MessageEntity(
             id = id,
@@ -137,8 +142,7 @@ class ProfileService @Inject constructor(
             text = text,
             originalMessageId = orig?.id,
             state = MessageEntity.State.SENT,
-            hasFile = false,
-            filePath = null,
+            file = file,
         ))
     }
 

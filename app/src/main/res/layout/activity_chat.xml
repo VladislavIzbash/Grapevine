@@ -87,6 +87,7 @@
             android:autofillHints="" />
 
         <ImageButton
+            android:id="@+id/buttonAttachFile"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginBottom="7dp"
@@ -112,26 +113,59 @@
 
     </LinearLayout>
 
-    <FrameLayout
-        android:id="@+id/layoutForwardedFrame"
-        android:visibility="visible"
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardForwardedMessage"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        app:cardUseCompatPadding="true">
 
-        <include layout="@layout/forwarded_message"
-            android:id="@+id/layoutForwardedMessage" />
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
 
-        <ImageButton
-            android:id="@+id/buttonForwardedRemove"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginEnd="10dp"
-            android:layout_gravity="end|center_vertical"
-            android:src="@drawable/ic_clear"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            tools:ignore="ContentDescription" />
+            <include layout="@layout/forwarded_message"
+                android:id="@+id/layoutForwardedMessage" />
 
-    </FrameLayout>
+            <ImageButton
+                android:id="@+id/buttonForwardedRemove"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_marginEnd="10dp"
+                android:layout_gravity="end|center_vertical"
+                android:src="@drawable/ic_clear"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                tools:ignore="ContentDescription" />
+
+        </FrameLayout>
+
+    </androidx.cardview.widget.CardView>
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardFileAttachment"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardUseCompatPadding="true">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <include layout="@layout/file_attachment"
+                android:id="@+id/layoutFileAttachment" />
+
+            <ImageButton
+                android:id="@+id/buttonAttachmentRemove"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_marginEnd="10dp"
+                android:layout_gravity="end|center_vertical"
+                android:src="@drawable/ic_clear"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                tools:ignore="ContentDescription" />
+
+        </FrameLayout>
+
+    </androidx.cardview.widget.CardView>
 
 
 </LinearLayout>

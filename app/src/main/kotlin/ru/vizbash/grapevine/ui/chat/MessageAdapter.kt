@@ -8,13 +8,16 @@ import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import ru.vizbash.grapevine.R
+import ru.vizbash.grapevine.databinding.FileAttachmentBinding
 import ru.vizbash.grapevine.databinding.ForwardedMessageBinding
 import ru.vizbash.grapevine.databinding.ItemIngoingMessageBinding
 import ru.vizbash.grapevine.databinding.ItemOutgoingMessageBinding
 import ru.vizbash.grapevine.storage.contacts.ContactEntity
 import ru.vizbash.grapevine.storage.messages.MessageEntity
+import ru.vizbash.grapevine.storage.messages.MessageFile
 import ru.vizbash.grapevine.storage.messages.MessageWithOrig
 import ru.vizbash.grapevine.storage.profile.ProfileEntity
+import ru.vizbash.grapevine.toHumanSize
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -28,7 +31,6 @@ class MessageAdapter(
         private const val TYPE_INGOING = 2
     }
 
-
     private fun ForwardedMessageBinding.bindOriginalMessage(message: MessageEntity?) {
         if (message != null) {
             tvForwardedUsername.text = if (message.senderId == currentProfile.nodeId) {
@@ -38,6 +40,21 @@ class MessageAdapter(
             }
             tvForwardedText.text = message.text
             tvForwardedTime.text = TIMESTAMP_FORMAT.format(message.timestamp)
+
+            root.visibility = View.VISIBLE
+        } else {
+            root.visibility = View.GONE
+        }
+    }
+
+    private fun FileAttachmentBinding.bindAttachment(file: MessageFile?, outgoing: Boolean) {
+        if (file != null) {
+            tvFileName.text = file.name
+
+            val units = root.context.resources.getStringArray(R.array.size_units)
+            tvFileSize.text = file.size.toHumanSize(units)
+
+            frameDownload.visibility = if (outgoing) View.GONE else View.VISIBLE
 
             root.visibility = View.VISIBLE
         } else {
@@ -65,10 +82,13 @@ class MessageAdapter(
             boundItem = item
 
             ui.layoutForwardedMessage.bindOriginalMessage(item.orig_msg)
+            ui.layoutFileAttachment.bindAttachment(item.msg.file, true)
 
             ui.tvMessageText.text = item.msg.text
             ui.layoutMessageBody.post {
-                val expand = ui.tvMessageText.lineCount > 1 || item.orig_msg != null
+                val expand = ui.tvMessageText.lineCount > 1
+                        || item.orig_msg != null
+                        || item.msg.file != null
                 ui.layoutMessageBody.orientation = if (expand) {
                     LinearLayout.VERTICAL
                 } else {
@@ -97,12 +117,15 @@ class MessageAdapter(
             boundItem = item
 
             ui.layoutForwardedMessage.bindOriginalMessage(item.orig_msg)
+            ui.layoutFileAttachment.bindAttachment(item.msg.file, false)
 
             ui.cardPhoto.visibility = View.GONE
 
             ui.tvMessageText.text = item.msg.text
             ui.layoutMessageBody.post {
-                val expand = ui.tvMessageText.lineCount > 1 || item.orig_msg != null
+                val expand = ui.tvMessageText.lineCount > 1
+                        || item.orig_msg != null
+                        || item.msg.file != null
                 ui.layoutMessageBody.orientation = if (expand) {
                     LinearLayout.VERTICAL
                 } else {
