@@ -15,6 +15,7 @@ import java.io.ByteArrayOutputStream
 import javax.crypto.SecretKey
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.ceil
 
 @Singleton
 class GrapevineNetwork @Inject constructor(
@@ -31,6 +32,7 @@ class GrapevineNetwork @Inject constructor(
     companion object {
         private const val ASK_INTERVAL_MS = 30_000L
         private const val RECEIVE_TIMEOUT_MS = 5_000L
+        private const val FILE_CHUNK_SIZE = 1024
     }
 
     private var coroutineScope = CoroutineScope(Dispatchers.IO)
@@ -141,16 +143,13 @@ class GrapevineNetwork @Inject constructor(
         }
     }
 
-    private suspend fun sendAndAwaitResponse(
-        payload: RoutedPayload,
-        dest: Node,
+    private suspend fun awaitResponse(
+        reqId: Long,
     ): RoutedResponse = withContext(Dispatchers.Default) {
-        val id = send(payload, dest)
-
         try {
             withTimeout(RECEIVE_TIMEOUT_MS) {
                 acceptedMessages
-                    .filter { it.payload.hasResponse() && it.payload.response.requestId == id }
+                    .filter { it.payload.hasResponse() && it.payload.response.requestId == reqId }
                     .map { msg ->
                         val resp = msg.payload.response
                         when (resp.error) {
@@ -207,7 +206,8 @@ class GrapevineNetwork @Inject constructor(
         val photoReq = PhotoRequest.newBuilder().build()
         val payload = RoutedPayload.newBuilder().setPhotoReq(photoReq).build()
 
-        val resp = sendAndAwaitResponse(payload, node)
+        val reqId = send(payload, node)
+        val resp = awaitResponse(reqId)
         if (!resp.hasPhotoResp()) {
             throw GVInvalidResponseException()
         }
@@ -223,7 +223,9 @@ class GrapevineNetwork @Inject constructor(
     suspend fun sendContactInvitation(node: Node) {
         val req = ContactInvitationMessage.newBuilder().build()
         val payload = RoutedPayload.newBuilder().setContactInvitation(req).build()
-        sendAndAwaitResponse(payload, node)
+
+        val reqId = send(payload, node)
+        awaitResponse(reqId)
     }
 
     val contactInvitations: Flow<Node> = acceptedMessages
@@ -259,7 +261,8 @@ class GrapevineNetwork @Inject constructor(
             .build()
         val payload = RoutedPayload.newBuilder().setContactInvitationAnswer(req).build()
 
-        sendAndAwaitResponse(payload, node)
+        val reqId = send(payload, node)
+        awaitResponse(reqId)
     }
 
     val textMessages: Flow<Pair<TextMessage, Node>> = acceptedMessages
@@ -293,7 +296,8 @@ class GrapevineNetwork @Inject constructor(
 
         val payload = RoutedPayload.newBuilder().setText(req.build()).build()
 
-        sendAndAwaitResponse(payload, dest)
+        val reqId = send(payload, dest)
+        awaitResponse(reqId)
     }
 
     val readConfirmations: Flow<Long> = acceptedMessages
@@ -307,12 +311,85 @@ class GrapevineNetwork @Inject constructor(
     }
 
     suspend fun sendReadConfirmation(msgId: Long, dest: Node) {
-        val req = ReadConfirmationMessage.newBuilder()
-            .setMsgId(msgId)
-            .build()
+        val req = ReadConfirmationMessage.newBuilder().setMsgId(msgId).build()
         val payload = RoutedPayload.newBuilder().setReadConfirmation(req).build()
 
-        sendAndAwaitResponse(payload, dest)
+        val reqId = send(payload, dest)
+        awaitResponse(reqId)
+    }
+
+    suspend fun startFileSharing(
+        msgId: Long,
+        file: MessageFile,
+        getNextChunk: suspend (Int) -> ByteArray,
+    ) {
+        val downloadRequests = acceptedMessages
+            .filter { it.payload.hasDownloadReq() }
+            .filter { it.payload.downloadReq.msgId == msgId }
+
+        downloadRequests.collect { req ->
+            val totalChunks = ceil(file.size.toFloat() / FILE_CHUNK_SIZE).toInt()
+            for (chunkNum in 0 until totalChunks) {
+                val chunkResp = FileChunkResponse.newBuilder()
+                    .setMsgId(msgId)
+                    .setTotalChunks(totalChunks)
+                    .setChunkNum(chunkNum)
+                    .setChunk(ByteString.copyFrom(getNextChunk(FILE_CHUNK_SIZE)))
+                    .build()
+
+                val resp = RoutedResponse.newBuilder()
+                    .setRequestId(req.id)
+                    .setError(Error.NO_ERROR)
+                    .setFileChunkResp(chunkResp)
+                    .build()
+
+                val payload = RoutedPayload.newBuilder().setResponse(resp).build()
+                send(payload, req.sender)
+            }
+        }
+    }
+
+    suspend fun downloadFile(
+        msgId: Long,
+        sender: Node,
+    ): Pair<Flow<ByteArray>, Int> {
+        val req = FileDownloadRequest.newBuilder().setMsgId(msgId).build()
+        val payload = RoutedPayload.newBuilder().setDownloadReq(req).build()
+
+        val reqId = send(payload, sender)
+        awaitResponse(reqId)
+
+        val firstResp = awaitResponse(reqId)
+        val firstChunkResp = if (firstResp.hasFileChunkResp()) {
+            firstResp.fileChunkResp
+        } else {
+            throw GVInvalidResponseException()
+        }
+
+        val chunkFlow = flow {
+            emit(firstChunkResp.chunk.toByteArray())
+
+            var prevNum = 0
+
+            repeat(firstChunkResp.totalChunks - 1) {
+                val resp = awaitResponse(reqId)
+                val chunkResp = if (resp.hasFileChunkResp()) {
+                    resp.fileChunkResp
+                } else {
+                    throw GVInvalidResponseException()
+                }
+
+                if (chunkResp.chunkNum != prevNum + 1)  {
+                    throw GVInvalidResponseException()
+                }
+
+                emit(chunkResp.chunk.toByteArray())
+
+                prevNum = chunkResp.chunkNum
+            }
+        }
+
+        return Pair(chunkFlow, firstChunkResp.totalChunks)
     }
 }
 

@@ -106,6 +106,8 @@ class ProfileService @Inject constructor(
         userDb.contactDao().update(contact.copy(state = state))
     }
 
+    fun getAllMessages() = userDb.messageDao().getAll()
+
     fun getContactMessages(contact: ContactEntity): PagingSource<Int, MessageWithOrig> {
         return userDb.messageDao().getAllForChat(contact.nodeId)
     }

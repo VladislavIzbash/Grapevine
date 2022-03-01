@@ -8,6 +8,9 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface MessageDao {
+    @Query("SELECT * FROM messages")
+    fun getAll(): Flow<List<MessageEntity>>
+
     @Query("SELECT * FROM messages WHERE chat_id = :chatId ORDER BY timestamp DESC")
     fun getAllForChat(chatId: Long): PagingSource<Int, MessageWithOrig>
 

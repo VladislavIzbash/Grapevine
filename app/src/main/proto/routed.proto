@@ -11,6 +11,7 @@ message RoutedPayload {
     ReadConfirmationMessage read_confirmation = 4;
     ContactInvitationMessage contact_invitation = 5;
     ContactInvitationAnswerMessage contact_invitation_answer = 6;
+    FileDownloadRequest download_req = 7;
   }
 }
 
@@ -25,6 +26,7 @@ message RoutedResponse {
   Error error = 2;
   oneof response {
     PhotoResponse photo_resp = 3;
+    FileChunkResponse file_chunk_resp = 8;
   }
 }
 
@@ -52,5 +54,16 @@ message TextMessage {
 
 message ReadConfirmationMessage {
   uint64 msg_id = 1;
+}
+
+message FileDownloadRequest {
+  uint64 msg_id = 1;
+}
+
+message FileChunkResponse {
+  uint64 msg_id = 1;
+  uint32 total_chunks = 2;
+  uint32 chunk_num = 3;
+  bytes chunk = 4;
 }
 

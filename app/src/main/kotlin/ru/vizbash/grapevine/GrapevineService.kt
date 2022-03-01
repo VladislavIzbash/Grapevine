@@ -8,6 +8,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.network.GrapevineNetwork
 import ru.vizbash.grapevine.storage.contacts.ContactEntity
@@ -40,6 +42,19 @@ class GrapevineService : Service() {
 
         return START_STICKY
     }
+
+//    private suspend fun CoroutineScope.shareMessageFiles() {
+//        val myId = profileService.profile.entity.nodeId
+//        profileService.getAllMessages().collect { messages ->
+//            for (msg in messages.filter { it.senderId == myId && it.file != null }) {
+//                launch {
+//                    grapevineNetwork.startFileSharing(msg.id, msg.file!!) { chunkSize ->
+//                        contentResolver.openFile(msg.file.)
+//                    }
+//                }
+//            }
+//        }
+//    }
 
     private suspend fun receiveInvitations() {
         grapevineNetwork.contactInvitations.collect { node ->
