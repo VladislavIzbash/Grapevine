@@ -4,6 +4,7 @@ import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -11,6 +12,7 @@ interface MessageDao {
     @Query("SELECT * FROM messages")
     fun getAll(): Flow<List<MessageEntity>>
 
+    @Transaction
     @Query("SELECT * FROM messages WHERE chat_id = :chatId ORDER BY timestamp DESC")
     fun getAllForChat(chatId: Long): PagingSource<Int, MessageWithOrig>
 

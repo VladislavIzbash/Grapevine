@@ -48,31 +48,33 @@ class PeopleAroundFragment : Fragment() {
     }
 
     private suspend fun collectNodes(adapter: NodeAdapter) {
-        model.availableNodes.collect { nodes ->
+        model.service.availableNodes.collect { nodes ->
             ui.tvNoNodes.visibility = if (nodes.isEmpty()) View.VISIBLE else View.INVISIBLE
             ui.rvNodes.visibility = if (nodes.isEmpty()) View.INVISIBLE else View.VISIBLE
 
-            val contacts = model.contacts.first()
+            val contacts = model.service.contactList.first()
 
-            adapter.items = nodes.map { node ->
+            val nodeItems = nodes.map { node ->
                 NodeAdapter.NodeItem(
                     node,
                     model.fetchPhotoAsync(node),
                     contacts.any { it.nodeId == node.id },
                 )
             }
+            adapter.submitList(nodeItems)
         }
     }
 
     private suspend fun collectContacts(adapter: NodeAdapter) {
-        model.contacts.collect { contacts ->
-            adapter.items = model.availableNodes.value.map { node ->
+        model.service.contactList.collect { contacts ->
+            val nodeItems = model.service.availableNodes.value.map { node ->
                 NodeAdapter.NodeItem(
                     node,
                     model.fetchPhotoAsync(node),
                     contacts.any { it.nodeId == node.id },
                 )
             }
+            adapter.submitList(nodeItems)
         }
     }
 }

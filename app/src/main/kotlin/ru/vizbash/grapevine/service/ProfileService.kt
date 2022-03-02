@@ -1,4 +1,4 @@
-package ru.vizbash.grapevine
+package ru.vizbash.grapevine.service
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -17,6 +17,7 @@ import ru.vizbash.grapevine.storage.messages.MessageFile
 import ru.vizbash.grapevine.storage.messages.MessageWithOrig
 import ru.vizbash.grapevine.storage.profile.ProfileDao
 import ru.vizbash.grapevine.storage.profile.ProfileEntity
+import ru.vizbash.grapevine.util.*
 import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -27,7 +28,7 @@ import kotlin.random.Random
 class ProfileService @Inject constructor(
     @ApplicationContext private val context: Context,
     private val profileDao: ProfileDao,
-) : ProfileProvider {
+) : ProfileProvider, NodeVerifier {
     override lateinit var profile: Profile
         private set
 
@@ -36,7 +37,7 @@ class ProfileService @Inject constructor(
 
     private lateinit var userDb: UserDatabase
 
-    suspend fun createProfileAndLogin(
+    suspend fun createProfile(
         username: String,
         password: String,
         photo: Bitmap?,
@@ -51,29 +52,22 @@ class ProfileService @Inject constructor(
             photo,
         )
         profileDao.insert(profile)
-
-        val dhKeyPair = createDhKeyPair()
-        this@ProfileService.profile = Profile(profile, keyPair.private, dhKeyPair.public, dhKeyPair.private)
-
-        loadUserDb()
     }
 
     suspend fun tryLogin(profile: ProfileEntity, password: String) = withContext(Dispatchers.Default) {
         val privKey = aesDecrypt(profile.privateKeyEnc, generatePasswordSecret(password))
+            ?: return@withContext false
 
         val dhKeyPair = createDhKeyPair()
-        if (privKey != null) {
-            this@ProfileService.profile = Profile(
-                profile,
-                decodeRsaPrivateKey(privKey),
-                dhKeyPair.public,
-                dhKeyPair.private,
-            )
-            loadUserDb()
-            true
-        } else {
-            false
-        }
+        this@ProfileService.profile = Profile(
+            profile,
+            decodeRsaPrivateKey(privKey),
+            dhKeyPair.public,
+            dhKeyPair.private,
+        )
+        loadUserDb()
+
+        true
     }
 
     private fun loadUserDb() {
@@ -82,6 +76,11 @@ class ProfileService @Inject constructor(
             UserDatabase::class.java,
             "profile_${profile.entity.nodeId.absoluteValue}",
         ).build()
+    }
+
+    override suspend fun checkNode(node: Node): Boolean {
+        val contact = userDb.contactDao().getById(node.id) ?: return true
+        return contact.publicKey == node.publicKey
     }
 
     val contactList get() = userDb.contactDao().getAll()
@@ -106,8 +105,6 @@ class ProfileService @Inject constructor(
         userDb.contactDao().update(contact.copy(state = state))
     }
 
-    fun getAllMessages() = userDb.messageDao().getAll()
-
     fun getContactMessages(contact: ContactEntity): PagingSource<Int, MessageWithOrig> {
         return userDb.messageDao().getAllForChat(contact.nodeId)
     }
@@ -122,6 +119,7 @@ class ProfileService @Inject constructor(
             originalMessageId = if (message.originalMsgId == 0L) null else message.originalMsgId,
             state = MessageEntity.State.DELIVERED,
             file = MessageFile(
+                uri = null,
                 name = message.fileName,
                 size = message.fileSize,
                 downloaded = false,

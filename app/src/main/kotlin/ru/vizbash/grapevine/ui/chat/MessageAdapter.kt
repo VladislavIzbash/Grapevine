@@ -17,7 +17,7 @@ import ru.vizbash.grapevine.storage.messages.MessageEntity
 import ru.vizbash.grapevine.storage.messages.MessageFile
 import ru.vizbash.grapevine.storage.messages.MessageWithOrig
 import ru.vizbash.grapevine.storage.profile.ProfileEntity
-import ru.vizbash.grapevine.toHumanSize
+import ru.vizbash.grapevine.util.toHumanSize
 import java.text.SimpleDateFormat
 import java.util.*
 

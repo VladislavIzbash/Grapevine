@@ -7,7 +7,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
-import ru.vizbash.grapevine.ProfileProvider
+import ru.vizbash.grapevine.service.ProfileProvider
 
 @ExperimentalCoroutinesApi
 class NetworkControllerTest {

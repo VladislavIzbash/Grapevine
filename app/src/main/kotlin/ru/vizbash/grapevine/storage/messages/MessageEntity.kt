@@ -11,6 +11,9 @@ import java.util.*
         childColumns = ["orig_msg_id"],
         onDelete = ForeignKey.NO_ACTION,
     )],
+    indices = [
+        Index(value = ["orig_msg_id"])
+    ],
 )
 data class MessageEntity(
     @PrimaryKey @ColumnInfo(name = "id") val id: Long,

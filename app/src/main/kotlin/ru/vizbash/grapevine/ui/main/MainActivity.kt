@@ -1,13 +1,17 @@
 package ru.vizbash.grapevine.ui.main
 
 import android.Manifest
+import android.content.ComponentName
 import android.content.Intent
+import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.IBinder
 import androidx.activity.result.contract.ActivityResultContracts.RequestPermission
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.Lifecycle
@@ -23,17 +27,30 @@ import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
-import ru.vizbash.grapevine.GrapevineService
 import ru.vizbash.grapevine.R
 import ru.vizbash.grapevine.databinding.ActivityMainBinding
 import ru.vizbash.grapevine.databinding.DrawerHeaderBinding
-import ru.vizbash.grapevine.network.bluetooth.BluetoothService
+import ru.vizbash.grapevine.service.ForegroundService
+import ru.vizbash.grapevine.ui.login.LoginActivity
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
     private lateinit var appBarConfig: AppBarConfiguration
 
+    private lateinit var ui: ActivityMainBinding
     private val model: MainViewModel by viewModels()
+
+    private lateinit var serviceBinder: ForegroundService.GrapevineBinder
+
+    private val serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
+            serviceBinder = (binder as ForegroundService.GrapevineBinder)
+            model.service = serviceBinder.grapevineService
+            onBound()
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {}
+    }
 
     @Navigator.Name("logout")
     private inner class LogoutNavigator : Navigator<NavDestination>() {
@@ -45,21 +62,28 @@ class MainActivity : AppCompatActivity() {
             navOptions: NavOptions?,
             navigatorExtras: Extras?,
         ): NavDestination? {
+            unbindService(serviceConnection)
+            stopService(Intent(this@MainActivity, ForegroundService::class.java))
+
+            startActivity(Intent(this@MainActivity, LoginActivity::class.java))
             finish()
-            stopService(Intent(this@MainActivity, BluetoothService::class.java))
-            stopService(Intent(this@MainActivity, GrapevineService::class.java))
-            model.disableAutologin()
             return null
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val ui = ActivityMainBinding.inflate(layoutInflater)
+        ui = ActivityMainBinding.inflate(layoutInflater)
         setContentView(ui.root)
 
         setSupportActionBar(ui.toolbar)
 
+        val intent = Intent(this, ForegroundService::class.java)
+        ContextCompat.startForegroundService(this, intent)
+        bindService(intent, serviceConnection, BIND_AUTO_CREATE)
+    }
+
+    private fun onBound() {
         val navHost = supportFragmentManager.findFragmentById(R.id.navHostFragment) as NavHostFragment
         val navController = navHost.navController
         navController.navigatorProvider.addNavigator(LogoutNavigator())
@@ -81,11 +105,11 @@ class MainActivity : AppCompatActivity() {
         val headerView = ui.navView.getHeaderView(0)
         val header = DrawerHeaderBinding.bind(headerView)
 
-        val photo = model.currentProfile.entity.photo
+        val photo = model.service.currentProfile.photo
         if (photo != null) {
             header.ivPhoto.setImageBitmap(photo)
         }
-        header.tvUsername.text = model.currentProfile.entity.username
+        header.tvUsername.text = model.service.currentProfile.username
 
         ViewCompat.setOnApplyWindowInsetsListener(headerView) { view, insets ->
             val top = insets.getInsets(WindowInsetsCompat.Type.systemBars()).top
@@ -94,8 +118,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         startBluetooth()
-        model.startGrapevineNetwork()
-        startService(Intent(this, GrapevineService::class.java))
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -118,11 +140,11 @@ class MainActivity : AppCompatActivity() {
         if (checkSelfPermission(permission) == PackageManager.PERMISSION_DENIED) {
             registerForActivityResult(RequestPermission()) { granted ->
                 if (granted) {
-                    startService(Intent(this, BluetoothService::class.java))
+                    serviceBinder.setBluetoothEnabled(true)
                 }
             }.launch(permission)
         } else {
-            startService(Intent(this, BluetoothService::class.java))
+            serviceBinder.setBluetoothEnabled(true)
         }
     }
 }

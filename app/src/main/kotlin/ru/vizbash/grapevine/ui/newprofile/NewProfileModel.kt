@@ -7,7 +7,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import ru.vizbash.grapevine.ProfileService
+import ru.vizbash.grapevine.service.ProfileService
 import ru.vizbash.grapevine.storage.LoginPrefs
 import javax.inject.Inject
 
@@ -27,7 +27,7 @@ class NewProfileModel @Inject constructor(
         viewModelScope.launch {
             loginPrefs.lastUsername = username
 
-            profileService.createProfileAndLogin(username, password, photo)
+            profileService.createProfile(username, password, photo)
 
             _creationState.value = CreationState.CREATED
         }

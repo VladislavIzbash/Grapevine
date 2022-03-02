@@ -2,9 +2,9 @@ package ru.vizbash.grapevine.network
 
 import android.util.Log
 import com.google.protobuf.ByteString
-import ru.vizbash.grapevine.GVException
-import ru.vizbash.grapevine.ProfileProvider
-import ru.vizbash.grapevine.TAG
+import ru.vizbash.grapevine.util.GVException
+import ru.vizbash.grapevine.service.ProfileProvider
+import ru.vizbash.grapevine.util.TAG
 import ru.vizbash.grapevine.network.messages.direct.*
 import javax.inject.Inject
 import javax.inject.Singleton

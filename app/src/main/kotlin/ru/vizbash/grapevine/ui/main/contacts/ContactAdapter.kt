@@ -4,6 +4,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -19,7 +20,7 @@ class ContactAdapter(
     private val coroutineScope: CoroutineScope,
     private val myId: Long,
     private val listener: ContactListener,
-) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+) : ListAdapter<ContactAdapter.ContactItem, RecyclerView.ViewHolder>(ContactDiffCallback()) {
     companion object {
         private const val TYPE_PENDING = 0
         private const val TYPE_ACCEPTED = 1
@@ -122,26 +123,45 @@ class ContactAdapter(
         }
     }
 
-    var items = emptyList<ContactItem>()
-        set(value) {
-            val sorted = value.sortedBy { getStateOrder(it.contact.state) }
+    override fun submitList(list: MutableList<ContactItem>?) {
+        requireNotNull(list)
 
-            val firstIngoing = sorted.find { it.contact.state == ContactEntity.State.INGOING }
-            firstIngoing?.headerRes = R.string.ingoing_contacts
+        val sorted = list.sortedBy { getStateOrder(it.contact.state) }
 
-            val firstOutgoing = sorted.find { it.contact.state == ContactEntity.State.OUTGOING }
-            firstOutgoing?.headerRes = R.string.outgoing_contacts
+        val firstIngoing = sorted.find { it.contact.state == ContactEntity.State.INGOING }
+        firstIngoing?.headerRes = R.string.ingoing_contacts
 
-            if (firstIngoing != null || firstOutgoing != null) {
-                val firstAccepted = sorted.find { it.contact.state == ContactEntity.State.ACCEPTED }
-                firstAccepted?.headerRes = R.string.accepted_contacts
-            }
+        val firstOutgoing = sorted.find { it.contact.state == ContactEntity.State.OUTGOING }
+        firstOutgoing?.headerRes = R.string.outgoing_contacts
 
-            val callback = ContactDiffCallback(items, sorted)
-            DiffUtil.calculateDiff(callback, true).dispatchUpdatesTo(this)
-
-            field = sorted
+        if (firstIngoing != null || firstOutgoing != null) {
+            val firstAccepted = sorted.find { it.contact.state == ContactEntity.State.ACCEPTED }
+            firstAccepted?.headerRes = R.string.accepted_contacts
         }
+
+        super.submitList(list)
+    }
+
+//    var items = emptyList<ContactItem>()
+//        set(value) {
+//            val sorted = value.sortedBy { getStateOrder(it.contact.state) }
+//
+//            val firstIngoing = sorted.find { it.contact.state == ContactEntity.State.INGOING }
+//            firstIngoing?.headerRes = R.string.ingoing_contacts
+//
+//            val firstOutgoing = sorted.find { it.contact.state == ContactEntity.State.OUTGOING }
+//            firstOutgoing?.headerRes = R.string.outgoing_contacts
+//
+//            if (firstIngoing != null || firstOutgoing != null) {
+//                val firstAccepted = sorted.find { it.contact.state == ContactEntity.State.ACCEPTED }
+//                firstAccepted?.headerRes = R.string.accepted_contacts
+//            }
+//
+//            val callback = ContactDiffCallback(items, sorted)
+//            DiffUtil.calculateDiff(callback, true).dispatchUpdatesTo(this)
+//
+//            field = sorted
+//        }
 
     private fun getStateOrder(state: ContactEntity.State) = when (state) {
         ContactEntity.State.ACCEPTED -> 2
@@ -149,33 +169,27 @@ class ContactAdapter(
         ContactEntity.State.INGOING -> 0
     }
 
-    override fun getItemViewType(position: Int): Int {
-        val item = items[position]
-
-        return when (item.contact.state) {
-            ContactEntity.State.OUTGOING, ContactEntity.State.INGOING -> TYPE_PENDING
-            ContactEntity.State.ACCEPTED -> TYPE_ACCEPTED
-        }
+    override fun getItemViewType(position: Int) = when (getItem(position).contact.state) {
+        ContactEntity.State.OUTGOING, ContactEntity.State.INGOING -> TYPE_PENDING
+        ContactEntity.State.ACCEPTED -> TYPE_ACCEPTED
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-        return when (viewType) {
-            TYPE_PENDING -> {
-                val view = LayoutInflater.from(parent.context)
-                    .inflate(R.layout.item_pending_contact, parent, false)
-                PendingViewHolder(view)
-            }
-            TYPE_ACCEPTED -> {
-                val view = LayoutInflater.from(parent.context)
-                    .inflate(R.layout.item_contact, parent, false)
-                AcceptedViewHolder(view)
-            }
-            else -> throw IllegalArgumentException()
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = when (viewType) {
+        TYPE_PENDING -> {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(R.layout.item_pending_contact, parent, false)
+            PendingViewHolder(view)
         }
+        TYPE_ACCEPTED -> {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(R.layout.item_contact, parent, false)
+            AcceptedViewHolder(view)
+        }
+        else -> throw IllegalArgumentException()
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        val item = items[position]
+        val item = getItem(position)
 
         when (item.contact.state) {
             ContactEntity.State.OUTGOING, ContactEntity.State.INGOING -> {
@@ -187,8 +201,6 @@ class ContactAdapter(
         }
     }
 
-    override fun getItemCount() = items.size
-
     override fun onViewDetachedFromWindow(holder: RecyclerView.ViewHolder) {
         super.onViewDetachedFromWindow(holder)
 
@@ -197,18 +209,11 @@ class ContactAdapter(
         }
     }
 
-    private class ContactDiffCallback(
-        private val oldItems: List<ContactItem>,
-        private val newItems: List<ContactItem>,
-    ) : DiffUtil.Callback() {
-        override fun getOldListSize() = oldItems.size
+    private class ContactDiffCallback : DiffUtil.ItemCallback<ContactItem>() {
+        override fun areItemsTheSame(oldItem: ContactItem, newItem: ContactItem): Boolean =
+            oldItem.contact.nodeId == newItem.contact.nodeId
 
-        override fun getNewListSize() = newItems.size
-
-        override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int) =
-            oldItems[oldItemPosition].contact.nodeId == newItems[newItemPosition].contact.nodeId
-
-        override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int) =
-            oldItems[oldItemPosition] == newItems[newItemPosition]
+        override fun areContentsTheSame(oldItem: ContactItem, newItem: ContactItem): Boolean =
+            oldItem == newItem
     }
 }

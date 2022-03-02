@@ -5,8 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import ru.vizbash.grapevine.ProfileProvider
-import ru.vizbash.grapevine.ProfileService
+import ru.vizbash.grapevine.service.ProfileService
 import ru.vizbash.grapevine.storage.LoginPrefs
 import ru.vizbash.grapevine.storage.profile.ProfileEntity
 import javax.inject.Inject

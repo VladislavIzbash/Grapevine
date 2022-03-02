@@ -1,7 +1,11 @@
 package ru.vizbash.grapevine.network
 
 import ru.vizbash.grapevine.*
+import ru.vizbash.grapevine.service.Profile
+import ru.vizbash.grapevine.service.ProfileProvider
 import ru.vizbash.grapevine.storage.profile.ProfileEntity
+import ru.vizbash.grapevine.util.createDhKeyPair
+import ru.vizbash.grapevine.util.createRsaKeyPair
 
 fun createProfileService(nodeId: Long): ProfileProvider {
     val keyPair = createRsaKeyPair()

@@ -8,9 +8,11 @@ import com.google.protobuf.InvalidProtocolBufferException
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
-import ru.vizbash.grapevine.*
 import ru.vizbash.grapevine.network.messages.routed.*
+import ru.vizbash.grapevine.service.NodeVerifier
+import ru.vizbash.grapevine.service.ProfileProvider
 import ru.vizbash.grapevine.storage.messages.MessageFile
+import ru.vizbash.grapevine.util.*
 import java.io.ByteArrayOutputStream
 import javax.crypto.SecretKey
 import javax.inject.Inject
@@ -21,6 +23,7 @@ import kotlin.math.ceil
 class GrapevineNetwork @Inject constructor(
     private val router: Router,
     private val profileProvider: ProfileProvider,
+    private val nodeVerifier: NodeVerifier,
 ) {
     class GVBadSignatureException : GVException()
     class GVCannotDecryptException : GVException()
@@ -36,10 +39,9 @@ class GrapevineNetwork @Inject constructor(
     }
 
     private var coroutineScope = CoroutineScope(Dispatchers.IO)
-    private var running = false
+    private var started = false
 
     private val secretKeyCache = mutableMapOf<Node, SecretKey>()
-    private val photoCache = mutableMapOf<Node, Bitmap?>()
 
     val availableNodes: StateFlow<List<Node>> = callbackFlow {
         router.setOnNodesUpdated {
@@ -60,11 +62,9 @@ class GrapevineNetwork @Inject constructor(
     }.acceptMessages().shareIn(coroutineScope, SharingStarted.Eagerly)
 
     fun start() {
-        if (running) {
-            return
-        }
+        check(!started)
 
-        Log.i(TAG, "Started message handler")
+        Log.i(TAG, "Started")
 
         coroutineScope.launch {
             while (true) {
@@ -78,15 +78,13 @@ class GrapevineNetwork @Inject constructor(
                 .collect(this@GrapevineNetwork::handlePhotoRequest)
         }
 
-        running = true
+        started = true
     }
 
     fun stop() {
-        if (running) {
-            running = false
-            coroutineScope.coroutineContext.cancelChildren()
-            Log.i(TAG, "Stopped message handler")
-        }
+        started = false
+        coroutineScope.cancel()
+        Log.i(TAG, "Stopped")
     }
 
     private fun getSecret(node: Node) = secretKeyCache.getOrPut(node) {
@@ -95,6 +93,19 @@ class GrapevineNetwork @Inject constructor(
 
     @Suppress("BlockingMethodInNonBlockingContext")
     private fun Flow<Router.ReceivedMessage>.acceptMessages(): Flow<AcceptedMessage> = transform { msg ->
+        if (!nodeVerifier.checkNode(msg.sender)) {
+            Log.w(this@GrapevineNetwork.TAG, "${msg.sender} is not who his claims to be")
+
+            val routed = RoutedResponse.newBuilder()
+                .setRequestId(msg.id)
+                .setError(Error.INVALID_IDENTITY)
+                .build()
+            val payload = RoutedPayload.newBuilder().setResponse(routed).build()
+
+            send(payload, msg.sender)
+            return@transform
+        }
+
         if (!verifyMessage(msg.payload, msg.sign, msg.sender.publicKey)) {
             Log.w(this@GrapevineNetwork.TAG, "${msg.sender} sent message with bad signature")
 
@@ -153,9 +164,10 @@ class GrapevineNetwork @Inject constructor(
                     .map { msg ->
                         val resp = msg.payload.response
                         when (resp.error) {
+                            Error.NO_ERROR -> resp
                             Error.BAD_SIGNATURE -> throw GVBadSignatureException()
                             Error.CANNOT_DECRYPT -> throw GVCannotDecryptException()
-                            else -> resp
+                            else -> throw GVException()
                         }
                     }
                     .first()
@@ -202,7 +214,7 @@ class GrapevineNetwork @Inject constructor(
         send(payload, req.sender)
     }
 
-    suspend fun fetchNodePhoto(node: Node) = photoCache.getOrPut(node) {
+    suspend fun fetchNodePhoto(node: Node): Bitmap?  {
         val photoReq = PhotoRequest.newBuilder().build()
         val payload = RoutedPayload.newBuilder().setPhotoReq(photoReq).build()
 

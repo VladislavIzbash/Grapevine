@@ -40,6 +40,7 @@
     <string name="type_message">Введите сообщение</string>
     <string name="file_name_placeholder">Название</string>
     <string name="file_size_placeholder">2.2 МиБ</string>
+    <string name="under_construction">Under construction</string>
     <string-array name="size_units">
         <item>Б</item>
         <item>КиБ</item>

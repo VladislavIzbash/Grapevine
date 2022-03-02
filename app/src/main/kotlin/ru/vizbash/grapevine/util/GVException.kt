@@ -1,3 +1,3 @@
-package ru.vizbash.grapevine
+package ru.vizbash.grapevine.util
 
 open class GVException : Exception()

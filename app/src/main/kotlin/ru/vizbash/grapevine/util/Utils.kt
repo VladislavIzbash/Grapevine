@@ -1,4 +1,4 @@
-package ru.vizbash.grapevine
+package ru.vizbash.grapevine.util
 
 import java.text.DecimalFormat
 import kotlin.math.log10
@@ -14,10 +14,7 @@ fun ByteArray.toHexString() = asUByteArray().joinToString("") {
 
 fun Number.toHumanSize(units: Array<String>): String {
     val size = toLong()
-
-    if (size < 0) {
-        throw IllegalArgumentException()
-    }
+    require(size >= 0)
 
     val digitGroup = (log10(size.toDouble()) / log10(1024F)).toInt()
     val num = DecimalFormat("#,##0.#").format(size / 1024.0.pow(digitGroup))

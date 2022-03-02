@@ -4,7 +4,6 @@ import android.graphics.Bitmap
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import ru.vizbash.grapevine.network.Node
 import java.security.PublicKey
 
 @Entity(tableName = "contacts")

@@ -1,6 +1,10 @@
 package ru.vizbash.grapevine.ui.chat
 
+import android.content.ComponentName
+import android.content.Intent
+import android.content.ServiceConnection
 import android.os.Bundle
+import android.os.IBinder
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
@@ -19,9 +23,10 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.R
 import ru.vizbash.grapevine.databinding.ActivityChatBinding
+import ru.vizbash.grapevine.service.ForegroundService
 import ru.vizbash.grapevine.storage.messages.MessageFile
 import ru.vizbash.grapevine.storage.messages.MessageWithOrig
-import ru.vizbash.grapevine.toHumanSize
+import ru.vizbash.grapevine.util.toHumanSize
 
 @AndroidEntryPoint
 class ChatActivity : AppCompatActivity() {
@@ -31,6 +36,15 @@ class ChatActivity : AppCompatActivity() {
 
     private lateinit var ui: ActivityChatBinding
     private val model: ChatViewModel by viewModels()
+
+    private val serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            model.service = (service as ForegroundService.GrapevineBinder).grapevineService
+            onBound()
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {}
+    }
 
     private val messageTextWatcher = object : TextWatcher {
         override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -49,6 +63,7 @@ class ChatActivity : AppCompatActivity() {
 
         val doc = DocumentFile.fromSingleUri(this, uri)!!
         model.attachedFile.value = MessageFile(
+            uri,
             doc.name!!,
             doc.length().toInt(),
             false,
@@ -67,6 +82,14 @@ class ChatActivity : AppCompatActivity() {
             setDisplayHomeAsUpEnabled(true)
         }
 
+        bindService(
+            Intent(this, ForegroundService::class.java),
+            serviceConnection,
+            BIND_AUTO_CREATE,
+        )
+    }
+
+    private fun onBound() {
         ui.tvContactUsername.text = model.contact.username
 
         val photo = model.contact.photo
@@ -116,8 +139,8 @@ class ChatActivity : AppCompatActivity() {
                     tvForwardedText.text = msg.text
                     tvForwardedTime.text = MessageAdapter.TIMESTAMP_FORMAT.format(msg.timestamp)
 
-                    tvForwardedUsername.text = if (msg.senderId == model.currentProfile.nodeId) {
-                        model.currentProfile.username
+                    tvForwardedUsername.text = if (msg.senderId == model.service.currentProfile.nodeId) {
+                        model.service.currentProfile.username
                     } else {
                         model.contact.username
                     }
@@ -147,7 +170,7 @@ class ChatActivity : AppCompatActivity() {
     }
 
     private fun setupMessageList() {
-        val messageAdapter = MessageAdapter(model.currentProfile, model.contact)
+        val messageAdapter = MessageAdapter(model.service.currentProfile, model.contact)
 
         ui.rvMessages.layoutManager = LinearLayoutManager(this).apply {
             stackFromEnd = false

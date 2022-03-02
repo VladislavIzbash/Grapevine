@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AnimationUtils
 import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
@@ -19,7 +20,7 @@ import ru.vizbash.grapevine.network.SourceType
 class NodeAdapter(
     private val coroutineScope: CoroutineScope,
     private val addClickedCb: (Node) -> Unit,
-) : RecyclerView.Adapter<NodeAdapter.ViewHolder>() {
+) : ListAdapter<NodeAdapter.NodeItem, NodeAdapter.ViewHolder>(NodeDiffCallback()) {
     class NodeItem(
         val node: Node,
         val photo: Deferred<Bitmap?>,
@@ -29,8 +30,7 @@ class NodeAdapter(
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         private val ui = ItemNodeBinding.bind(view)
 
-        lateinit var fetchJob: Job
-            private set
+        private lateinit var fetchJob: Job
 
         fun bind(item: NodeItem) {
             ui.tvUsername.text = item.node.username
@@ -61,14 +61,11 @@ class NodeAdapter(
                 }
             }
         }
-    }
 
-    var items = emptyList<NodeItem>()
-        set(value) {
-            val callback = NodeDiffCallback(items, value)
-            DiffUtil.calculateDiff(callback).dispatchUpdatesTo(this)
-            field = value
+        fun unbind() {
+            fetchJob.cancel()
         }
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -78,31 +75,19 @@ class NodeAdapter(
 
     override fun onViewDetachedFromWindow(holder: ViewHolder) {
         super.onViewDetachedFromWindow(holder)
-
-        holder.fetchJob.cancel()
+        holder.unbind()
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bind(items[position])
+        holder.bind(getItem(position))
     }
 
-    override fun getItemCount() = items.size
+    class NodeDiffCallback : DiffUtil.ItemCallback<NodeItem>() {
+        override fun areItemsTheSame(oldItem: NodeItem, newItem: NodeItem): Boolean =
+            oldItem.node.id == newItem.node.id
 
-    class NodeDiffCallback(
-        private val oldItems: List<NodeItem>,
-        private val newItems: List<NodeItem>,
-    ) : DiffUtil.Callback() {
-        override fun getOldListSize() = oldItems.size
-
-        override fun getNewListSize() = newItems.size
-
-        override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int) =
-            oldItems[oldItemPosition].node.id == newItems[newItemPosition].node.id
-
-        override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            val old = oldItems[oldItemPosition]
-            val new = newItems[newItemPosition]
-            return old.node == new.node && old.isContact == new.isContact
+        override fun areContentsTheSame(oldItem: NodeItem, newItem: NodeItem): Boolean {
+            return oldItem.node == newItem.node && oldItem.isContact == newItem.isContact
         }
     }
 }

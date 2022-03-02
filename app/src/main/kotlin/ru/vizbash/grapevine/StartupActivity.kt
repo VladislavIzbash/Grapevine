@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import ru.vizbash.grapevine.service.ProfileService
 import ru.vizbash.grapevine.storage.LoginPrefs
 import ru.vizbash.grapevine.storage.profile.ProfileEntity
 import ru.vizbash.grapevine.ui.login.LoginActivity
@@ -19,13 +20,6 @@ class StartupActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        if (BuildConfig.DEBUG) {
-            System.setProperty(
-                kotlinx.coroutines.DEBUG_PROPERTY_NAME,
-                kotlinx.coroutines.DEBUG_PROPERTY_VALUE_ON,
-            )
-        }
 
         runBlocking {
             if (tryAutologin(profileService.profileList.first())) {

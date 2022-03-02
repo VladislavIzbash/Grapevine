@@ -2,13 +2,13 @@ package ru.vizbash.grapevine.storage
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.Uri
 import androidx.room.TypeConverter
-import ru.vizbash.grapevine.decodeRsaPublicKey
+import ru.vizbash.grapevine.util.decodeRsaPublicKey
 import ru.vizbash.grapevine.storage.contacts.ContactEntity
 import ru.vizbash.grapevine.storage.messages.MessageEntity
 import java.io.ByteArrayOutputStream
 import java.security.PublicKey
-import java.time.Instant
 import java.util.*
 
 class Converters {
@@ -47,4 +47,10 @@ class Converters {
 
     @TypeConverter
     fun longToDate(value: Long): Date = Date(value * 1000)
+
+    @TypeConverter
+    fun uriToString(uri: Uri?): String? = uri?.toString()
+
+    @TypeConverter
+    fun stringToUri(str: String?): Uri? = str?.let { Uri.parse(it) }
 }

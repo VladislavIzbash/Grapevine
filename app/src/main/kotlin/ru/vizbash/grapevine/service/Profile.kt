@@ -1,4 +1,4 @@
-package ru.vizbash.grapevine
+package ru.vizbash.grapevine.service
 
 import ru.vizbash.grapevine.storage.profile.ProfileEntity
 import java.security.PrivateKey

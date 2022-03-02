@@ -1,7 +1,6 @@
 package ru.vizbash.grapevine.ui.newprofile
 
 import android.app.Activity
-import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
@@ -20,9 +19,8 @@ import com.github.dhaval2404.imagepicker.ImagePicker
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.R
-import ru.vizbash.grapevine.TAG
+import ru.vizbash.grapevine.util.TAG
 import ru.vizbash.grapevine.databinding.ActivityNewProfileBinding
-import ru.vizbash.grapevine.ui.main.MainActivity
 
 @AndroidEntryPoint
 class NewProfileActivity : AppCompatActivity() {

@@ -1,4 +1,4 @@
-package ru.vizbash.grapevine
+package ru.vizbash.grapevine.util
 
 import java.math.BigInteger
 import java.security.*

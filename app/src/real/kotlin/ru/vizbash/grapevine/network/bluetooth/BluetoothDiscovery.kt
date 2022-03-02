@@ -8,7 +8,7 @@ import android.content.Context
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.scopes.ServiceScoped
-import ru.vizbash.grapevine.TAG
+import ru.vizbash.grapevine.util.TAG
 import ru.vizbash.grapevine.network.Neighbor
 import ru.vizbash.grapevine.network.Router
 import ru.vizbash.grapevine.network.SourceType

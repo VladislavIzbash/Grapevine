@@ -1,9 +1,9 @@
 package ru.vizbash.grapevine.network
 
 import com.google.protobuf.ByteString
-import ru.vizbash.grapevine.Profile
-import ru.vizbash.grapevine.decodeDhPublicKey
-import ru.vizbash.grapevine.decodeRsaPublicKey
+import ru.vizbash.grapevine.service.Profile
+import ru.vizbash.grapevine.util.decodeDhPublicKey
+import ru.vizbash.grapevine.util.decodeRsaPublicKey
 import ru.vizbash.grapevine.network.messages.direct.NodeMessage
 import java.security.PublicKey
 
