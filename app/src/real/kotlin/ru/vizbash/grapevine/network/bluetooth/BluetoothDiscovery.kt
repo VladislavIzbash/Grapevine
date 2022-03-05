@@ -71,13 +71,7 @@ class BluetoothDiscovery @Inject constructor(
         running = true
         Log.i(TAG, "Starting...")
 
-        val serverSocket = adapter.listenUsingInsecureRfcommWithServiceRecord(
-            SERVICE_NAME,
-            SERVICE_UUID,
-        )
-
-        startAccepting(serverSocket)
-        startBondedScan(serverSocket)
+        startDiscover()
     }
 
     fun stop() {
@@ -91,6 +85,16 @@ class BluetoothDiscovery @Inject constructor(
         neighbor = null
 
         Log.i(TAG, "Stopped")
+    }
+
+    private fun startDiscover() {
+        val serverSocket = adapter.listenUsingInsecureRfcommWithServiceRecord(
+            SERVICE_NAME,
+            SERVICE_UUID,
+        )
+
+        startAccepting(serverSocket)
+        startBondedScan(serverSocket)
     }
 
     private fun startBondedScan(serverSocket: BluetoothServerSocket) = thread {
@@ -140,6 +144,8 @@ class BluetoothDiscovery @Inject constructor(
                     neighbor!!.disconnectCb()
                     neighbor!!.socket.close()
                     neighbor = null
+
+                    startDiscover()
                 }
                 return@thread
             }
@@ -230,10 +236,14 @@ class BluetoothDiscovery @Inject constructor(
                 msg.writeDelimitedTo(socket.outputStream)
                 Log.d(this@BluetoothDiscovery.TAG, "written ${msg.toByteArray().size} bytes")
             } catch (e: IOException) {
-                Log.d(TAG, "${socket.remoteDevice.address} closed connection: ${e.message}")
-                neighbor!!.disconnectCb()
-                socket.close()
-                neighbor = null
+                if (neighbor != null) {
+                    Log.d(TAG, "${socket.remoteDevice.address} closed connection: ${e.message}")
+                    neighbor!!.disconnectCb()
+                    socket.close()
+                    neighbor = null
+
+                    startDiscover()
+                }
             }
         }
 

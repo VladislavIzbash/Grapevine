@@ -25,7 +25,7 @@ class ContactsFragment : Fragment() {
     private val contactListener = object : ContactAdapter.ContactListener {
         override fun onSelected(contact: ContactEntity) {
             val intent = Intent(requireContext(), ChatActivity::class.java).apply {
-                putExtra(ChatActivity.EXTRA_CONTACT_ID, contact.nodeId)
+                putExtra(ChatActivity.EXTRA_CHAT_ID, contact.nodeId)
             }
             startActivity(intent)
         }

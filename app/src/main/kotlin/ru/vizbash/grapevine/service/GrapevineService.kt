@@ -3,16 +3,20 @@ package ru.vizbash.grapevine.service
 import android.graphics.Bitmap
 import android.util.Log
 import dagger.hilt.android.scopes.ServiceScoped
-import kotlinx.coroutines.*
-import ru.vizbash.grapevine.util.TAG
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.network.GrapevineNetwork
 import ru.vizbash.grapevine.network.Node
 import ru.vizbash.grapevine.storage.contacts.ContactEntity
 import ru.vizbash.grapevine.storage.messages.MessageEntity
 import ru.vizbash.grapevine.storage.messages.MessageFile
 import ru.vizbash.grapevine.util.GVException
+import ru.vizbash.grapevine.util.TAG
 import javax.inject.Inject
-import javax.inject.Singleton
 import kotlin.random.Random
 
 @ServiceScoped
@@ -87,6 +91,9 @@ class GrapevineService @Inject constructor(
         }
     }
 
+    private val _ingoingMessages = Channel<MessageEntity>()
+    val ingoingMessages: ReceiveChannel<MessageEntity> = _ingoingMessages
+
     fun getLastMessage(contact: ContactEntity) = profileService.getLastMessage(contact)
 
     fun getContactMessages(contact: ContactEntity) = profileService.getContactMessages(contact)
@@ -96,9 +103,9 @@ class GrapevineService @Inject constructor(
         text: String,
         forwardedMessage: MessageEntity? = null,
         attachment: MessageFile? = null,
-    ) {
+    ): MessageEntity {
         val id = Random.nextLong()
-        profileService.addSentMessage(
+        val sentMessage = profileService.addSentMessage(
             id,
             contact,
             text,
@@ -119,6 +126,19 @@ class GrapevineService @Inject constructor(
             } catch (e: GVException) {
                 profileService.setMessageState(id, MessageEntity.State.DELIVERY_FAILED)
             }
+        }
+
+        return sentMessage
+    }
+
+    suspend fun markAsRead(msgId: Long, senderId: Long) {
+        val dest = availableNodes.value.find { it.id == senderId } ?: return
+
+        profileService.setMessageState(msgId, MessageEntity.State.READ)
+
+        try {
+            grapevineNetwork.sendReadConfirmation(msgId, dest)
+        } catch (e: GVException) {
         }
     }
 
@@ -150,9 +170,10 @@ class GrapevineService @Inject constructor(
     private suspend fun receiveTextMessages() {
         grapevineNetwork.textMessages.collect { (msg, node) ->
             profileService.getContact(node.id)?.let {
-                profileService.addReceivedMessage(it, msg)
+                val entity = profileService.addReceivedMessage(it, msg)
+                _ingoingMessages.send(entity)
             }
-        } // TODO: show notification
+        }
     }
 
     private suspend fun receiveReadConfirmations() {

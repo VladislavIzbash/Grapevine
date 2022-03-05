@@ -40,11 +40,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var ui: ActivityMainBinding
     private val model: MainViewModel by viewModels()
 
-    private lateinit var serviceBinder: ForegroundService.GrapevineBinder
+    private lateinit var serviceBinder: ForegroundService.ServiceBinder
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
-            serviceBinder = (binder as ForegroundService.GrapevineBinder)
+            serviceBinder = (binder as ForegroundService.ServiceBinder)
             model.service = serviceBinder.grapevineService
             onBound()
         }

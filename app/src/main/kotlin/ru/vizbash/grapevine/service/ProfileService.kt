@@ -109,8 +109,8 @@ class ProfileService @Inject constructor(
         return userDb.messageDao().getAllForChat(contact.nodeId)
     }
 
-    suspend fun addReceivedMessage(contact: ContactEntity, message: TextMessage) {
-        userDb.messageDao().insert(MessageEntity(
+    suspend fun addReceivedMessage(contact: ContactEntity, message: TextMessage): MessageEntity {
+        val entity = MessageEntity(
             id = message.msgId,
             timestamp = Date(message.timestamp * 1000),
             chatId = contact.nodeId,
@@ -124,7 +124,10 @@ class ProfileService @Inject constructor(
                 size = message.fileSize,
                 downloaded = false,
             ) else null,
-        ))
+        )
+
+        userDb.messageDao().insert(entity)
+        return entity
     }
 
     suspend fun addSentMessage(
@@ -133,8 +136,8 @@ class ProfileService @Inject constructor(
         text: String,
         orig: MessageEntity?,
         file: MessageFile?,
-    ) {
-        userDb.messageDao().insert(MessageEntity(
+    ): MessageEntity {
+        val entity = MessageEntity(
             id = id,
             timestamp = Calendar.getInstance().time,
             chatId = contact.nodeId,
@@ -143,7 +146,9 @@ class ProfileService @Inject constructor(
             originalMessageId = orig?.id,
             state = MessageEntity.State.SENT,
             file = file,
-        ))
+        )
+        userDb.messageDao().insert(entity)
+        return entity
     }
 
     suspend fun setMessageState(msgId: Long, state: MessageEntity.State) {

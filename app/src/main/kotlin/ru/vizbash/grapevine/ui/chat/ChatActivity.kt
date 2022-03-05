@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.R
@@ -31,16 +32,23 @@ import ru.vizbash.grapevine.util.toHumanSize
 @AndroidEntryPoint
 class ChatActivity : AppCompatActivity() {
     companion object {
-        const val EXTRA_CONTACT_ID = "contact_id"
+        const val EXTRA_CHAT_ID = "contact_id"
     }
 
     private lateinit var ui: ActivityChatBinding
     private val model: ChatViewModel by viewModels()
 
+    private lateinit var serviceBinder: ForegroundService.ServiceBinder
+
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            model.service = (service as ForegroundService.GrapevineBinder).grapevineService
+            serviceBinder = (service as ForegroundService.ServiceBinder)
+            model.service = serviceBinder.grapevineService
             onBound()
+
+            lifecycleScope.launchWhenResumed {
+                serviceBinder.suppressChatNotifications(model.contact.nodeId)
+            }
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {}
@@ -130,6 +138,12 @@ class ChatActivity : AppCompatActivity() {
         ui.buttonAttachmentRemove.setOnClickListener {
             model.attachedFile.value = null
         }
+    }
+
+    override fun onStop() {
+        super.onStop()
+
+        serviceBinder.enableChatNotifications(model.contact.nodeId)
     }
 
     private suspend fun collectForwardedMessage() {

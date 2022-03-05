@@ -17,7 +17,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(savedState: SavedStateHandle) : ViewModel() {
-    private val contactId = savedState.get<Long>(ChatActivity.EXTRA_CONTACT_ID)!!
+    private val contactId = savedState.get<Long>(ChatActivity.EXTRA_CHAT_ID)!!
 
     lateinit var service: GrapevineService
 

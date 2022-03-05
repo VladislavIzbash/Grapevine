@@ -58,7 +58,7 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@id/editMessage"
         android:background="@color/chatBackground"
-        tools:listitem="@layout/item_outgoing_message" />
+        tools:listitem="@layout/item_ingoing_message" />
 
     <View
         android:layout_width="match_parent"
