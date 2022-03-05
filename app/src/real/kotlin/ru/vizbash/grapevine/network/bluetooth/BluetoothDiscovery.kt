@@ -59,18 +59,17 @@ class BluetoothDiscovery @Inject constructor(
 //        }
 //    }
 
+    val isAdapterEnabled get() = adapter.isEnabled
+
     fun start() {
-        if (!adapter.isEnabled) {
-            Log.i(TAG, "Bluetooth is not enabled")
-            return
-        }
+        check(adapter.isEnabled)
 
         if (running) {
             return
         }
 
         running = true
-        Log.i(TAG, "Starting bluetooth discovery")
+        Log.i(TAG, "Starting...")
 
         val serverSocket = adapter.listenUsingInsecureRfcommWithServiceRecord(
             SERVICE_NAME,
@@ -82,10 +81,16 @@ class BluetoothDiscovery @Inject constructor(
     }
 
     fun stop() {
+        if (!running) {
+            return
+        }
+
         running = false
 
         neighbor?.disconnectCb?.invoke()
         neighbor = null
+
+        Log.i(TAG, "Stopped")
     }
 
     private fun startBondedScan(serverSocket: BluetoothServerSocket) = thread {
@@ -123,7 +128,7 @@ class BluetoothDiscovery @Inject constructor(
         try {
             while (running && neighbor != null) {
                 val msg = DirectMessage.parseDelimitedFrom(neighbor!!.socket.inputStream)
-                println("read ${msg.serializedSize} bytes")
+                Log.d(TAG, "read ${msg.serializedSize} bytes")
 
                 neighbor!!.receiveCb(msg)
             }

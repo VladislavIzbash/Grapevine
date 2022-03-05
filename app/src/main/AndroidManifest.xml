@@ -44,6 +44,7 @@
 
         <activity
             android:name=".ui.main.MainActivity"
+            android:launchMode="singleTask"
             android:theme="@style/Theme.Grapevine.TranslucentStatus" />
 
         <activity

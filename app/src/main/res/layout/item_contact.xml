@@ -12,7 +12,7 @@
         android:layout_height="wrap_content"
         android:text="@string/header"
         android:visibility="gone"
-        style="@style/Grapevine.Widget.ItemHeader" />
+        style="@style/Grapevine.ItemHeader" />
 
     <androidx.cardview.widget.CardView
         android:layout_width="match_parent"

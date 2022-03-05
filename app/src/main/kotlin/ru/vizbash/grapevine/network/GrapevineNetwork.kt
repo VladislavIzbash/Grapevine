@@ -5,6 +5,7 @@ import android.graphics.BitmapFactory
 import android.util.Log
 import com.google.protobuf.ByteString
 import com.google.protobuf.InvalidProtocolBufferException
+import dagger.hilt.android.scopes.ServiceScoped
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
@@ -19,7 +20,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.ceil
 
-@Singleton
+@ServiceScoped
 class GrapevineNetwork @Inject constructor(
     private val router: Router,
     private val profileProvider: ProfileProvider,
@@ -66,13 +67,13 @@ class GrapevineNetwork @Inject constructor(
 
         Log.i(TAG, "Started")
 
-        coroutineScope.launch {
+        coroutineScope.launch(Dispatchers.IO) {
             while (true) {
                 delay(ASK_INTERVAL_MS)
                 router.askForNodes()
             }
         }
-        coroutineScope.launch {
+        coroutineScope.launch(Dispatchers.Default) {
             acceptedMessages
                 .filter { it.payload.hasPhotoReq() }
                 .collect(this@GrapevineNetwork::handlePhotoRequest)

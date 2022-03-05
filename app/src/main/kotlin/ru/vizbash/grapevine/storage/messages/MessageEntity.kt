@@ -23,6 +23,7 @@ data class MessageEntity(
     @ColumnInfo(name = "text") val text: String,
     @ColumnInfo(name = "orig_msg_id") val originalMessageId: Long?,
     @ColumnInfo(name = "state") val state: State,
+//    @ColumnInfo(name = "has_file") val hasFile: Boolean,
     @Embedded(prefix = "file_") val file: MessageFile?,
 ) {
     enum class State { SENT, DELIVERED, READ, DELIVERY_FAILED }

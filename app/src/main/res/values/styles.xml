@@ -27,13 +27,18 @@
     </style>
 
     <style name="Grapevine" />
-    <style name="Grapevine.Widget" parent="Grapevine" />
 
-    <style name="Grapevine.Widget.TextInput" parent="Grapevine.Widget">
-        <item name="android:background">@color/textInputBackground</item>
+    <style name="Grapevine.TextInputLayout" parent="Widget.MaterialComponents.TextInputLayout.FilledBox">
+        <item name="boxBackgroundColor">@color/textInputBackground</item>
     </style>
 
-    <style name="Grapevine.Widget.ItemHeader" parent="Grapevine.Widget">
+    <style name="Grapevine.TextInputLayout.ExposedDropdownMenu"
+        parent="Widget.MaterialComponents.TextInputLayout.FilledBox.ExposedDropdownMenu">
+
+        <item name="boxBackgroundColor">@color/textInputBackground</item>
+    </style>
+
+    <style name="Grapevine.ItemHeader">
         <item name="android:textSize">8pt</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textColor">@color/primary</item>
@@ -41,13 +46,13 @@
         <item name="android:paddingEnd">5dp</item>
     </style>
 
-    <style name="Grapevine.Widget.Toolbar" parent="Grapevine.Widget">
+    <style name="Grapevine.Toolbar">
         <item name="android:background">?attr/colorPrimary</item>
         <item name="android:elevation">4dp</item>
         <item name="titleTextColor">?attr/colorOnPrimary</item>
     </style>
 
-    <style name="Grapevine.TextAppearance" parent="Grapevine" />
+    <style name="Grapevine.TextAppearance" />
 
     <style name="Grapevine.TextAppearance.Timestamp" parent="Grapevine.TextAppearance">
         <item name="android:textSize">5pt</item>

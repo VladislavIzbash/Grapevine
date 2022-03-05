@@ -12,6 +12,7 @@ import ru.vizbash.grapevine.storage.messages.MessageEntity
 import ru.vizbash.grapevine.storage.messages.MessageFile
 import ru.vizbash.grapevine.util.GVException
 import javax.inject.Inject
+import javax.inject.Singleton
 import kotlin.random.Random
 
 @ServiceScoped
@@ -32,10 +33,10 @@ class GrapevineService @Inject constructor(
         Log.i(TAG, "Started")
 
         coroutineScope.run {
-            launch { receiveInvitations() }
-            launch { receiveInvitationAnswers() }
-            launch { receiveTextMessages() }
-            launch { receiveReadConfirmations() }
+            launch(Dispatchers.Default) { receiveInvitations() }
+            launch(Dispatchers.Default) { receiveInvitationAnswers() }
+            launch(Dispatchers.Default) { receiveTextMessages() }
+            launch(Dispatchers.Default) { receiveReadConfirmations() }
         }
     }
 

@@ -13,7 +13,7 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        style="@style/Grapevine.Widget.Toolbar" />
+        style="@style/Grapevine.Toolbar" />
 
     <androidx.cardview.widget.CardView
         android:id="@+id/cardPhoto"
@@ -36,6 +36,7 @@
     </androidx.cardview.widget.CardView>
 
     <com.google.android.material.textfield.TextInputLayout
+        style="@style/Grapevine.TextInputLayout"
         android:id="@+id/newLayoutUsername"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -47,7 +48,6 @@
         app:errorEnabled="true">
 
         <com.google.android.material.textfield.TextInputEditText
-            style="@style/Grapevine.Widget.TextInput"
             android:id="@+id/newEditUsername"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -57,6 +57,7 @@
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
+        style="@style/Grapevine.TextInputLayout"
         android:id="@+id/newLayoutPassword"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -69,7 +70,6 @@
         app:errorEnabled="true">
 
         <com.google.android.material.textfield.TextInputEditText
-            style="@style/Grapevine.Widget.TextInput"
             android:id="@+id/newEditPassword"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -79,6 +79,7 @@
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
+        style="@style/Grapevine.TextInputLayout"
         android:id="@+id/newLayoutPasswordRepeat"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -90,7 +91,6 @@
         app:errorEnabled="true">
 
         <com.google.android.material.textfield.TextInputEditText
-            style="@style/Grapevine.Widget.TextInput"
             android:id="@+id/newEditPasswordRepeat"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

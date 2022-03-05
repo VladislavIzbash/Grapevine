@@ -34,7 +34,7 @@ class LoginActivity : AppCompatActivity() {
             startActivity(Intent(this, NewProfileActivity::class.java))
         }
         ui.buttonLogin.setOnClickListener {
-            val profile = model.profiles.value[ui.spinnerUsername.selectedItemPosition]
+            val profile = model.profiles.value.find { it.username == ui.tvUsername.text.toString() }!!
             model.login(profile, ui.editPassword.text.toString(), ui.checkAutoLogin.isChecked)
         }
 
@@ -46,12 +46,9 @@ class LoginActivity : AppCompatActivity() {
         }
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
-                model.profiles.collect { profiles ->
+                model.profiles.collect {
                     model.loginPrefs.lastUsername?.let { username ->
-                        val index = profiles.indexOfFirst { it.username == username }
-                        if (index != -1) {
-                            ui.spinnerUsername.setSelection(index)
-                        }
+                        ui.tvUsername.setText(username)
                     }
                 }
             }
@@ -80,20 +77,16 @@ class LoginActivity : AppCompatActivity() {
         model.profiles.collect { profiles ->
             val empty = profiles.isEmpty()
 
-            ui.spinnerUsername.isEnabled = !empty
+            ui.layoutUsername.isEnabled = !empty
             ui.buttonLogin.isEnabled = !empty
 
-            val options = if (!empty) {
-                profiles.map(ProfileEntity::username)
-            } else {
-                listOf(getString(R.string.no_profiles))
+            if (!empty) {
+                ui.tvUsername.setAdapter(ArrayAdapter(
+                    this,
+                    R.layout.support_simple_spinner_dropdown_item,
+                    profiles.map(ProfileEntity::username),
+                ))
             }
-
-            ui.spinnerUsername.adapter = ArrayAdapter(
-                this,
-                android.R.layout.simple_spinner_dropdown_item,
-                options,
-            )
         }
     }
 }

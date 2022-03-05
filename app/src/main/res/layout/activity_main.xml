@@ -18,7 +18,7 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            style="@style/Grapevine.Widget.Toolbar" />
+            style="@style/Grapevine.Toolbar" />
 
         <androidx.fragment.app.FragmentContainerView
             android:id="@+id/navHostFragment"

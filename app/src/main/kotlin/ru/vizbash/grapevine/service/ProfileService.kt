@@ -118,12 +118,12 @@ class ProfileService @Inject constructor(
             text = message.text,
             originalMessageId = if (message.originalMsgId == 0L) null else message.originalMsgId,
             state = MessageEntity.State.DELIVERED,
-            file = MessageFile(
+            file = if (message.hasFile) MessageFile(
                 uri = null,
                 name = message.fileName,
                 size = message.fileSize,
                 downloaded = false,
-            )
+            ) else null,
         ))
     }
 

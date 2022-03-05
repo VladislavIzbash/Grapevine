@@ -14,29 +14,50 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        style="@style/Grapevine.Widget.Toolbar" />
+        style="@style/Grapevine.Toolbar" />
 
-    <RelativeLayout
+    <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/layoutUsername"
-        style="@style/Grapevine.Widget.TextInput"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/form_margin_top"
         android:layout_marginHorizontal="@dimen/form_horizontal_margin"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/toolbar" >
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        style="@style/Grapevine.TextInputLayout.ExposedDropdownMenu">
 
-        <Spinner
-            android:id="@+id/spinnerUsername"
-            style="@style/Widget.AppCompat.DropDownItem.Spinner"
+        <AutoCompleteTextView
+            android:id="@+id/tvUsername"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:inputType="none"
+            android:hint="@string/username" />
 
-            tools:listitem="@android:layout/simple_spinner_dropdown_item" />
-    </RelativeLayout>
+    </com.google.android.material.textfield.TextInputLayout>
+
+<!--    <RelativeLayout-->
+<!--        android:id="@+id/layoutUsername"-->
+<!--        style="@style/Grapevine.Widget.TextInput"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:layout_marginTop="@dimen/form_margin_top"-->
+<!--        android:layout_marginHorizontal="@dimen/form_horizontal_margin"-->
+<!--        app:layout_constraintStart_toStartOf="parent"-->
+<!--        app:layout_constraintEnd_toEndOf="parent"-->
+<!--        app:layout_constraintTop_toBottomOf="@id/toolbar" >-->
+
+<!--        <Spinner-->
+<!--            android:id="@+id/spinnerUsername"-->
+<!--            style="@style/Widget.AppCompat.DropDownItem.Spinner"-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+
+<!--            tools:listitem="@android:layout/simple_spinner_dropdown_item" />-->
+<!--    </RelativeLayout>-->
 
     <com.google.android.material.textfield.TextInputLayout
+        style="@style/Grapevine.TextInputLayout"
         android:id="@+id/layoutPassword"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -48,7 +69,6 @@
         app:endIconMode="password_toggle">
 
         <com.google.android.material.textfield.TextInputEditText
-            style="@style/Grapevine.Widget.TextInput"
             android:id="@+id/editPassword"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

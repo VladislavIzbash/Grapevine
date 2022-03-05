@@ -8,7 +8,6 @@
     <string name="logout">Выйти</string>
     <string name="wifi">Wi-fi</string>
     <string name="bluetooth">Bluetooth</string>
-    <string name="off">Off</string>
     <string name="name">Имя</string>
     <string name="login">Войти</string>
     <string name="login_title">Вход в Grapevine</string>
@@ -47,4 +46,10 @@
         <item>МиБ</item>
         <item>ГиБ</item>
     </string-array>
+    <string name="status_channel_name">Статус сервиса</string>
+    <string name="status_channel_desc">Отображение статуса сервиса Grapevine</string>
+    <string name="grapevine_service">Сервис Grapevine</string>
+    <string name="status_text">Bluetooth: %1$s\nWi-FI: %2$s</string>
+    <string name="on">вкл.</string>
+    <string name="off">выкл.</string>
 </resources>
