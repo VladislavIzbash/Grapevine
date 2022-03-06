@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+    <group android:id="@+id/groupPeople">
+        <item
+            android:id="@+id/contactsFragment"
+            android:title="@string/contacts"
+            android:icon="@drawable/ic_contacts"/>
+        <item
+            android:id="@+id/chatsFragment"
+            android:title="@string/chats"
+            android:icon="@drawable/ic_chats"/>
+        <item
+            android:id="@+id/peopleAroundFragment"
+            android:title="@string/people_around"
+            android:icon="@drawable/ic_search"/>
+    </group>
+
+    <group android:id="@+id/groupSettings">
+        <item
+            android:id="@+id/settings"
+            android:title="@string/settings"
+            android:icon="@drawable/ic_settings"/>
+        <item
+            android:id="@+id/logout"
+            android:title="@string/logout"
+            android:icon="@drawable/ic_logout"/>
+    </group>
+
+    <group android:id="@+id/groupServiceToggles">
+        <item
+            android:id="@+id/wifiMenuItem"
+            android:title="@string/wifi"
+            app:actionViewClass="com.google.android.material.switchmaterial.SwitchMaterial"
+            android:icon="@drawable/ic_wifi"/>
+        <item
+            android:id="@+id/bluetoothMenuItem"
+            android:title="@string/bluetooth"
+            app:actionViewClass="com.google.android.material.switchmaterial.SwitchMaterial"
+            android:icon="@drawable/ic_bluetooth"/>
+    </group>
+
+</menu>

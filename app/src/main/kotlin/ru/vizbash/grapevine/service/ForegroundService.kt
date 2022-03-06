@@ -1,7 +1,10 @@
 package ru.vizbash.grapevine.service
 
 import android.annotation.SuppressLint
-import android.app.*
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.Service
 import android.bluetooth.BluetoothAdapter
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -18,6 +21,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.R
 import ru.vizbash.grapevine.network.bluetooth.BluetoothDiscovery
@@ -35,8 +40,9 @@ class ForegroundService : Service() {
 
     private var started = false
 
-    private var bluetoothHardwareEnabled = false
-    private var bluetoothUserEnabled = true
+    private var bluetoothEnabled = MutableStateFlow(false)
+    private var bluetoothHardwareEnabled = MutableStateFlow(false)
+    private var bluetoothUserEnabled = MutableStateFlow(true)
 
     private lateinit var foregroundNotification: NotificationCompat.Builder
 
@@ -59,18 +65,12 @@ class ForegroundService : Service() {
 
             when (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, 0)) {
                 BluetoothAdapter.STATE_ON -> {
-                    bluetoothHardwareEnabled = true
-                    if (bluetoothUserEnabled) {
-                        bluetoothDiscovery.start()
-                    }
-                    updateForegroundNotification()
+                    bluetoothHardwareEnabled.value = true
+                    bluetoothEnabled.value = bluetoothUserEnabled.value
                 }
                 BluetoothAdapter.STATE_OFF -> {
-                    bluetoothHardwareEnabled = false
-                    if (bluetoothUserEnabled) {
-                        bluetoothDiscovery.stop()
-                    }
-                    updateForegroundNotification()
+                    bluetoothHardwareEnabled.value = false
+                    bluetoothEnabled.value = false
                 }
             }
         }
@@ -92,17 +92,13 @@ class ForegroundService : Service() {
     inner class ServiceBinder : Binder() {
         val grapevineService = this@ForegroundService.grapevineService
 
-        fun setBluetoothEnabled(enabled: Boolean) {
-            if (bluetoothHardwareEnabled) {
-                if (enabled) {
-                    bluetoothDiscovery.start()
-                } else {
-                    bluetoothDiscovery.stop()
-                }
-            }
+        val bluetoothHardwareEnabled = this@ForegroundService.bluetoothHardwareEnabled.asStateFlow()
+        val bluetoothEnabled = this@ForegroundService.bluetoothEnabled.asStateFlow()
 
-            bluetoothUserEnabled = enabled
-            updateForegroundNotification()
+        fun setBluetoothUserEnabled(enabled: Boolean) {
+            bluetoothUserEnabled.value = enabled
+            this@ForegroundService.bluetoothEnabled.value =
+                bluetoothHardwareEnabled.value && bluetoothUserEnabled.value
         }
 
         fun suppressChatNotifications(chatId: Long) {
@@ -147,10 +143,6 @@ class ForegroundService : Service() {
             .setContentTitle(getString(R.string.grapevine_service))
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-
-        coroutineScope.launch {
-            showMessageNotifications()
-        }
     }
 
     override fun onDestroy() {
@@ -170,10 +162,26 @@ class ForegroundService : Service() {
             started = true
         }
 
-        bluetoothHardwareEnabled = bluetoothDiscovery.isAdapterEnabled
-
         foregroundNotification.setContentText(getForegroundText())
         startForeground(FOREGROUND_NOTIFICATION_ID, foregroundNotification.build())
+
+        coroutineScope.launch {
+            bluetoothEnabled.collect {
+                if (it) {
+                    bluetoothDiscovery.start()
+                } else {
+                    bluetoothDiscovery.stop()
+                }
+                updateForegroundNotification()
+            }
+        }
+
+        coroutineScope.launch {
+            showMessageNotifications()
+        }
+
+        bluetoothHardwareEnabled.value = bluetoothDiscovery.isAdapterEnabled
+        bluetoothEnabled.value = bluetoothHardwareEnabled.value && bluetoothUserEnabled.value
 
         return START_STICKY
     }
@@ -202,7 +210,7 @@ class ForegroundService : Service() {
     }
 
     private fun getForegroundText(): String {
-        val bluetoothStatus = getString(if (bluetoothUserEnabled && bluetoothHardwareEnabled) {
+        val bluetoothStatus = getString(if (bluetoothEnabled.value) {
             R.string.on
         } else {
             R.string.off

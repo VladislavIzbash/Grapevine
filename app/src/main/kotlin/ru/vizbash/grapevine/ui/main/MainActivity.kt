@@ -24,6 +24,7 @@ import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupWithNavController
 import com.google.android.material.snackbar.Snackbar
+import com.google.android.material.switchmaterial.SwitchMaterial
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
@@ -39,6 +40,9 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var ui: ActivityMainBinding
     private val model: MainViewModel by viewModels()
+
+    private lateinit var wifiSwitch: SwitchMaterial
+    private lateinit var bluetoothSwitch: SwitchMaterial
 
     private lateinit var serviceBinder: ForegroundService.ServiceBinder
 
@@ -78,6 +82,9 @@ class MainActivity : AppCompatActivity() {
 
         setSupportActionBar(ui.toolbar)
 
+        wifiSwitch = ui.navView.menu.findItem(R.id.wifiMenuItem).actionView as SwitchMaterial
+        bluetoothSwitch = ui.navView.menu.findItem(R.id.bluetoothMenuItem).actionView as SwitchMaterial
+
         val intent = Intent(this, ForegroundService::class.java)
         ContextCompat.startForegroundService(this, intent)
         bindService(intent, serviceConnection, BIND_AUTO_CREATE)
@@ -111,22 +118,48 @@ class MainActivity : AppCompatActivity() {
         }
         header.tvUsername.text = model.service.currentProfile.username
 
+        // Для позиционирования под статусбаром
         ViewCompat.setOnApplyWindowInsetsListener(headerView) { view, insets ->
             val top = insets.getInsets(WindowInsetsCompat.Type.systemBars()).top
             view.setPadding(0, top, 0, 0)
             insets
         }
 
-        startBluetooth()
+        wifiSwitch.isChecked = false
+        wifiSwitch.isEnabled = false
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                model.networkError.filterNotNull().collect {
-                    Snackbar.make(ui.root, R.string.error_network, Snackbar.LENGTH_LONG).apply {
-                        setTextColor(getColor(R.color.error))
-                    }.show()
+                launch {
+                    model.networkError.filterNotNull().collect {
+                        Snackbar.make(ui.root, R.string.error_network, Snackbar.LENGTH_LONG).apply {
+                            setTextColor(getColor(R.color.error))
+                        }.show()
+                    }
+                }
+                launch {
+                    serviceBinder.bluetoothEnabled.collect { enabled ->
+                        bluetoothSwitch.isChecked = enabled
+                    }
+                }
+                launch {
+                    serviceBinder.bluetoothHardwareEnabled.collect { enabled ->
+                        bluetoothSwitch.isEnabled = enabled
+                    }
                 }
             }
+        }
+
+        bluetoothSwitch.setOnClickListener {
+            if (bluetoothSwitch.isChecked) {
+                startBluetooth()
+            } else {
+                serviceBinder.setBluetoothUserEnabled(false)
+            }
+        }
+
+        if (bluetoothSwitch.isChecked) {
+            startBluetooth()
         }
     }
 
@@ -140,11 +173,11 @@ class MainActivity : AppCompatActivity() {
         if (checkSelfPermission(permission) == PackageManager.PERMISSION_DENIED) {
             registerForActivityResult(RequestPermission()) { granted ->
                 if (granted) {
-                    serviceBinder.setBluetoothEnabled(true)
+                    serviceBinder.setBluetoothUserEnabled(true)
                 }
             }.launch(permission)
         } else {
-            serviceBinder.setBluetoothEnabled(true)
+            serviceBinder.setBluetoothUserEnabled(true)
         }
     }
 }
