@@ -24,6 +24,7 @@ import java.util.*
 class MessageAdapter(
     private val currentProfile: ProfileEntity,
     private val contact: ContactEntity,
+    private val messageReadCb: (MessageEntity) -> Unit,
 ) : PagingDataAdapter<MessageWithOrig, MessageAdapter.MessageViewHolder>(MessageDiffCallback()) {
     companion object {
         val TIMESTAMP_FORMAT = SimpleDateFormat("k:mm", Locale.US)
@@ -134,6 +135,8 @@ class MessageAdapter(
             }
 
             ui.tvMessageTime.text = TIMESTAMP_FORMAT.format(item.msg.timestamp)
+
+            messageReadCb(item.msg)
         }
     }
 

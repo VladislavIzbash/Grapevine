@@ -15,9 +15,9 @@ import ru.vizbash.grapevine.service.ProfileProvider
 import ru.vizbash.grapevine.storage.messages.MessageFile
 import ru.vizbash.grapevine.util.*
 import java.io.ByteArrayOutputStream
+import java.util.concurrent.ConcurrentHashMap
 import javax.crypto.SecretKey
 import javax.inject.Inject
-import javax.inject.Singleton
 import kotlin.math.ceil
 
 @ServiceScoped
@@ -42,7 +42,7 @@ class GrapevineNetwork @Inject constructor(
     private var coroutineScope = CoroutineScope(Dispatchers.IO)
     private var started = false
 
-    private val secretKeyCache = mutableMapOf<Node, SecretKey>()
+    private val secretKeyCache = ConcurrentHashMap<Node, SecretKey>()
 
     val availableNodes: StateFlow<List<Node>> = callbackFlow {
         router.setOnNodesUpdated {
@@ -66,6 +66,12 @@ class GrapevineNetwork @Inject constructor(
         check(!started)
 
         Log.i(TAG, "Started")
+
+        coroutineScope.launch(Dispatchers.Default) {
+            availableNodes.collect {
+                secretKeyCache.clear()
+            }
+        }
 
         coroutineScope.launch(Dispatchers.IO) {
             while (true) {

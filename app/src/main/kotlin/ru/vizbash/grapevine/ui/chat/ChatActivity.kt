@@ -19,7 +19,6 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.R
@@ -38,17 +37,13 @@ class ChatActivity : AppCompatActivity() {
     private lateinit var ui: ActivityChatBinding
     private val model: ChatViewModel by viewModels()
 
-    private lateinit var serviceBinder: ForegroundService.ServiceBinder
+    private var serviceBinder: ForegroundService.ServiceBinder? = null
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             serviceBinder = (service as ForegroundService.ServiceBinder)
-            model.service = serviceBinder.grapevineService
+            model.service = serviceBinder!!.grapevineService
             onBound()
-
-            lifecycleScope.launchWhenResumed {
-                serviceBinder.suppressChatNotifications(model.contact.nodeId)
-            }
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {}
@@ -138,12 +133,20 @@ class ChatActivity : AppCompatActivity() {
         ui.buttonAttachmentRemove.setOnClickListener {
             model.attachedFile.value = null
         }
+
+        serviceBinder?.suppressChatNotifications(model.contact.nodeId)
+    }
+
+    override fun onStart() {
+        super.onStart()
+
+        serviceBinder?.suppressChatNotifications(model.contact.nodeId)
     }
 
     override fun onStop() {
         super.onStop()
 
-        serviceBinder.enableChatNotifications(model.contact.nodeId)
+        serviceBinder?.enableChatNotifications(model.contact.nodeId)
     }
 
     private suspend fun collectForwardedMessage() {
@@ -184,7 +187,7 @@ class ChatActivity : AppCompatActivity() {
     }
 
     private fun setupMessageList() {
-        val messageAdapter = MessageAdapter(model.service.currentProfile, model.contact)
+        val messageAdapter = MessageAdapter(model.service.currentProfile, model.contact, model::markAsRead)
 
         ui.rvMessages.layoutManager = LinearLayoutManager(this).apply {
             stackFromEnd = false

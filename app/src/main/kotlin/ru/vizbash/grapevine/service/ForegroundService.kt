@@ -76,6 +76,19 @@ class ForegroundService : Service() {
         }
     }
 
+    private val notificationActionReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.action) {
+                ACTION_MARK_READ -> onMarkReadAction(intent)
+                ACTION_REPLY -> onReplyAction(intent)
+                ACTION_DISMISS -> {
+                    val chatId = intent.getLongExtra(EXTRA_CHAT_ID, 0)
+                    messageGroups.remove(chatId)
+                }
+            }
+        }
+    }
+
     inner class ServiceBinder : Binder() {
         val grapevineService = this@ForegroundService.grapevineService
 
@@ -204,44 +217,6 @@ class ForegroundService : Service() {
             FOREGROUND_NOTIFICATION_ID,
             foregroundNotification.build(),
         )
-    }
-
-    private val notificationActionReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            when (intent.action) {
-                ACTION_MARK_READ -> {
-                    val chatId = intent.getLongExtra(EXTRA_CHAT_ID, 0)
-                    val messages = messageGroups[chatId] ?: return
-
-                    NotificationManagerCompat.from(this@ForegroundService)
-                        .cancel(chatId.toInt())
-
-                    coroutineScope.launch {
-                        for (msg in messages) {
-                            grapevineService.markAsRead(msg.id, chatId)
-                        }
-                    }
-                }
-                ACTION_REPLY -> {
-                    val chatId = intent.getLongExtra(EXTRA_CHAT_ID, 0)
-                    val text = RemoteInput.getResultsFromIntent(intent)?.getCharSequence(KEY_REPLY_TEXT)
-                        ?: return
-
-                    val notificationManager = NotificationManagerCompat.from(this@ForegroundService)
-
-                    coroutineScope.launch {
-                        grapevineService.getContact(chatId)?.let {
-                            val msg = grapevineService.sendMessage(it, text.toString())
-                            showNotification(notificationManager, msg)
-                        }
-                    }
-                }
-                ACTION_DISMISS -> {
-                    val chatId = intent.getLongExtra(EXTRA_CHAT_ID, 0)
-                    messageGroups.remove(chatId)
-                }
-            }
-        }
     }
 
     private val messageGroups = mutableMapOf<Long, MutableList<MessageEntity>>()
@@ -379,6 +354,35 @@ class ForegroundService : Service() {
         for (msg in grapevineService.ingoingMessages) {
             if (msg.chatId !in suppressedChats) {
                 showNotification(notificationManager, msg)
+            }
+        }
+    }
+
+    private fun onReplyAction(intent: Intent) {
+        val chatId = intent.getLongExtra(EXTRA_CHAT_ID, 0)
+        val text = RemoteInput.getResultsFromIntent(intent)?.getCharSequence(KEY_REPLY_TEXT)
+            ?: return
+
+        val notificationManager = NotificationManagerCompat.from(this@ForegroundService)
+
+        coroutineScope.launch {
+            grapevineService.getContact(chatId)?.let {
+                val msg = grapevineService.sendMessage(it, text.toString())
+                showNotification(notificationManager, msg)
+            }
+        }
+    }
+
+    private fun onMarkReadAction(intent: Intent) {
+        val chatId = intent.getLongExtra(EXTRA_CHAT_ID, 0)
+        val messages = messageGroups[chatId] ?: return
+
+        NotificationManagerCompat.from(this@ForegroundService)
+            .cancel(chatId.toInt())
+
+        coroutineScope.launch {
+            for (msg in messages) {
+                grapevineService.markAsRead(msg.id, chatId)
             }
         }
     }

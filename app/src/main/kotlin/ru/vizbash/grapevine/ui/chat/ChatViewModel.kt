@@ -2,6 +2,7 @@ package ru.vizbash.grapevine.ui.chat
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
@@ -40,4 +41,15 @@ class ChatViewModel @Inject constructor(savedState: SavedStateHandle) : ViewMode
             service.sendMessage(contact, text, forwardedMessage.value, attachedFile.value)
         }
     }
+
+    fun markAsRead(msg: MessageEntity) {
+        if (msg.state == MessageEntity.State.READ) {
+            return
+        }
+
+        viewModelScope.launch {
+            service.markAsRead(msg.id, msg.senderId)
+        }
+    }
+
 }
