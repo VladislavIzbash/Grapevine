@@ -35,7 +35,7 @@ class GrapevineNetwork @Inject constructor(
 
     companion object {
         private const val ASK_INTERVAL_MS = 30_000L
-        private const val RECEIVE_TIMEOUT_MS = 5_000L
+        private const val RECEIVE_TIMEOUT_MS = 2_000L
         private const val FILE_CHUNK_SIZE = 1024
     }
 

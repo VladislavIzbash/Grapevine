@@ -3,12 +3,10 @@ package ru.vizbash.grapevine.service
 import android.graphics.Bitmap
 import android.util.Log
 import dagger.hilt.android.scopes.ServiceScoped
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import ru.vizbash.grapevine.network.GrapevineNetwork
 import ru.vizbash.grapevine.network.Node
 import ru.vizbash.grapevine.storage.contacts.ContactEntity
@@ -37,6 +35,7 @@ class GrapevineService @Inject constructor(
         Log.i(TAG, "Started")
 
         coroutineScope.run {
+            launch(Dispatchers.Default) { redeliverFailedMessages() }
             launch(Dispatchers.Default) { receiveInvitations() }
             launch(Dispatchers.Default) { receiveInvitationAnswers() }
             launch(Dispatchers.Default) { receiveTextMessages() }
@@ -113,12 +112,13 @@ class GrapevineService @Inject constructor(
             attachment,
         )
 
-        grapevineNetwork.availableNodes.value.find { it.id == contact.nodeId }?.let {
+        val node = grapevineNetwork.availableNodes.value.find { it.id == contact.nodeId }
+        if (node != null) {
             try {
                 grapevineNetwork.sendTextMessage(
                     id,
                     text,
-                    it,
+                    node,
                     forwardedMessage?.id,
                     attachment,
                 )
@@ -126,6 +126,8 @@ class GrapevineService @Inject constructor(
             } catch (e: GVException) {
                 profileService.setMessageState(id, MessageEntity.State.DELIVERY_FAILED)
             }
+        } else {
+            profileService.setMessageState(id, MessageEntity.State.DELIVERY_FAILED)
         }
 
         return sentMessage
@@ -179,6 +181,30 @@ class GrapevineService @Inject constructor(
     private suspend fun receiveReadConfirmations() {
         grapevineNetwork.readConfirmations.collect { msgId ->
             profileService.setMessageState(msgId, MessageEntity.State.READ)
+        }
+    }
+
+    private suspend fun redeliverFailedMessages() {
+        while (true) {
+            delay(5000)
+
+            for (contact in profileService.contactList.first()) {
+                for (msg in profileService.getContactFailedMessages(contact).take(5)) {
+                    grapevineNetwork.availableNodes.value.find { it.id == contact.nodeId }?.let {
+                        try {
+                            grapevineNetwork.sendTextMessage(
+                                msg.id,
+                                msg.text,
+                                it,
+                                msg.originalMessageId,
+                                msg.file,
+                            )
+                            profileService.setMessageState(msg.id, MessageEntity.State.DELIVERED)
+                        } catch (e: GVException) {
+                        }
+                    }
+                }
+            }
         }
     }
 }

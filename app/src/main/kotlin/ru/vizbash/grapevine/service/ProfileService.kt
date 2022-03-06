@@ -109,6 +109,13 @@ class ProfileService @Inject constructor(
         return userDb.messageDao().getAllForChat(contact.nodeId)
     }
 
+    suspend fun getContactFailedMessages(contact: ContactEntity): List<MessageEntity> {
+        return userDb.messageDao().getAllForChatWithState(
+            contact.nodeId,
+            MessageEntity.State.DELIVERY_FAILED,
+        )
+    }
+
     suspend fun addReceivedMessage(contact: ContactEntity, message: TextMessage): MessageEntity {
         val entity = MessageEntity(
             id = message.msgId,

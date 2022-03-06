@@ -16,6 +16,9 @@ interface MessageDao {
     @Query("SELECT * FROM messages WHERE chat_id = :chatId ORDER BY timestamp DESC LIMIT 1")
     fun getLastMessage(chatId: Long): Flow<MessageEntity?>
 
+    @Query("SELECT * FROM messages WHERE chat_id = :chatId AND state = :state ORDER BY timestamp")
+    suspend fun getAllForChatWithState(chatId: Long, state: MessageEntity.State): List<MessageEntity>
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(message: MessageEntity)
 
