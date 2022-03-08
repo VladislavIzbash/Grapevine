@@ -8,6 +8,9 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions
 import androidx.activity.result.contract.ActivityResultContracts.RequestPermission
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -26,6 +29,7 @@ import androidx.navigation.ui.setupWithNavController
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.switchmaterial.SwitchMaterial
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.R
@@ -35,7 +39,7 @@ import ru.vizbash.grapevine.service.ForegroundService
 import ru.vizbash.grapevine.ui.login.LoginActivity
 
 @AndroidEntryPoint
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), ServiceConnection {
     private lateinit var appBarConfig: AppBarConfiguration
 
     private lateinit var ui: ActivityMainBinding
@@ -46,15 +50,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var serviceBinder: ForegroundService.ServiceBinder
 
-    private val serviceConnection = object : ServiceConnection {
-        override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
-            serviceBinder = (binder as ForegroundService.ServiceBinder)
-            model.service = serviceBinder.grapevineService
-            onBound()
-        }
-
-        override fun onServiceDisconnected(name: ComponentName?) {}
-    }
+    private lateinit var requestLocation: ActivityResultLauncher<Array<String>>
 
     @Navigator.Name("logout")
     private inner class LogoutNavigator : Navigator<NavDestination>() {
@@ -66,7 +62,7 @@ class MainActivity : AppCompatActivity() {
             navOptions: NavOptions?,
             navigatorExtras: Extras?,
         ): NavDestination? {
-            unbindService(serviceConnection)
+            unbindService(this@MainActivity)
             stopService(Intent(this@MainActivity, ForegroundService::class.java))
 
             startActivity(Intent(this@MainActivity, LoginActivity::class.java))
@@ -82,15 +78,30 @@ class MainActivity : AppCompatActivity() {
 
         setSupportActionBar(ui.toolbar)
 
+        requestLocation = registerForActivityResult(RequestMultiplePermissions()) { granted ->
+            if (granted[Manifest.permission.ACCESS_FINE_LOCATION]!!) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    if (granted[Manifest.permission.ACCESS_BACKGROUND_LOCATION]!!) {
+                        serviceBinder.setWifiUserEnabled(true)
+                    }
+                } else {
+                    serviceBinder.setWifiUserEnabled(true)
+                }
+            }
+        }
+
         wifiSwitch = ui.navView.menu.findItem(R.id.wifiMenuItem).actionView as SwitchMaterial
         bluetoothSwitch = ui.navView.menu.findItem(R.id.bluetoothMenuItem).actionView as SwitchMaterial
 
         val intent = Intent(this, ForegroundService::class.java)
         ContextCompat.startForegroundService(this, intent)
-        bindService(intent, serviceConnection, BIND_AUTO_CREATE)
+        bindService(intent, this, BIND_AUTO_CREATE)
     }
 
-    private fun onBound() {
+    override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+        serviceBinder = (service as ForegroundService.ServiceBinder)
+        model.service = serviceBinder.grapevineService
+
         val navHost = supportFragmentManager.findFragmentById(R.id.navHostFragment) as NavHostFragment
         val navController = navHost.navController
         navController.navigatorProvider.addNavigator(LogoutNavigator())
@@ -125,9 +136,6 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
-        wifiSwitch.isChecked = false
-        wifiSwitch.isEnabled = false
-
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
@@ -138,14 +146,20 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
                 launch {
-                    serviceBinder.bluetoothEnabled.collect { enabled ->
-                        bluetoothSwitch.isChecked = enabled
-                    }
+                    serviceBinder.bluetoothEnabled
+                        .combine(serviceBinder.bluetoothHardwareEnabled, ::Pair)
+                        .collect { (enabled, hwEnabled) ->
+                            bluetoothSwitch.isChecked = enabled
+                            bluetoothSwitch.isEnabled = hwEnabled
+                        }
                 }
                 launch {
-                    serviceBinder.bluetoothHardwareEnabled.collect { enabled ->
-                        bluetoothSwitch.isEnabled = enabled
-                    }
+                    serviceBinder.wifiEnabled
+                        .combine(serviceBinder.wifiHardwareEnabled, ::Pair)
+                        .collect { (enabled, hwEnabled) ->
+                            wifiSwitch.isChecked = enabled
+                            wifiSwitch.isEnabled = hwEnabled
+                        }
                 }
             }
         }
@@ -157,27 +171,43 @@ class MainActivity : AppCompatActivity() {
                 serviceBinder.setBluetoothUserEnabled(false)
             }
         }
+        wifiSwitch.setOnClickListener {
+            if (wifiSwitch.isChecked) {
+                startBluetooth()
+            } else {
+                serviceBinder.setWifiUserEnabled(false)
+            }
+        }
 
         if (bluetoothSwitch.isChecked) {
             startBluetooth()
         }
+        if (wifiSwitch.isChecked) {
+            startWifi()
+        }
     }
 
-    private fun startBluetooth() {
-        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            Manifest.permission.BLUETOOTH_CONNECT
-        } else {
-            Manifest.permission.BLUETOOTH
-        }
+    override fun onServiceDisconnected(name: ComponentName?) {}
 
-        if (checkSelfPermission(permission) == PackageManager.PERMISSION_DENIED) {
-            registerForActivityResult(RequestPermission()) { granted ->
-                if (granted) {
-                    serviceBinder.setBluetoothUserEnabled(true)
-                }
-            }.launch(permission)
+    private fun startBluetooth() {
+        serviceBinder.setBluetoothUserEnabled(true)
+        // TODO: other persmissiopns
+    }
+
+    private fun startWifi() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            == PackageManager.PERMISSION_GRANTED
+            && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+            == PackageManager.PERMISSION_GRANTED) {
+
+            serviceBinder.setWifiUserEnabled(true)
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            requestLocation.launch(arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+            ))
         } else {
-            serviceBinder.setBluetoothUserEnabled(true)
+            requestLocation.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))
         }
     }
 }

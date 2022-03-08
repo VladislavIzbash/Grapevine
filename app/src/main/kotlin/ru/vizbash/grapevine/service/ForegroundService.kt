@@ -25,7 +25,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.R
-import ru.vizbash.grapevine.network.bluetooth.BluetoothDiscovery
+import ru.vizbash.grapevine.network.bluetooth.discovery.BluetoothDiscovery
+import ru.vizbash.grapevine.network.discovery.WifiDiscovery
 import ru.vizbash.grapevine.storage.messages.MessageEntity
 import ru.vizbash.grapevine.ui.chat.ChatActivity
 import ru.vizbash.grapevine.ui.main.MainActivity
@@ -35,6 +36,7 @@ import javax.inject.Inject
 class ForegroundService : Service() {
     @Inject lateinit var grapevineService: GrapevineService
     @Inject lateinit var bluetoothDiscovery: BluetoothDiscovery
+    @Inject lateinit var wifiDiscovery: WifiDiscovery
 
     private val coroutineScope = CoroutineScope(Dispatchers.Main)
 
@@ -43,6 +45,8 @@ class ForegroundService : Service() {
     private var bluetoothEnabled = MutableStateFlow(false)
     private var bluetoothHardwareEnabled = MutableStateFlow(false)
     private var bluetoothUserEnabled = MutableStateFlow(true)
+
+    private var wifiEnabled = MutableStateFlow(true)
 
     private lateinit var foregroundNotification: NotificationCompat.Builder
 
@@ -92,13 +96,20 @@ class ForegroundService : Service() {
     inner class ServiceBinder : Binder() {
         val grapevineService = this@ForegroundService.grapevineService
 
-        val bluetoothHardwareEnabled = this@ForegroundService.bluetoothHardwareEnabled.asStateFlow()
         val bluetoothEnabled = this@ForegroundService.bluetoothEnabled.asStateFlow()
+        val bluetoothHardwareEnabled = this@ForegroundService.bluetoothHardwareEnabled.asStateFlow()
+
+        val wifiEnabled = this@ForegroundService.wifiEnabled.asStateFlow()
+        val wifiHardwareEnabled = MutableStateFlow(true).asStateFlow()
 
         fun setBluetoothUserEnabled(enabled: Boolean) {
             bluetoothUserEnabled.value = enabled
             this@ForegroundService.bluetoothEnabled.value =
                 bluetoothHardwareEnabled.value && bluetoothUserEnabled.value
+        }
+
+        fun setWifiUserEnabled(enabled: Boolean) {
+
         }
 
         fun suppressChatNotifications(chatId: Long) {
@@ -175,6 +186,16 @@ class ForegroundService : Service() {
                 updateForegroundNotification()
             }
         }
+        coroutineScope.launch {
+            wifiEnabled.collect {
+                if (it) {
+                    wifiDiscovery.start()
+                } else {
+                    wifiDiscovery.stop()
+                }
+                updateForegroundNotification()
+            }
+        }
 
         coroutineScope.launch {
             showMessageNotifications()
@@ -215,8 +236,13 @@ class ForegroundService : Service() {
         } else {
             R.string.off
         })
+        val wifiStatus = getString(if (wifiEnabled.value) {
+            R.string.on
+        } else {
+            R.string.off
+        })
 
-        return getString(R.string.status_text, bluetoothStatus, getString(R.string.off))
+        return getString(R.string.status_text, bluetoothStatus, wifiStatus)
     }
 
     private fun updateForegroundNotification() {

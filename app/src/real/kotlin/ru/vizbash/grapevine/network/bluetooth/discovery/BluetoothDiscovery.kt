@@ -1,4 +1,4 @@
-package ru.vizbash.grapevine.network.bluetooth
+package ru.vizbash.grapevine.network.bluetooth.discovery
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothManager
@@ -8,11 +8,11 @@ import android.content.Context
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.scopes.ServiceScoped
-import ru.vizbash.grapevine.util.TAG
 import ru.vizbash.grapevine.network.Neighbor
 import ru.vizbash.grapevine.network.Router
 import ru.vizbash.grapevine.network.SourceType
 import ru.vizbash.grapevine.network.messages.direct.DirectMessage
+import ru.vizbash.grapevine.util.TAG
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.util.*
@@ -69,7 +69,7 @@ class BluetoothDiscovery @Inject constructor(
         }
 
         running = true
-        Log.i(TAG, "Starting...")
+        Log.i(TAG, "Starting")
 
         startDiscover()
     }
@@ -179,7 +179,7 @@ class BluetoothDiscovery @Inject constructor(
         return null
     }
 
-    private fun macToInt(mac: String): Int {
+    fun macToInt(mac: String): Int {
         val addressBytes = mac.split(':')
             .map { it.toUByte(16).toByte() }
             .toByteArray()
@@ -190,36 +190,6 @@ class BluetoothDiscovery @Inject constructor(
             getInt()
         }
     }
-
-//    private fun writeMessage(output: OutputStream, msg: DirectMessage) {
-//        msg.writeDelimitedTo(output)
-//
-//        val msgBytes = msg.toByteArray()
-//        val lenBytes = ByteBuffer.allocate(Int.SIZE_BYTES).apply {
-//            order(ByteOrder.BIG_ENDIAN)
-//            putInt(msgBytes.size)
-//        }
-//
-//        output.write(lenBytes.array())
-//        output.write(msgBytes)
-//    }
-//
-//    private fun readMessage(input: InputStream): DirectMessage {
-//
-//
-//        val dataInput = DataInputStream(input)
-//
-//        val len = dataInput.readInt()
-//
-//        if (len > 1 * 1024 * 1024) {
-//            throw MessageTooBig()
-//        }
-//
-//        val bytes = ByteArray(len)
-//        dataInput.readFully(bytes)
-//
-//        return DirectMessage.parseDelimitedFrom(bytes)
-//    }
 
     private inner class BluetoothNeighbor(
         val socket: BluetoothSocket,
@@ -238,7 +208,7 @@ class BluetoothDiscovery @Inject constructor(
             } catch (e: IOException) {
                 if (neighbor != null) {
                     Log.d(TAG, "${socket.remoteDevice.address} closed connection: ${e.message}")
-                    neighbor!!.disconnectCb()
+                    disconnectCb()
                     socket.close()
                     neighbor = null
 

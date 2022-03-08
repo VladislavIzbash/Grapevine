@@ -11,7 +11,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import jp.wasabeef.recyclerview.animators.SlideInUpAnimator
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.databinding.FragmentPeopleAroundBinding
 import ru.vizbash.grapevine.ui.main.MainViewModel
@@ -35,12 +35,7 @@ class PeopleAroundFragment : Fragment() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                launch {
-                    collectNodes(nodeAdapter)
-                }
-                launch {
-                    collectContacts(nodeAdapter)
-                }
+                collectNodes(nodeAdapter)
             }
         }
 
@@ -48,33 +43,21 @@ class PeopleAroundFragment : Fragment() {
     }
 
     private suspend fun collectNodes(adapter: NodeAdapter) {
-        model.service.availableNodes.collect { nodes ->
-            ui.tvNoNodes.visibility = if (nodes.isEmpty()) View.VISIBLE else View.INVISIBLE
-            ui.rvNodes.visibility = if (nodes.isEmpty()) View.INVISIBLE else View.VISIBLE
-
-            val contacts = model.service.contactList.first()
-
-            val nodeItems = nodes.map { node ->
-                NodeAdapter.NodeItem(
-                    node,
-                    model.fetchPhotoAsync(node),
-                    contacts.any { it.nodeId == node.id },
-                )
+        model.service.availableNodes
+            .combine(model.service.contactList) { nodes, contacts ->
+                nodes.map { node ->
+                    NodeAdapter.NodeItem(
+                        node,
+                        model.fetchPhotoAsync(node),
+                        contacts.any { it.nodeId == node.id },
+                    )
+                }
             }
-            adapter.submitList(nodeItems)
-        }
-    }
+            .collect { items ->
+                ui.tvNoNodes.visibility = if (items.isEmpty()) View.VISIBLE else View.INVISIBLE
+                ui.rvNodes.visibility = if (items.isEmpty()) View.INVISIBLE else View.VISIBLE
 
-    private suspend fun collectContacts(adapter: NodeAdapter) {
-        model.service.contactList.collect { contacts ->
-            val nodeItems = model.service.availableNodes.value.map { node ->
-                NodeAdapter.NodeItem(
-                    node,
-                    model.fetchPhotoAsync(node),
-                    contacts.any { it.nodeId == node.id },
-                )
+                adapter.submitList(items)
             }
-            adapter.submitList(nodeItems)
-        }
     }
 }

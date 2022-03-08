@@ -42,7 +42,7 @@ class Router @Inject constructor(private val profileService: ProfileProvider) {
 
         Log.d(TAG, "Sent hello to $neighbor")
 
-        neighbor.setOnReceive { msg -> onMessageReceived(neighbor, msg) }
+        neighbor.setOnReceive { msg: DirectMessage -> onMessageReceived(neighbor, msg) }
     }
 
     @Synchronized

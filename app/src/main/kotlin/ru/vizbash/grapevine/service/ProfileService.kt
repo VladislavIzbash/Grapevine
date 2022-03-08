@@ -32,8 +32,7 @@ class ProfileService @Inject constructor(
     override lateinit var profile: Profile
         private set
 
-    val profileList
-        get() = profileDao.getAll()
+    val profileList = profileDao.getAll()
 
     private lateinit var userDb: UserDatabase
 

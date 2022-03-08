@@ -29,7 +29,7 @@ import ru.vizbash.grapevine.storage.messages.MessageWithOrig
 import ru.vizbash.grapevine.util.toHumanSize
 
 @AndroidEntryPoint
-class ChatActivity : AppCompatActivity() {
+class ChatActivity : AppCompatActivity(), ServiceConnection {
     companion object {
         const val EXTRA_CHAT_ID = "contact_id"
     }
@@ -38,16 +38,6 @@ class ChatActivity : AppCompatActivity() {
     private val model: ChatViewModel by viewModels()
 
     private var serviceBinder: ForegroundService.ServiceBinder? = null
-
-    private val serviceConnection = object : ServiceConnection {
-        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            serviceBinder = (service as ForegroundService.ServiceBinder)
-            model.service = serviceBinder!!.grapevineService
-            onBound()
-        }
-
-        override fun onServiceDisconnected(name: ComponentName?) {}
-    }
 
     private val messageTextWatcher = object : TextWatcher {
         override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -87,14 +77,16 @@ class ChatActivity : AppCompatActivity() {
 
         bindService(
             Intent(this, ForegroundService::class.java),
-            serviceConnection,
+            this,
             BIND_AUTO_CREATE,
         )
     }
 
-    private fun onBound() {
-        ui.tvContactUsername.text = model.contact.username
+    override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+        serviceBinder = (service as ForegroundService.ServiceBinder)
+        model.service = serviceBinder!!.grapevineService
 
+        ui.tvContactUsername.text = model.contact.username
         val photo = model.contact.photo
         if (photo != null) {
             ui.cardContactPhoto.visibility = View.VISIBLE
@@ -102,11 +94,8 @@ class ChatActivity : AppCompatActivity() {
         } else {
             ui.cardContactPhoto.visibility = View.GONE
         }
-
         setupMessageList()
-
         ui.editMessage.addTextChangedListener(messageTextWatcher)
-
         ui.buttonSend.isEnabled = false
         ui.buttonSend.setOnClickListener {
             model.sendMessage(ui.editMessage.text.toString().trim())
@@ -115,27 +104,25 @@ class ChatActivity : AppCompatActivity() {
             model.forwardedMessage.value = null
             model.attachedFile.value = null
         }
-
         ui.buttonAttachFile.setOnClickListener {
             openFile.launch("*/*")
         }
-
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { collectForwardedMessage() }
                 launch { collectAttachment() }
             }
         }
-
         ui.buttonForwardedRemove.setOnClickListener {
             model.forwardedMessage.value = null
         }
         ui.buttonAttachmentRemove.setOnClickListener {
             model.attachedFile.value = null
         }
-
         serviceBinder?.suppressChatNotifications(model.contact.nodeId)
     }
+
+    override fun onServiceDisconnected(name: ComponentName?) {}
 
     override fun onStart() {
         super.onStart()
@@ -149,6 +136,11 @@ class ChatActivity : AppCompatActivity() {
         serviceBinder?.enableChatNotifications(model.contact.nodeId)
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        unbindService(this)
+    }
+
     private suspend fun collectForwardedMessage() {
         model.forwardedMessage.collect { msg ->
             ui.layoutForwardedMessage.apply {
@@ -156,11 +148,12 @@ class ChatActivity : AppCompatActivity() {
                     tvForwardedText.text = msg.text
                     tvForwardedTime.text = MessageAdapter.TIMESTAMP_FORMAT.format(msg.timestamp)
 
-                    tvForwardedUsername.text = if (msg.senderId == model.service.currentProfile.nodeId) {
-                        model.service.currentProfile.username
-                    } else {
-                        model.contact.username
-                    }
+                    tvForwardedUsername.text =
+                        if (msg.senderId == model.service.currentProfile.nodeId) {
+                            model.service.currentProfile.username
+                        } else {
+                            model.contact.username
+                        }
 
                     ui.cardForwardedMessage.visibility = View.VISIBLE
                 } else {
@@ -175,7 +168,8 @@ class ChatActivity : AppCompatActivity() {
             ui.layoutFileAttachment.apply {
                 if (file != null) {
                     tvFileName.text = file.name
-                    tvFileSize.text = file.size.toHumanSize(resources.getStringArray(R.array.size_units))
+                    tvFileSize.text =
+                        file.size.toHumanSize(resources.getStringArray(R.array.size_units))
 
                     frameDownload.visibility = View.GONE
                     ui.cardFileAttachment.visibility = View.VISIBLE
@@ -187,7 +181,8 @@ class ChatActivity : AppCompatActivity() {
     }
 
     private fun setupMessageList() {
-        val messageAdapter = MessageAdapter(model.service.currentProfile, model.contact, model::markAsRead)
+        val messageAdapter =
+            MessageAdapter(model.service.currentProfile, model.contact, model::markAsRead)
 
         ui.rvMessages.layoutManager = LinearLayoutManager(this).apply {
             stackFromEnd = false
