@@ -86,14 +86,16 @@ class ProfileService @Inject constructor(
 
     suspend fun getContact(id: Long) = userDb.contactDao().getById(id)
 
-    suspend fun addContact(node: Node, photo: Bitmap?, state: ContactEntity.State) {
-        userDb.contactDao().insert(ContactEntity(
+    suspend fun addContact(node: Node, photo: Bitmap?, state: ContactEntity.State): ContactEntity {
+        val contact = ContactEntity(
             node.id,
             node.username,
             node.publicKey,
             photo,
             state,
-        ))
+        )
+        userDb.contactDao().insert(contact)
+        return contact
     }
 
     suspend fun deleteContact(contact: ContactEntity) {

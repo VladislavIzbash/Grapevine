@@ -33,7 +33,7 @@ class Router @Inject constructor(private val profileService: ProfileProvider) {
         @Synchronized
         get() = routingTable.map { (node, routes) ->
             node.apply { primarySource = routes.minByOrNull(NodeRoute::hops)!!.neighbor.sourceType }
-        }
+        }.distinctBy { it.id }
 
     fun addNeighbor(neighbor: Neighbor) {
         val hello = HelloRequest.newBuilder().setNode(myNode.toMessage()).build()

@@ -46,8 +46,8 @@
         <item>МиБ</item>
         <item>ГиБ</item>
     </string-array>
-    <string name="status_channel_name">Статус сервиса</string>
-    <string name="message_channel_name">Входящие сообщения</string>
+    <string name="status_channel_name">Статус</string>
+    <string name="message_channel_name">Сообщения</string>
     <string name="message_channel_desc">Отображение входящих сообщений</string>
     <string name="status_channel_desc">Отображение статуса сервиса Grapevine</string>
     <string name="grapevine_service">Сервис Grapevine</string>
@@ -62,4 +62,8 @@
     <string name="enable">Включить</string>
     <string name="close">Закрыть</string>
     <string name="error_need_location_permission">Необходим доступ к местоположению</string>
+    <string name="invitations_channel_desc">Отображение запросов на добавление в контакты и приглашений в чаты</string>
+    <string name="invitation_message_text">Хочет добавить вас в контакты</string>
+    <string name="accept">Принять</string>
+    <string name="reject">Отклонить</string>
 </resources>

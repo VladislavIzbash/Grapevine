@@ -64,9 +64,10 @@ class MainActivity : AppCompatActivity(), ServiceConnection {
     private lateinit var wifiSwitch: SwitchMaterial
     private lateinit var bluetoothSwitch: SwitchMaterial
 
-    private lateinit var foregroundService: ForegroundService
+    lateinit var foregroundService: ForegroundService
 
     private lateinit var requestWifiPerms: ActivityResultLauncher<Array<String>>
+    private lateinit var requestBluetoothPerms: ActivityResultLauncher<Array<String>>
 
     @Navigator.Name("logout")
     private inner class LogoutNavigator : Navigator<NavDestination>() {
@@ -94,28 +95,32 @@ class MainActivity : AppCompatActivity(), ServiceConnection {
 
         setSupportActionBar(ui.toolbar)
 
-        requestWifiPerms = registerForActivityResult(RequestMultiplePermissions()) { perms ->
-            val granted = locationPermissions.map { perms[it] }.all { it ?: false }
-            if (granted) {
-                enableWifi()
-            } else {
-                Snackbar.make(
-                    ui.root,
-                    R.string.error_need_location_permission,
-                    Snackbar.LENGTH_SHORT,
-                ).apply {
-                    setTextColor(getColor(R.color.error))
-                }.show()
-            }
-        }
+        requestWifiPerms = registerLocationResult { enableWifi() }
+        requestBluetoothPerms = registerLocationResult { enableBluetooth() }
 
         wifiSwitch = ui.navView.menu.findItem(R.id.wifiMenuItem).actionView as SwitchMaterial
-        bluetoothSwitch =
-            ui.navView.menu.findItem(R.id.bluetoothMenuItem).actionView as SwitchMaterial
+        bluetoothSwitch = ui.navView.menu.findItem(R.id.bluetoothMenuItem).actionView as SwitchMaterial
 
         val intent = Intent(this, ForegroundService::class.java)
         ContextCompat.startForegroundService(this, intent)
         bindService(intent, this, BIND_AUTO_CREATE)
+    }
+
+    private fun registerLocationResult(action: () -> Unit) =
+        registerForActivityResult(RequestMultiplePermissions()) { perms ->
+
+        val granted = locationPermissions.map { perms[it] }.all { it ?: false }
+        if (granted) {
+            action()
+        } else {
+            Snackbar.make(
+                ui.root,
+                R.string.error_need_location_permission,
+                Snackbar.LENGTH_SHORT,
+            ).apply {
+                setTextColor(getColor(R.color.error))
+            }.show()
+        }
     }
 
     override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
@@ -187,7 +192,7 @@ class MainActivity : AppCompatActivity(), ServiceConnection {
 
         bluetoothSwitch.setOnClickListener {
             if (bluetoothSwitch.isChecked) {
-                startBluetooth()
+                enableBluetooth()
             } else {
                 foregroundService.bluetoothUserEnabled.value = false
             }
@@ -222,9 +227,22 @@ class MainActivity : AppCompatActivity(), ServiceConnection {
         }
     }
 
-    private fun startBluetooth() {
-//        serviceBinder.setBluetoothUserEnabled(true)
-        // TODO: other persmissiopns
+    private fun enableBluetooth(): Boolean {
+        if (!askEnableLocation()) {
+            return false
+        }
+
+        val allGranted = locationPermissions.map {
+            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
+        }.all { it }
+
+        return if (allGranted) {
+            foregroundService.bluetoothUserEnabled.value = true
+            true
+        } else {
+            requestBluetoothPerms.launch(locationPermissions)
+            false
+        }
     }
 
     private fun enableWifi(): Boolean {

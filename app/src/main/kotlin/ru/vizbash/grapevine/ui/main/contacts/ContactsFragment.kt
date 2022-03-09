@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.databinding.FragmentContactsBinding
 import ru.vizbash.grapevine.storage.contacts.ContactEntity
 import ru.vizbash.grapevine.ui.chat.ChatActivity
+import ru.vizbash.grapevine.ui.main.MainActivity
 import ru.vizbash.grapevine.ui.main.MainViewModel
 
 class ContactsFragment : Fragment() {
@@ -66,6 +67,18 @@ class ContactsFragment : Fragment() {
         }
 
         return ui.root
+    }
+
+    override fun onStart() {
+        super.onStart()
+        (requireActivity() as MainActivity).foregroundService
+            .suppressContactInvitationNotifications()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        (requireActivity() as MainActivity).foregroundService
+            .enableContactInvitationNotifications()
     }
 
     private suspend fun collectContacts(contactAdapter: ContactAdapter) {

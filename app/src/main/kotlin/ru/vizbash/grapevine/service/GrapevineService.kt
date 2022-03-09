@@ -144,6 +144,9 @@ class GrapevineService @Inject constructor(
         }
     }
 
+    private val _ingoingInvitations = Channel<ContactEntity>()
+    val ingoingInvitations: ReceiveChannel<ContactEntity> = _ingoingInvitations
+
     private suspend fun receiveInvitations() {
         grapevineNetwork.contactInvitations.collect { node ->
             val photo = try {
@@ -153,7 +156,8 @@ class GrapevineService @Inject constructor(
                 null
             }
 
-            profileService.addContact(node, photo, ContactEntity.State.INGOING)
+            val contact = profileService.addContact(node, photo, ContactEntity.State.INGOING)
+            _ingoingInvitations.send(contact)
         }
     }
 

@@ -10,7 +10,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.net.wifi.WifiManager
+import android.location.LocationManager
 import android.net.wifi.p2p.WifiP2pManager
 import android.os.Binder
 import android.os.Build
@@ -19,6 +19,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.Person
 import androidx.core.app.RemoteInput
 import androidx.core.graphics.drawable.IconCompat
+import androidx.navigation.NavDeepLinkBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +29,7 @@ import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.R
 import ru.vizbash.grapevine.network.bluetooth.discovery.BluetoothDiscovery
 import ru.vizbash.grapevine.network.discovery.WifiDiscovery
+import ru.vizbash.grapevine.storage.contacts.ContactEntity
 import ru.vizbash.grapevine.storage.messages.MessageEntity
 import ru.vizbash.grapevine.ui.chat.ChatActivity
 import ru.vizbash.grapevine.ui.main.MainActivity
@@ -38,6 +40,20 @@ class ForegroundService : Service() {
     @Inject lateinit var grapevineService: GrapevineService
     @Inject lateinit var bluetoothDiscovery: BluetoothDiscovery
     @Inject lateinit var wifiDiscovery: WifiDiscovery
+
+    companion object {
+        private const val FOREGROUND_CHANNEL_ID = "status_channel"
+        private const val MESSAGE_CHANNEL_ID = "message_channel"
+        private const val INVITATIONS_CHANNEL_ID = "invitations_channel"
+        private const val FOREGROUND_NOTIFICATION_ID = 10
+        private const val ACTION_MARK_READ = "ru.vizbash.grapevine.action.MARK_READ"
+        private const val ACTION_REPLY = "ru.vizbash.grapevine.action.REPLY"
+        private const val ACTION_DISMISS = "ru.vizbash.grapevine.action.DISMISS"
+        private const val EXTRA_CHAT_ID = "chat_id"
+        private const val KEY_REPLY_TEXT = "reply_text"
+        private const val ACTION_ACCEPT_INVITATION = "ru.vizbash.grapevine.action.ACCEPT_INVITATION"
+        private const val ACTION_REJECT_INVITATION = "ru.vizbash.grapevine.action.REJECT_INVITATION"
+    }
 
     private val coroutineScope = CoroutineScope(Dispatchers.Main)
 
@@ -63,18 +79,11 @@ class ForegroundService : Service() {
 
     private lateinit var foregroundNotification: NotificationCompat.Builder
 
-    companion object {
-        private const val FOREGROUND_CHANNEL_ID = "status_channel"
-        private const val MESSAGE_CHANNEL_ID = "message_channel"
-        private const val FOREGROUND_NOTIFICATION_ID = 10
-        private const val ACTION_MARK_READ = "ru.vizbash.grapevine.mark_read"
-        private const val ACTION_REPLY = "ru.vizbash.grapevine.reply"
-        private const val ACTION_DISMISS = "ru.vizbash.grapevine.reply.dismiss"
-        private const val KEY_REPLY_TEXT = "reply_text"
-        private const val EXTRA_CHAT_ID = "sender_id"
+    private val notificationManager by lazy {
+        NotificationManagerCompat.from(this)
     }
 
-    private val adaptersStateReceiver = object : BroadcastReceiver() {
+    private val stateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
                 BluetoothAdapter.ACTION_STATE_CHANGED -> {
@@ -87,6 +96,13 @@ class ForegroundService : Service() {
                     when (intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1)) {
                         WifiP2pManager.WIFI_P2P_STATE_ENABLED -> _wifiHardwareEnabled.value = true
                         WifiP2pManager.WIFI_P2P_STATE_DISABLED -> _wifiHardwareEnabled.value = false
+                    }
+                }
+                LocationManager.MODE_CHANGED_ACTION -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                        val locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
+                        _wifiHardwareEnabled.value = locationManager.isLocationEnabled
+                        _bluetoothHardwareEnabled.value = locationManager.isLocationEnabled
                     }
                 }
             }
@@ -102,6 +118,8 @@ class ForegroundService : Service() {
                     val chatId = intent.getLongExtra(EXTRA_CHAT_ID, 0)
                     messageGroups.remove(chatId)
                 }
+                ACTION_ACCEPT_INVITATION -> onInvitationAction(intent, true)
+                ACTION_REJECT_INVITATION -> onInvitationAction(intent, false)
             }
         }
     }
@@ -111,25 +129,17 @@ class ForegroundService : Service() {
         val foregroundService = this@ForegroundService
     }
 
-    fun suppressChatNotifications(chatId: Long) {
-        NotificationManagerCompat.from(this@ForegroundService).cancel(chatId.toInt())
-        suppressedChats.add(chatId)
-    }
-
-    fun enableChatNotifications(chatId: Long) {
-        suppressedChats.remove(chatId)
-    }
-
     override fun onBind(intent: Intent?) = ServiceBinder()
 
     override fun onCreate() {
         super.onCreate()
 
         registerReceiver(
-            adaptersStateReceiver,
+            stateReceiver,
             IntentFilter().apply {
                 addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
                 addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION)
+                addAction(LocationManager.MODE_CHANGED_ACTION)
             },
         )
         registerReceiver(
@@ -138,6 +148,8 @@ class ForegroundService : Service() {
                 addAction(ACTION_MARK_READ)
                 addAction(ACTION_REPLY)
                 addAction(ACTION_DISMISS)
+                addAction(ACTION_ACCEPT_INVITATION)
+                addAction(ACTION_REJECT_INVITATION)
             },
         )
 
@@ -164,7 +176,7 @@ class ForegroundService : Service() {
         grapevineService.stop()
         coroutineScope.cancel()
 
-        unregisterReceiver(adaptersStateReceiver)
+        unregisterReceiver(stateReceiver)
         unregisterReceiver(notificationActionReceiver)
     }
 
@@ -201,6 +213,9 @@ class ForegroundService : Service() {
         coroutineScope.launch {
             showMessageNotifications()
         }
+        coroutineScope.launch {
+            showInvitationNotifications()
+        }
 
         _bluetoothHardwareEnabled.value = bluetoothDiscovery.isAdapterEnabled
 
@@ -225,8 +240,20 @@ class ForegroundService : Service() {
                 description = getString(R.string.message_channel_desc)
             }
 
+            val invitationsChannel = NotificationChannel(
+                INVITATIONS_CHANNEL_ID,
+                "Приглашения",
+                NotificationManager.IMPORTANCE_DEFAULT,
+            ).apply {
+                description = getString(R.string.invitations_channel_desc)
+            }
+
             val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannels(listOf(statusChannel, messageChannel))
+            notificationManager.createNotificationChannels(listOf(
+                statusChannel,
+                messageChannel,
+                invitationsChannel,
+            ))
         }
     }
 
@@ -255,6 +282,33 @@ class ForegroundService : Service() {
 
     private val messageGroups = mutableMapOf<Long, MutableList<MessageEntity>>()
     private val suppressedChats = mutableSetOf<Long>()
+
+    fun suppressChatNotifications(chatId: Long) {
+        NotificationManagerCompat.from(this@ForegroundService).cancel(chatId.toInt())
+        suppressedChats.add(chatId)
+    }
+
+    fun enableChatNotifications(chatId: Long) {
+        suppressedChats.remove(chatId)
+    }
+
+    private var showInvitations = false
+
+    fun suppressContactInvitationNotifications() {
+        showInvitations = false
+
+        coroutineScope.launch {
+            grapevineService.contactList.first()
+                .filter { it.state == ContactEntity.State.INGOING }
+                .forEach {
+                    notificationManager.cancel(it.nodeId.toInt())
+                }
+        }
+    }
+
+    fun enableContactInvitationNotifications() {
+        showInvitations = true
+    }
 
     private suspend fun createNotificationStyle(chatId: Long): NotificationCompat.MessagingStyle {
         val sender = grapevineService.getContact(chatId) ?: throw IllegalArgumentException()
@@ -338,15 +392,8 @@ class ForegroundService : Service() {
         )
     }
 
-    private suspend fun showNotification(
-        notificationManager: NotificationManagerCompat,
-        msg: MessageEntity,
-    ) {
+    private suspend fun showMessageNotification(msg: MessageEntity) {
         messageGroups.getOrPut(msg.chatId) { mutableListOf() }.add(msg)
-
-        val style = createNotificationStyle(msg.chatId)
-        val replyAction = createReplyAction(msg)
-        val markReadAction = createMarkReadAction(msg)
 
         val dismissPendingIntent = PendingIntent.getBroadcast(
             this,
@@ -369,13 +416,13 @@ class ForegroundService : Service() {
 
         val notification = NotificationCompat.Builder(this, MESSAGE_CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_notification)
-            .setStyle(style)
+            .setStyle(createNotificationStyle(msg.chatId))
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setAutoCancel(true)
             .setContentIntent(contentPendingIntent)
-            .addAction(replyAction)
-            .addAction(markReadAction)
+            .addAction(createReplyAction(msg))
+            .addAction(createMarkReadAction(msg))
             .setDeleteIntent(dismissPendingIntent)
             .build()
 
@@ -383,12 +430,71 @@ class ForegroundService : Service() {
     }
 
     private suspend fun showMessageNotifications() {
-        val notificationManager = NotificationManagerCompat.from(this)
-
         for (msg in grapevineService.ingoingMessages) {
             if (msg.chatId !in suppressedChats) {
-                showNotification(notificationManager, msg)
+                showMessageNotification(msg)
             }
+        }
+    }
+
+    private fun createAcceptAction(contact: ContactEntity): NotificationCompat.Action {
+        val acceptPendingIntent = PendingIntent.getBroadcast(
+            this,
+            contact.nodeId.toInt(),
+            Intent(ACTION_ACCEPT_INVITATION).apply {
+                putExtra(EXTRA_CHAT_ID, contact.nodeId)
+            },
+            PendingIntent.FLAG_IMMUTABLE,
+        )
+
+        return NotificationCompat.Action(
+            R.drawable.ic_check,
+            getString(R.string.accept),
+            acceptPendingIntent,
+        )
+    }
+
+    private fun createRejectAction(contact: ContactEntity): NotificationCompat.Action {
+        val rejectPendingIntent = PendingIntent.getBroadcast(
+            this,
+            contact.nodeId.toInt(),
+            Intent(ACTION_REJECT_INVITATION).apply {
+                putExtra(EXTRA_CHAT_ID, contact.nodeId)
+            },
+            PendingIntent.FLAG_IMMUTABLE,
+        )
+
+        return NotificationCompat.Action(
+            R.drawable.ic_clear,
+            getString(R.string.reject),
+            rejectPendingIntent,
+        )
+    }
+
+    private suspend fun showInvitationNotifications() {
+        for (contact in grapevineService.ingoingInvitations) {
+            if (!showInvitations) {
+                continue
+            }
+
+            val contentPendingIntent = NavDeepLinkBuilder(this)
+                .setGraph(R.navigation.main_nav)
+                .setDestination(R.id.contactsFragment)
+                .createPendingIntent()
+
+            val notification = NotificationCompat.Builder(this, INVITATIONS_CHANNEL_ID)
+                .setSmallIcon(R.mipmap.ic_notification)
+                .setContentTitle(contact.username)
+                .setContentText(getString(R.string.invitation_message_text))
+                .setCategory(NotificationCompat.CATEGORY_SOCIAL)
+                .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+                .setAutoCancel(true)
+                .setContentIntent(contentPendingIntent)
+                .addAction(createAcceptAction(contact))
+                .addAction(createRejectAction(contact))
+                .build()
+
+            notificationManager.notify(contact.nodeId.toInt(), notification)
         }
     }
 
@@ -397,26 +503,39 @@ class ForegroundService : Service() {
         val text = RemoteInput.getResultsFromIntent(intent)?.getCharSequence(KEY_REPLY_TEXT)
             ?: return
 
-        val notificationManager = NotificationManagerCompat.from(this@ForegroundService)
-
         coroutineScope.launch {
             grapevineService.getContact(chatId)?.let {
                 val msg = grapevineService.sendMessage(it, text.toString())
-                showNotification(notificationManager, msg)
+                showMessageNotification(msg)
             }
         }
     }
 
     private fun onMarkReadAction(intent: Intent) {
-        val chatId = intent.getLongExtra(EXTRA_CHAT_ID, 0)
+        val chatId = intent.getLongExtra(EXTRA_CHAT_ID, -1)
         val messages = messageGroups[chatId] ?: return
 
-        NotificationManagerCompat.from(this@ForegroundService)
-            .cancel(chatId.toInt())
+        notificationManager.cancel(chatId.toInt())
 
         coroutineScope.launch {
             for (msg in messages) {
                 grapevineService.markAsRead(msg.id, chatId)
+            }
+        }
+    }
+
+    private fun onInvitationAction(intent: Intent, accepted: Boolean) {
+        val contactId = intent.getLongExtra(EXTRA_CHAT_ID, -1)
+
+        notificationManager.cancel(contactId.toInt())
+
+        coroutineScope.launch {
+            grapevineService.getContact(contactId)?.let {
+                if (accepted) {
+                    grapevineService.acceptContact(it)
+                } else {
+                    grapevineService.rejectContact(it)
+                }
             }
         }
     }
