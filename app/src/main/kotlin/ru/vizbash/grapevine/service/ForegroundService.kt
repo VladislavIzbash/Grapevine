@@ -10,6 +10,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.wifi.WifiManager
+import android.net.wifi.p2p.WifiP2pManager
 import android.os.Binder
 import android.os.Build
 import androidx.core.app.NotificationCompat
@@ -21,8 +23,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.R
 import ru.vizbash.grapevine.network.bluetooth.discovery.BluetoothDiscovery
@@ -42,11 +43,23 @@ class ForegroundService : Service() {
 
     private var started = false
 
-    private var bluetoothEnabled = MutableStateFlow(false)
-    private var bluetoothHardwareEnabled = MutableStateFlow(false)
-    private var bluetoothUserEnabled = MutableStateFlow(true)
+    private val _bluetoothHardwareEnabled = MutableStateFlow(false)
+    val bluetoothHardwareEnabled = _bluetoothHardwareEnabled.asStateFlow()
 
-    private var wifiEnabled = MutableStateFlow(true)
+    val bluetoothUserEnabled = MutableStateFlow(false)
+
+    val bluetoothEnabled = bluetoothHardwareEnabled
+        .combine(bluetoothUserEnabled, Boolean::and)
+        .stateIn(coroutineScope, SharingStarted.Eagerly, false)
+
+    private val _wifiHardwareEnabled = MutableStateFlow(false)
+    val wifiHardwareEnabled = _wifiHardwareEnabled.asStateFlow()
+
+    val wifiUserEnabled = MutableStateFlow(false)
+
+    val wifiEnabled = wifiHardwareEnabled
+        .combine(wifiUserEnabled, Boolean::and)
+        .stateIn(coroutineScope, SharingStarted.Eagerly, false)
 
     private lateinit var foregroundNotification: NotificationCompat.Builder
 
@@ -61,20 +74,20 @@ class ForegroundService : Service() {
         private const val EXTRA_CHAT_ID = "sender_id"
     }
 
-    private val bluetoothStateReceiver = object : BroadcastReceiver() {
+    private val adaptersStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            if (intent.action != BluetoothAdapter.ACTION_STATE_CHANGED) {
-                return
-            }
-
-            when (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, 0)) {
-                BluetoothAdapter.STATE_ON -> {
-                    bluetoothHardwareEnabled.value = true
-                    bluetoothEnabled.value = bluetoothUserEnabled.value
+            when (intent.action) {
+                BluetoothAdapter.ACTION_STATE_CHANGED -> {
+                    when (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1)) {
+                        BluetoothAdapter.STATE_ON -> _bluetoothHardwareEnabled.value = true
+                        BluetoothAdapter.STATE_OFF -> _bluetoothHardwareEnabled.value = false
+                    }
                 }
-                BluetoothAdapter.STATE_OFF -> {
-                    bluetoothHardwareEnabled.value = false
-                    bluetoothEnabled.value = false
+                WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION -> {
+                    when (intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1)) {
+                        WifiP2pManager.WIFI_P2P_STATE_ENABLED -> _wifiHardwareEnabled.value = true
+                        WifiP2pManager.WIFI_P2P_STATE_DISABLED -> _wifiHardwareEnabled.value = false
+                    }
                 }
             }
         }
@@ -95,31 +108,16 @@ class ForegroundService : Service() {
 
     inner class ServiceBinder : Binder() {
         val grapevineService = this@ForegroundService.grapevineService
+        val foregroundService = this@ForegroundService
+    }
 
-        val bluetoothEnabled = this@ForegroundService.bluetoothEnabled.asStateFlow()
-        val bluetoothHardwareEnabled = this@ForegroundService.bluetoothHardwareEnabled.asStateFlow()
+    fun suppressChatNotifications(chatId: Long) {
+        NotificationManagerCompat.from(this@ForegroundService).cancel(chatId.toInt())
+        suppressedChats.add(chatId)
+    }
 
-        val wifiEnabled = this@ForegroundService.wifiEnabled.asStateFlow()
-        val wifiHardwareEnabled = MutableStateFlow(true).asStateFlow()
-
-        fun setBluetoothUserEnabled(enabled: Boolean) {
-            bluetoothUserEnabled.value = enabled
-            this@ForegroundService.bluetoothEnabled.value =
-                bluetoothHardwareEnabled.value && bluetoothUserEnabled.value
-        }
-
-        fun setWifiUserEnabled(enabled: Boolean) {
-
-        }
-
-        fun suppressChatNotifications(chatId: Long) {
-            NotificationManagerCompat.from(this@ForegroundService).cancel(chatId.toInt())
-            suppressedChats.add(chatId)
-        }
-
-        fun enableChatNotifications(chatId: Long) {
-            suppressedChats.remove(chatId)
-        }
+    fun enableChatNotifications(chatId: Long) {
+        suppressedChats.remove(chatId)
     }
 
     override fun onBind(intent: Intent?) = ServiceBinder()
@@ -128,8 +126,11 @@ class ForegroundService : Service() {
         super.onCreate()
 
         registerReceiver(
-            bluetoothStateReceiver,
-            IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED),
+            adaptersStateReceiver,
+            IntentFilter().apply {
+                addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
+                addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION)
+            },
         )
         registerReceiver(
             notificationActionReceiver,
@@ -163,7 +164,7 @@ class ForegroundService : Service() {
         grapevineService.stop()
         coroutineScope.cancel()
 
-        unregisterReceiver(bluetoothStateReceiver)
+        unregisterReceiver(adaptersStateReceiver)
         unregisterReceiver(notificationActionReceiver)
     }
 
@@ -201,8 +202,7 @@ class ForegroundService : Service() {
             showMessageNotifications()
         }
 
-        bluetoothHardwareEnabled.value = bluetoothDiscovery.isAdapterEnabled
-        bluetoothEnabled.value = bluetoothHardwareEnabled.value && bluetoothUserEnabled.value
+        _bluetoothHardwareEnabled.value = bluetoothDiscovery.isAdapterEnabled
 
         return START_STICKY
     }

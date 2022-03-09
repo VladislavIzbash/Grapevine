@@ -1,14 +1,19 @@
 package ru.vizbash.grapevine.network.discovery
 
 import android.annotation.SuppressLint
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.net.wifi.p2p.WifiP2pConfig
 import android.net.wifi.p2p.WifiP2pDevice
+import android.net.wifi.p2p.WifiP2pInfo
 import android.net.wifi.p2p.WifiP2pManager
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceRequest
 import android.os.Looper
 import android.util.Log
+import com.google.protobuf.InvalidProtocolBufferException
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.scopes.ServiceScoped
 import ru.vizbash.grapevine.network.Neighbor
@@ -18,23 +23,27 @@ import ru.vizbash.grapevine.network.messages.direct.DirectMessage
 import ru.vizbash.grapevine.util.TAG
 import java.io.IOException
 import java.net.InetSocketAddress
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.nio.channels.ServerSocketChannel
 import java.nio.channels.SocketChannel
 import java.util.*
 import javax.inject.Inject
 import kotlin.concurrent.thread
-import kotlin.random.Random
 
 @ServiceScoped
 @SuppressLint("MissingPermission")
 class WifiDiscovery @Inject constructor(
     @ApplicationContext private val context: Context,
     private val router: Router,
-) : WifiP2pManager.DnsSdTxtRecordListener, WifiP2pManager.DnsSdServiceResponseListener {
-
+) : WifiP2pManager.DnsSdTxtRecordListener,
+    WifiP2pManager.DnsSdServiceResponseListener,
+    WifiP2pManager.ConnectionInfoListener
+{
     companion object {
         private const val SERVICE_NAME = "Grapevine"
         private const val SERVICE_TYPE = "_grapevine._tcp"
+        private const val PORT = 54013
         private const val TICK_INTERVAL_MS = 200L
     }
 
@@ -43,24 +52,35 @@ class WifiDiscovery @Inject constructor(
     }
     private lateinit var p2pChannel: WifiP2pManager.Channel
 
-    private val myConnKey = Random.nextLong()
-
     @Volatile
-    private var running = false
+    private var started = false
 
     private lateinit var looper: Looper
+    private val tickTimer = Timer()
     private lateinit var serviceInfo: WifiP2pDnsSdServiceInfo
 
     private val neighbors = mutableSetOf<WifiNeighbor>()
 
+    private val p2pConnectionReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION) {
+                p2pManager.requestConnectionInfo(p2pChannel, this@WifiDiscovery)
+            }
+        }
+    }
+
     fun start() {
-        if (running) {
+        if (started) {
             return
         }
 
-        running = true
-
+        started = true
         Log.i(TAG, "Starting")
+
+        context.registerReceiver(
+            p2pConnectionReceiver,
+            IntentFilter(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION),
+        )
 
         startThread()
     }
@@ -75,12 +95,12 @@ class WifiDiscovery @Inject constructor(
 
         val serverChannel = ServerSocketChannel.open().apply {
             configureBlocking(false)
-            bind(InetSocketAddress(0))
+            bind(InetSocketAddress(PORT))
         }
 
-        serviceInfo = registerService(serverChannel.socket().localPort)
+        registerService()
 
-        Timer().scheduleAtFixedRate(TickTask(serverChannel), 100, TICK_INTERVAL_MS)
+        tickTimer.scheduleAtFixedRate(TickerTask(serverChannel), 100, TICK_INTERVAL_MS)
         Looper.loop()
 
         p2pChannel.close()
@@ -90,12 +110,15 @@ class WifiDiscovery @Inject constructor(
     }
 
     fun stop() {
-        if (!running) {
+        if (!started) {
             return
         }
 
-        running = false
+        started = false
         Log.i(this@WifiDiscovery.TAG, "Stopping")
+
+        context.unregisterReceiver(p2pConnectionReceiver)
+        tickTimer.cancel()
 
         p2pManager.removeLocalService(p2pChannel, serviceInfo, object : WifiP2pManager.ActionListener {
             override fun onSuccess() {
@@ -108,17 +131,14 @@ class WifiDiscovery @Inject constructor(
         })
     }
 
-    private fun registerService(port: Int): WifiP2pDnsSdServiceInfo {
-        val info = WifiP2pDnsSdServiceInfo.newInstance(
+    private fun registerService() {
+        serviceInfo = WifiP2pDnsSdServiceInfo.newInstance(
             SERVICE_NAME,
             SERVICE_TYPE,
-            mapOf(
-                "port" to port.toString(),
-                "conn_key" to myConnKey.toString(),
-            ),
+            emptyMap(),
         )
 
-        p2pManager.addLocalService(p2pChannel, info, object : WifiP2pManager.ActionListener {
+        p2pManager.addLocalService(p2pChannel, serviceInfo, object : WifiP2pManager.ActionListener {
             override fun onSuccess() {
                 Log.d(this@WifiDiscovery.TAG, "Added local service")
                 onServiceRegistered()
@@ -129,8 +149,6 @@ class WifiDiscovery @Inject constructor(
                 stop()
             }
         })
-
-        return info
     }
 
     private fun onServiceRegistered() {
@@ -172,23 +190,13 @@ class WifiDiscovery @Inject constructor(
             deviceAddress = device.deviceAddress
         }
 
-        val connKey = record["conn_key"] ?: return
-        val port = record["port"] ?: return
-
-        if (myConnKey > connKey.toLong()) {
-            Log.d(TAG, "Waiting ${device.deviceAddress} to connect")
-            return
-        }
-
         p2pManager.connect(p2pChannel, config, object : WifiP2pManager.ActionListener {
             override fun onSuccess() {
-                Log.d(this@WifiDiscovery.TAG, "Connected to ${device.deviceAddress}")
-                onConnected(port.toInt())
+                Log.d(this@WifiDiscovery.TAG, "Connecting to ${device.deviceAddress}")
             }
 
             override fun onFailure(reason: Int) {
-                Log.e(this@WifiDiscovery.TAG, "connect() failed with code $reason")
-                stop()
+                Log.w(this@WifiDiscovery.TAG, "connect() failed with code $reason")
             }
         })
     }
@@ -197,35 +205,111 @@ class WifiDiscovery @Inject constructor(
         instanceName: String,
         registrationType: String,
         device: WifiP2pDevice,
-    ) {}
+    ) {
+        Log.d(TAG, "Service discovered ${device.deviceAddress} (${device.deviceName})")
+    }
 
-    private fun onConnected(port: Int) {
-        p2pManager.requestConnectionInfo(p2pChannel) { info ->
-            val address = info.groupOwnerAddress.hostAddress
-            val channel = SocketChannel.open(InetSocketAddress(address, port)).apply {
+    override fun onConnectionInfoAvailable(info: WifiP2pInfo) {
+        if (!info.groupFormed) {
+            Log.w(TAG, "Group is not formed")
+            return
+        } else {
+            Log.i(TAG, "Group is formed")
+        }
+
+        if (info.isGroupOwner) {
+            return
+        }
+
+        val address = info.groupOwnerAddress.hostAddress
+        val channel = try {
+            SocketChannel.open(InetSocketAddress(address, PORT)).apply {
                 configureBlocking(false)
             }
+        } catch (e: IOException) {
+            Log.w(TAG, "Failed to connect to $address: ${e.message}")
+            return
+        }
 
-            synchronized(this) {
-                neighbors.add(WifiNeighbor(channel))
+        Log.d(this@WifiDiscovery.TAG, "Connected to $address")
+
+        synchronized(this) {
+            val neighbor = WifiNeighbor(channel)
+            if (neighbors.add(neighbor)) {
+                router.addNeighbor(neighbor)
             }
         }
     }
 
-    private inner class TickTask(
+    private inner class TickerTask(
         private val serverChannel: ServerSocketChannel,
     ) : TimerTask() {
+        private val buffers = mutableMapOf<WifiNeighbor, ByteBuffer>()
+        private val sizeBuf = ByteBuffer.allocate(Int.SIZE_BYTES).apply {
+            order(ByteOrder.BIG_ENDIAN)
+        }
+
         override fun run() = synchronized(this@WifiDiscovery) {
-            val clientChannel = serverChannel.accept()
-            if (clientChannel != null) {
-                clientChannel.configureBlocking(false)
-                neighbors.add(WifiNeighbor(clientChannel))
+            serverChannel.accept()?.let {
+                it.configureBlocking(false)
+
+                Log.d(this@WifiDiscovery.TAG, "Accepted ${it.remoteAddress}")
+
+                val neighbor = WifiNeighbor(it)
+                if (neighbors.add(neighbor)) {
+                    router.addNeighbor(neighbor)
+                }
             }
 
-//            for (neighbor in neighbors) {
-//                neighbor.channel.socket().getInputStream()
-//                DirectMessage.parseFrom(neighbor.channel)
-//            }
+            for (neighbor in neighbors) {
+                val buffer = if (buffers[neighbor] == null) {
+                    sizeBuf.rewind()
+                    if (!readFrom(neighbor, sizeBuf)) {
+                        continue
+                    }
+
+                    val size = sizeBuf.getInt(0)
+                    if (size > 250_000) {
+                        continue
+                    }
+
+                    val newBuffer = ByteBuffer.allocate(size)
+                    buffers[neighbor] = newBuffer
+
+                    Log.d(this@WifiDiscovery.TAG, "allocated $size bytes for message")
+                    newBuffer
+                } else {
+                    buffers[neighbor]!!
+                }
+
+                if (readFrom(neighbor, buffer)) {
+                    Log.d(this@WifiDiscovery.TAG, "read partial message")
+                }
+
+                if (buffer.position() == buffer.capacity()) {
+                    buffer.flip()
+                    try {
+                        val msg = DirectMessage.parseFrom(buffer)
+                        neighbor.receiveCb(msg)
+                    } catch (e: InvalidProtocolBufferException) {
+                    }
+                    buffers.remove(neighbor)
+                }
+            }
+        }
+    }
+
+    private fun readFrom(neighbor: WifiNeighbor, buffer: ByteBuffer): Boolean {
+        val read = neighbor.channel.read(buffer)
+        return when {
+            read == 0 -> false
+            read < 0 -> {
+                Log.d(TAG, "$neighbor disconnected")
+                neighbor.disconnectCb()
+                neighbors.remove(neighbor)
+                false
+            }
+            else -> true
         }
     }
 
@@ -241,9 +325,23 @@ class WifiDiscovery @Inject constructor(
 
         override fun send(msg: DirectMessage) {
             try {
-//                msg.writeDelimitedTo(channel.socket().getOutputStream())
+                val msgBytes = msg.toByteArray()
+
+                val sizeBytes = ByteBuffer.allocate(Int.SIZE_BYTES).apply {
+                    order(ByteOrder.BIG_ENDIAN)
+                    putInt(msgBytes.size)
+                    rewind()
+                }
+                channel.write(sizeBytes)
+
+                val buf = ByteBuffer.wrap(msgBytes)
+                while (buf.remaining() > 0) {
+                    channel.write(buf)
+                }
+
+                Log.d(this@WifiDiscovery.TAG, "written ${buf.capacity()} bytes")
             } catch (e: IOException) {
-                Log.d(TAG, "$this closed connection: ${e.message}")
+                Log.d(this@WifiDiscovery.TAG, "$this closed connection: ${e.message}")
 
                 disconnectCb()
 

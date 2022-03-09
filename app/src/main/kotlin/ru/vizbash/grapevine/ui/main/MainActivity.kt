@@ -5,14 +5,15 @@ import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
+import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import android.provider.Settings
 import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions
-import androidx.activity.result.contract.ActivityResultContracts.RequestPermission
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
@@ -40,6 +41,21 @@ import ru.vizbash.grapevine.ui.login.LoginActivity
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity(), ServiceConnection {
+    companion object {
+        private val locationPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            arrayOf(
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+            )
+        } else {
+            arrayOf(
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+            )
+        }
+    }
+
     private lateinit var appBarConfig: AppBarConfiguration
 
     private lateinit var ui: ActivityMainBinding
@@ -48,9 +64,9 @@ class MainActivity : AppCompatActivity(), ServiceConnection {
     private lateinit var wifiSwitch: SwitchMaterial
     private lateinit var bluetoothSwitch: SwitchMaterial
 
-    private lateinit var serviceBinder: ForegroundService.ServiceBinder
+    private lateinit var foregroundService: ForegroundService
 
-    private lateinit var requestLocation: ActivityResultLauncher<Array<String>>
+    private lateinit var requestWifiPerms: ActivityResultLauncher<Array<String>>
 
     @Navigator.Name("logout")
     private inner class LogoutNavigator : Navigator<NavDestination>() {
@@ -78,20 +94,24 @@ class MainActivity : AppCompatActivity(), ServiceConnection {
 
         setSupportActionBar(ui.toolbar)
 
-        requestLocation = registerForActivityResult(RequestMultiplePermissions()) { granted ->
-            if (granted[Manifest.permission.ACCESS_FINE_LOCATION]!!) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    if (granted[Manifest.permission.ACCESS_BACKGROUND_LOCATION]!!) {
-                        serviceBinder.setWifiUserEnabled(true)
-                    }
-                } else {
-                    serviceBinder.setWifiUserEnabled(true)
-                }
+        requestWifiPerms = registerForActivityResult(RequestMultiplePermissions()) { perms ->
+            val granted = locationPermissions.map { perms[it] }.all { it ?: false }
+            if (granted) {
+                enableWifi()
+            } else {
+                Snackbar.make(
+                    ui.root,
+                    R.string.error_need_location_permission,
+                    Snackbar.LENGTH_SHORT,
+                ).apply {
+                    setTextColor(getColor(R.color.error))
+                }.show()
             }
         }
 
         wifiSwitch = ui.navView.menu.findItem(R.id.wifiMenuItem).actionView as SwitchMaterial
-        bluetoothSwitch = ui.navView.menu.findItem(R.id.bluetoothMenuItem).actionView as SwitchMaterial
+        bluetoothSwitch =
+            ui.navView.menu.findItem(R.id.bluetoothMenuItem).actionView as SwitchMaterial
 
         val intent = Intent(this, ForegroundService::class.java)
         ContextCompat.startForegroundService(this, intent)
@@ -99,8 +119,9 @@ class MainActivity : AppCompatActivity(), ServiceConnection {
     }
 
     override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-        serviceBinder = (service as ForegroundService.ServiceBinder)
-        model.service = serviceBinder.grapevineService
+        val binder = (service as ForegroundService.ServiceBinder)
+        model.service = binder.grapevineService
+        foregroundService = binder.foregroundService
 
         val navHost = supportFragmentManager.findFragmentById(R.id.navHostFragment) as NavHostFragment
         val navController = navHost.navController
@@ -146,16 +167,16 @@ class MainActivity : AppCompatActivity(), ServiceConnection {
                     }
                 }
                 launch {
-                    serviceBinder.bluetoothEnabled
-                        .combine(serviceBinder.bluetoothHardwareEnabled, ::Pair)
+                    foregroundService.bluetoothEnabled
+                        .combine(foregroundService.bluetoothHardwareEnabled, ::Pair)
                         .collect { (enabled, hwEnabled) ->
                             bluetoothSwitch.isChecked = enabled
                             bluetoothSwitch.isEnabled = hwEnabled
                         }
                 }
                 launch {
-                    serviceBinder.wifiEnabled
-                        .combine(serviceBinder.wifiHardwareEnabled, ::Pair)
+                    foregroundService.wifiEnabled
+                        .combine(foregroundService.wifiHardwareEnabled, ::Pair)
                         .collect { (enabled, hwEnabled) ->
                             wifiSwitch.isChecked = enabled
                             wifiSwitch.isEnabled = hwEnabled
@@ -168,46 +189,59 @@ class MainActivity : AppCompatActivity(), ServiceConnection {
             if (bluetoothSwitch.isChecked) {
                 startBluetooth()
             } else {
-                serviceBinder.setBluetoothUserEnabled(false)
+                foregroundService.bluetoothUserEnabled.value = false
             }
         }
         wifiSwitch.setOnClickListener {
             if (wifiSwitch.isChecked) {
-                startBluetooth()
+                wifiSwitch.isChecked = enableWifi()
             } else {
-                serviceBinder.setWifiUserEnabled(false)
+                foregroundService.wifiUserEnabled.value = false
             }
-        }
-
-        if (bluetoothSwitch.isChecked) {
-            startBluetooth()
-        }
-        if (wifiSwitch.isChecked) {
-            startWifi()
         }
     }
 
     override fun onServiceDisconnected(name: ComponentName?) {}
 
+    private fun askEnableLocation(): Boolean {
+        val locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
+
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && !locationManager.isLocationEnabled) {
+            val dialog = AlertDialog.Builder(this)
+                .setMessage(getString(R.string.location_alert))
+                .setPositiveButton(R.string.enable) { _, _ ->
+                    startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                }
+                .setNegativeButton(R.string.close) { _, _ -> }
+                .create()
+
+            dialog.show()
+            false
+        } else {
+            true
+        }
+    }
+
     private fun startBluetooth() {
-        serviceBinder.setBluetoothUserEnabled(true)
+//        serviceBinder.setBluetoothUserEnabled(true)
         // TODO: other persmissiopns
     }
 
-    private fun startWifi() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-            == PackageManager.PERMISSION_GRANTED
-            && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-            == PackageManager.PERMISSION_GRANTED) {
+    private fun enableWifi(): Boolean {
+        if (!askEnableLocation()) {
+            return false
+        }
 
-            serviceBinder.setWifiUserEnabled(true)
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            requestLocation.launch(arrayOf(
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_BACKGROUND_LOCATION,
-            ))
+        val allGranted = locationPermissions.map {
+            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
+        }.all { it }
+
+        return if (allGranted) {
+            foregroundService.wifiUserEnabled.value = true
+            true
         } else {
-            requestLocation.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))
+            requestWifiPerms.launch(locationPermissions)
+            false
         }
     }
 }

@@ -58,4 +58,8 @@
     <string name="mark_as_read">Прочитано</string>
     <string name="notification_forwarded_message">Пересланное сообщение</string>
     <string name="notification_attachment">Файл: %1$s</string>
+    <string name="location_alert">Для обнаружения устройств поблизости необходимо включить местоположение</string>
+    <string name="enable">Включить</string>
+    <string name="close">Закрыть</string>
+    <string name="error_need_location_permission">Необходим доступ к местоположению</string>
 </resources>

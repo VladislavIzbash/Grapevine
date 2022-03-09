@@ -37,7 +37,7 @@ class ChatActivity : AppCompatActivity(), ServiceConnection {
     private lateinit var ui: ActivityChatBinding
     private val model: ChatViewModel by viewModels()
 
-    private var serviceBinder: ForegroundService.ServiceBinder? = null
+    private var foregroundService: ForegroundService? = null
 
     private val messageTextWatcher = object : TextWatcher {
         override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -83,8 +83,9 @@ class ChatActivity : AppCompatActivity(), ServiceConnection {
     }
 
     override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-        serviceBinder = (service as ForegroundService.ServiceBinder)
-        model.service = serviceBinder!!.grapevineService
+        val binder = (service as ForegroundService.ServiceBinder)
+        model.service = binder.grapevineService
+        foregroundService = binder.foregroundService
 
         ui.tvContactUsername.text = model.contact.username
         val photo = model.contact.photo
@@ -119,21 +120,19 @@ class ChatActivity : AppCompatActivity(), ServiceConnection {
         ui.buttonAttachmentRemove.setOnClickListener {
             model.attachedFile.value = null
         }
-        serviceBinder?.suppressChatNotifications(model.contact.nodeId)
+        foregroundService?.suppressChatNotifications(model.contact.nodeId)
     }
 
     override fun onServiceDisconnected(name: ComponentName?) {}
 
     override fun onStart() {
         super.onStart()
-
-        serviceBinder?.suppressChatNotifications(model.contact.nodeId)
+        foregroundService?.suppressChatNotifications(model.contact.nodeId)
     }
 
     override fun onStop() {
         super.onStop()
-
-        serviceBinder?.enableChatNotifications(model.contact.nodeId)
+        foregroundService?.enableChatNotifications(model.contact.nodeId)
     }
 
     override fun onDestroy() {
