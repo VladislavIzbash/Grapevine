@@ -7,20 +7,28 @@ import androidx.room.TypeConverter
 import ru.vizbash.grapevine.util.decodeRsaPublicKey
 import ru.vizbash.grapevine.storage.contacts.ContactEntity
 import ru.vizbash.grapevine.storage.messages.MessageEntity
+import ru.vizbash.grapevine.util.decodeSecretKey
 import java.io.ByteArrayOutputStream
 import java.security.PublicKey
 import java.util.*
+import javax.crypto.SecretKey
 
 class Converters {
     @TypeConverter
-    fun publicKeyFromBytes(bytes: ByteArray?) = bytes?.let { decodeRsaPublicKey(bytes) }
+    fun publicKeyFromBytes(bytes: ByteArray?) = bytes?.let { decodeRsaPublicKey(it) }
 
     @TypeConverter
     fun publicKeyToBytes(publicKey: PublicKey?) = publicKey?.encoded
 
     @TypeConverter
+    fun secretKeyFromBytes(bytes: ByteArray?) = bytes?.let { decodeSecretKey(it) }
+
+    @TypeConverter
+    fun secretKeyToBytes(secretKey: SecretKey?) = secretKey?.encoded
+
+    @TypeConverter
     fun bitmapFromBytes(bytes: ByteArray?) = bytes?.let {
-        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        BitmapFactory.decodeByteArray(it, 0, it.size)
     }
 
     @TypeConverter

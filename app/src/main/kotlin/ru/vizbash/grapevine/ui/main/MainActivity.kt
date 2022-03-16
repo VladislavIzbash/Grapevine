@@ -93,8 +93,6 @@ class MainActivity : AppCompatActivity(), ServiceConnection {
         ui = ActivityMainBinding.inflate(layoutInflater)
         setContentView(ui.root)
 
-        setSupportActionBar(ui.toolbar)
-
         requestWifiPerms = registerLocationResult { enableWifi() }
         requestBluetoothPerms = registerLocationResult { enableBluetooth() }
 
@@ -106,24 +104,7 @@ class MainActivity : AppCompatActivity(), ServiceConnection {
         bindService(intent, this, BIND_AUTO_CREATE)
     }
 
-    private fun registerLocationResult(action: () -> Unit) =
-        registerForActivityResult(RequestMultiplePermissions()) { perms ->
-
-        val granted = locationPermissions.map { perms[it] }.all { it ?: false }
-        if (granted) {
-            action()
-        } else {
-            Snackbar.make(
-                ui.root,
-                R.string.error_need_location_permission,
-                Snackbar.LENGTH_SHORT,
-            ).apply {
-                setTextColor(getColor(R.color.error))
-            }.show()
-        }
-    }
-
-    override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+    override fun onServiceConnected(name: ComponentName, service: IBinder) {
         val binder = (service as ForegroundService.ServiceBinder)
         model.service = binder.grapevineService
         foregroundService = binder.foregroundService
@@ -142,9 +123,6 @@ class MainActivity : AppCompatActivity(), ServiceConnection {
         )
         appBarConfig = AppBarConfiguration(topLevel, ui.drawerLayout)
         ui.toolbar.setupWithNavController(navController, appBarConfig)
-
-        // Иначе в начале отображается имя приложения
-        supportActionBar?.title = navController.currentBackStackEntry?.destination?.label
 
         val headerView = ui.navView.getHeaderView(0)
         val header = DrawerHeaderBinding.bind(headerView)
@@ -206,7 +184,24 @@ class MainActivity : AppCompatActivity(), ServiceConnection {
         }
     }
 
-    override fun onServiceDisconnected(name: ComponentName?) {}
+    override fun onServiceDisconnected(name: ComponentName) {}
+
+    private fun registerLocationResult(
+        action: () -> Unit,
+    ) = registerForActivityResult(RequestMultiplePermissions()) { perms ->
+        val granted = locationPermissions.map { perms[it] }.all { it ?: false }
+        if (granted) {
+            action()
+        } else {
+            Snackbar.make(
+                ui.root,
+                R.string.error_need_location_permission,
+                Snackbar.LENGTH_SHORT,
+            ).apply {
+                setTextColor(getColor(R.color.error))
+            }.show()
+        }
+    }
 
     private fun askEnableLocation(): Boolean {
         val locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
@@ -214,10 +209,10 @@ class MainActivity : AppCompatActivity(), ServiceConnection {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && !locationManager.isLocationEnabled) {
             val dialog = AlertDialog.Builder(this)
                 .setMessage(getString(R.string.location_alert))
+                .setNegativeButton(R.string.close, null)
                 .setPositiveButton(R.string.enable) { _, _ ->
                     startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
                 }
-                .setNegativeButton(R.string.close) { _, _ -> }
                 .create()
 
             dialog.show()

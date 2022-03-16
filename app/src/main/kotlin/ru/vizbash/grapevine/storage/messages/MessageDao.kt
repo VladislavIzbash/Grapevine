@@ -10,7 +10,9 @@ interface MessageDao {
     fun getAll(): Flow<List<MessageEntity>>
 
     @Transaction
-    @Query("SELECT * FROM messages WHERE chat_id = :chatId ORDER BY timestamp DESC")
+    @Query("SELECT m.*, c.username FROM messages m " +
+            "LEFT JOIN contacts c ON m.sender_id = c.node_id " +
+            "WHERE chat_id = :chatId ORDER BY timestamp DESC")
     fun getAllForChat(chatId: Long): PagingSource<Int, MessageWithOrig>
 
     @Query("SELECT * FROM messages WHERE chat_id = :chatId ORDER BY timestamp DESC LIMIT 1")

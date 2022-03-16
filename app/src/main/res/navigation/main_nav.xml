@@ -14,7 +14,7 @@
 
     <fragment
         android:id="@+id/chatsFragment"
-        android:name="ru.vizbash.grapevine.ui.main.ChatsFragment"
+        android:name="ru.vizbash.grapevine.ui.main.chats.ChatsFragment"
         android:label="@string/chats"
         tools:layout="@layout/fragment_contacts" >
     </fragment>

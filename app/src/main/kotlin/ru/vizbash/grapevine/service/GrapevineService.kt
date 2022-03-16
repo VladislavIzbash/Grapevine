@@ -9,6 +9,7 @@ import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.flow.first
 import ru.vizbash.grapevine.network.GrapevineNetwork
 import ru.vizbash.grapevine.network.Node
+import ru.vizbash.grapevine.storage.chats.ChatEntity
 import ru.vizbash.grapevine.storage.contacts.ContactEntity
 import ru.vizbash.grapevine.storage.messages.MessageEntity
 import ru.vizbash.grapevine.storage.messages.MessageFile
@@ -34,12 +35,15 @@ class GrapevineService @Inject constructor(
 
         Log.i(TAG, "Started")
 
-        coroutineScope.run {
-            launch(Dispatchers.Default) { redeliverFailedMessages() }
-            launch(Dispatchers.Default) { receiveInvitations() }
-            launch(Dispatchers.Default) { receiveInvitationAnswers() }
-            launch(Dispatchers.Default) { receiveTextMessages() }
-            launch(Dispatchers.Default) { receiveReadConfirmations() }
+        listOf(
+            this::redeliverFailedMessages,
+            this::receiveContactInvitations,
+            this::receiveChatInvitations,
+            this::receiveInvitationAnswers,
+            this::receiveTextMessages,
+            this::receiveReadConfirmations,
+        ).forEach {
+            coroutineScope.launch(Dispatchers.Default) { it() }
         }
     }
 
@@ -50,8 +54,8 @@ class GrapevineService @Inject constructor(
     }
 
     val availableNodes = grapevineNetwork.availableNodes
+
     val currentProfile get() = profileService.profile.entity
-    val contactList get() = profileService.contactList
 
     private val photoCache = mutableMapOf<Node, Bitmap?>()
 
@@ -59,7 +63,11 @@ class GrapevineService @Inject constructor(
         grapevineNetwork.fetchNodePhoto(node)
     }
 
+    val contactList get() = profileService.contactList
+
     suspend fun getContact(id: Long) = profileService.getContact(id)
+
+    suspend fun loadPhoto(id: Long) = profileService.loadPhoto(id)
 
     suspend fun sendContactInvitation(node: Node) {
         grapevineNetwork.sendContactInvitation(node)
@@ -77,7 +85,7 @@ class GrapevineService @Inject constructor(
     suspend fun acceptContact(contact: ContactEntity) {
         profileService.setContactState(contact, ContactEntity.State.ACCEPTED)
 
-        grapevineNetwork.availableNodes.value.find { it.id == contact.nodeId }?.let {
+        grapevineNetwork.lookupNode(contact.nodeId)?.let {
             grapevineNetwork.sendContactInvitationAnswer(it, true)
         }
     }
@@ -85,8 +93,26 @@ class GrapevineService @Inject constructor(
     suspend fun rejectContact(contact: ContactEntity) {
         profileService.deleteContact(contact)
 
-        grapevineNetwork.availableNodes.value.find { it.id == contact.nodeId }?.let {
+        grapevineNetwork.lookupNode(contact.nodeId)?.let {
             grapevineNetwork.sendContactInvitationAnswer(it, false)
+        }
+    }
+
+    val chatList get() = profileService.chatList
+
+    suspend fun getChat(id: Long) = profileService.getChat(id)
+
+    suspend fun createChat(name: String) {
+        val id = Random.nextLong()
+        profileService.addChat(id, name, currentProfile.nodeId)
+        profileService.addChatMember(id, currentProfile.nodeId)
+    }
+
+    suspend fun inviteToChat(chat: ChatEntity, contact: ContactEntity) {
+        profileService.addChatMember(chat.id, contact.nodeId)
+
+        grapevineNetwork.lookupNode(contact.nodeId)?.let {
+            grapevineNetwork.sendChatInvitation(it, chat.id, chat.name)
         }
     }
 
@@ -95,7 +121,7 @@ class GrapevineService @Inject constructor(
 
     fun getLastMessage(contact: ContactEntity) = profileService.getLastMessage(contact)
 
-    fun getContactMessages(contact: ContactEntity) = profileService.getContactMessages(contact)
+    fun getChatMessages(chatId: Long) = profileService.getChatMessages(chatId)
 
     suspend fun sendMessage(
         contact: ContactEntity,
@@ -106,13 +132,13 @@ class GrapevineService @Inject constructor(
         val id = Random.nextLong()
         val sentMessage = profileService.addSentMessage(
             id,
-            contact,
+            contact.nodeId,
             text,
             forwardedMessage,
             attachment,
         )
 
-        val node = grapevineNetwork.availableNodes.value.find { it.id == contact.nodeId }
+        val node = grapevineNetwork.lookupNode(contact.nodeId)
         if (node != null) {
             try {
                 grapevineNetwork.sendTextMessage(
@@ -133,8 +159,50 @@ class GrapevineService @Inject constructor(
         return sentMessage
     }
 
+    suspend fun sendMessage(
+        chat: ChatEntity,
+        text: String,
+        forwardedMessage: MessageEntity? = null,
+        attachment: MessageFile? = null,
+    ): MessageEntity {
+        val id = Random.nextLong()
+        val sentMessage = profileService.addSentMessage(
+            id,
+            chat.id,
+            text,
+            forwardedMessage,
+            attachment,
+        )
+
+        var successful = false
+
+        for (memberId in profileService.getChatMembers(chat.id)) {
+            val node = grapevineNetwork.lookupNode(memberId)
+            if (node != null) {
+                try {
+                    grapevineNetwork.sendTextMessage(
+                        id,
+                        text,
+                        node,
+                        forwardedMessage?.id,
+                        attachment,
+                        chat.id,
+                    )
+                    successful = true
+                    profileService.setMessageState(id, MessageEntity.State.DELIVERED)
+                } catch (e: GVException) {
+                    if (!successful) {
+                        profileService.setMessageState(id, MessageEntity.State.DELIVERY_FAILED)
+                    }
+                }
+            }
+        }
+
+        return sentMessage
+    }
+
     suspend fun markAsRead(msgId: Long, senderId: Long) {
-        val dest = availableNodes.value.find { it.id == senderId } ?: return
+        val dest = grapevineNetwork.lookupNode(senderId) ?: return
 
         profileService.setMessageState(msgId, MessageEntity.State.READ)
 
@@ -144,20 +212,30 @@ class GrapevineService @Inject constructor(
         }
     }
 
-    private val _ingoingInvitations = Channel<ContactEntity>()
-    val ingoingInvitations: ReceiveChannel<ContactEntity> = _ingoingInvitations
+    private val _ingoingContactInvitations = Channel<ContactEntity>()
+    val ingoingContactInvitations: ReceiveChannel<ContactEntity> = _ingoingContactInvitations
 
-    private suspend fun receiveInvitations() {
+    private suspend fun receiveContactInvitations() {
         grapevineNetwork.contactInvitations.collect { node ->
             val photo = try {
-                grapevineNetwork.fetchNodePhoto(node)
+                fetchNodePhoto(node)
             } catch (e: GVException) {
                 e.printStackTrace()
                 null
             }
 
             val contact = profileService.addContact(node, photo, ContactEntity.State.INGOING)
-            _ingoingInvitations.send(contact)
+            _ingoingContactInvitations.send(contact)
+        }
+    }
+
+    private val _ingoingChatInvitations = Channel<ChatEntity>()
+    val ingoingChatInvitations: ReceiveChannel<ChatEntity> = _ingoingChatInvitations
+
+    private suspend fun receiveChatInvitations() {
+        grapevineNetwork.chatInvitations.collect {
+            val chat = profileService.addChat(it.chatId, it.name, it.node.id)
+            _ingoingChatInvitations.send(chat)
         }
     }
 
@@ -176,7 +254,7 @@ class GrapevineService @Inject constructor(
     private suspend fun receiveTextMessages() {
         grapevineNetwork.textMessages.collect { (msg, node) ->
             profileService.getContact(node.id)?.let {
-                val entity = profileService.addReceivedMessage(it, msg)
+                val entity = profileService.addReceivedMessage(node.id, msg)
                 _ingoingMessages.send(entity)
             }
         }
@@ -194,7 +272,7 @@ class GrapevineService @Inject constructor(
 
             for (contact in profileService.contactList.first()) {
                 for (msg in profileService.getContactFailedMessages(contact).take(5)) {
-                    grapevineNetwork.availableNodes.value.find { it.id == contact.nodeId }?.let {
+                    grapevineNetwork.lookupNode(contact.nodeId)?.let {
                         try {
                             grapevineNetwork.sendTextMessage(
                                 msg.id,

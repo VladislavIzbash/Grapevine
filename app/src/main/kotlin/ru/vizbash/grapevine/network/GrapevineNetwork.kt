@@ -62,6 +62,8 @@ class GrapevineNetwork @Inject constructor(
         }
     }.acceptMessages().shareIn(coroutineScope, SharingStarted.Eagerly)
 
+    fun lookupNode(id: Long) = availableNodes.value.find { it.id == id }
+
     fun start() {
         check(!started)
 
@@ -249,7 +251,7 @@ class GrapevineNetwork @Inject constructor(
 
     val contactInvitations: Flow<Node> = acceptedMessages
         .filter { it.payload.hasContactInvitation() }
-        .map(this::handleContactInvitation)
+        .map(::handleContactInvitation)
         .shareIn(coroutineScope, SharingStarted.Eagerly)
 
     private suspend fun handleContactInvitation(req: AcceptedMessage): Node {
@@ -261,16 +263,11 @@ class GrapevineNetwork @Inject constructor(
 
     val contactInvitationAnswers: Flow<ContactInvitationAnswer> = acceptedMessages
         .filter { it.payload.hasContactInvitationAnswer() }
-        .map(this::handleContactInvitationAnswer)
+        .map(::handleContactInvitationAnswer)
         .shareIn(coroutineScope, SharingStarted.Eagerly)
 
     private suspend fun handleContactInvitationAnswer(req: AcceptedMessage): ContactInvitationAnswer {
         sendEmptyResponse(req)
-
-        if (!req.payload.hasContactInvitationAnswer()) {
-            throw GVInvalidResponseException()
-        }
-
         return ContactInvitationAnswer(req.sender, req.payload.contactInvitationAnswer.accepted)
     }
 
@@ -284,9 +281,38 @@ class GrapevineNetwork @Inject constructor(
         awaitResponse(reqId)
     }
 
+    data class ChatInvitation(
+        val node: Node,
+        val chatId: Long,
+        val name: String,
+    )
+
+    val chatInvitations: Flow<ChatInvitation> = acceptedMessages
+        .filter { it.payload.hasChatInvitation() }
+        .map(::handleChatInvitation)
+        .shareIn(coroutineScope, SharingStarted.Eagerly)
+
+    private suspend fun handleChatInvitation(req: AcceptedMessage): ChatInvitation {
+        val invitation = req.payload.chatInvitation
+
+        sendEmptyResponse(req)
+        return ChatInvitation(req.sender, invitation.chatId, invitation.name)
+    }
+
+    suspend fun sendChatInvitation(node: Node, chatId: Long, name: String) {
+        val req = ChatInvitationMessage.newBuilder()
+            .setChatId(chatId)
+            .setName(name)
+            .build()
+        val payload = RoutedPayload.newBuilder().setChatInvitation(req).build()
+
+        val reqId = send(payload, node)
+        awaitResponse(reqId)
+    }
+
     val textMessages: Flow<Pair<TextMessage, Node>> = acceptedMessages
         .filter { it.payload.hasText() }
-        .map(this::handleTextMessage)
+        .map(::handleTextMessage)
         .shareIn(coroutineScope, SharingStarted.Eagerly, replay = 5)
 
     private suspend fun handleTextMessage(req: AcceptedMessage): Pair<TextMessage, Node> {
@@ -300,6 +326,7 @@ class GrapevineNetwork @Inject constructor(
         dest: Node,
         origId: Long?,
         file: MessageFile?,
+        chatId: Long? = null
     ) {
         val req = TextMessage.newBuilder()
             .setMsgId(msgId)
@@ -307,6 +334,7 @@ class GrapevineNetwork @Inject constructor(
             .setTimestamp(System.currentTimeMillis() / 1000)
             .setOriginalMsgId(origId ?: 0)
             .setHasFile(file != null)
+            .setChatId(chatId ?: 0)
 
         if (file != null) {
             req.fileName = file.name
@@ -321,7 +349,7 @@ class GrapevineNetwork @Inject constructor(
 
     val readConfirmations: Flow<Long> = acceptedMessages
         .filter { it.payload.hasReadConfirmation() }
-        .map(this::handleReadConfirmation)
+        .map(::handleReadConfirmation)
         .shareIn(coroutineScope, SharingStarted.Eagerly)
 
     private suspend fun handleReadConfirmation(req: AcceptedMessage): Long {

@@ -5,7 +5,11 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import ru.vizbash.grapevine.storage.Converters
 
-@Database(entities = [ProfileEntity::class], version = 1)
+@Database(
+    version = 1,
+    exportSchema = false,
+    entities = [ProfileEntity::class],
+)
 @TypeConverters(Converters::class)
 abstract class ProfileDatabase : RoomDatabase() {
     abstract fun profileDao(): ProfileDao

@@ -472,7 +472,7 @@ class ForegroundService : Service() {
     }
 
     private suspend fun showInvitationNotifications() {
-        for (contact in grapevineService.ingoingInvitations) {
+        for (contact in grapevineService.ingoingContactInvitations) {
             if (!showInvitations) {
                 continue
             }

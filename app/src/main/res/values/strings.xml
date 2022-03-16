@@ -66,4 +66,9 @@
     <string name="invitation_message_text">Хочет добавить вас в контакты</string>
     <string name="accept">Принять</string>
     <string name="reject">Отклонить</string>
+    <string name="chat_name">Название чата</string>
+    <string name="create">Создать</string>
+    <string name="cancel">Отмена</string>
+    <string name="chat_name_hint">Введите название</string>
+    <string name="error_empty_chat_name">Имя чата не может быть пустым</string>
 </resources>

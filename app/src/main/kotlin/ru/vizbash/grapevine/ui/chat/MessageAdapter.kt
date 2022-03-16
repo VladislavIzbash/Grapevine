@@ -1,5 +1,6 @@
 package ru.vizbash.grapevine.ui.chat
 
+import android.graphics.Bitmap
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -7,40 +8,40 @@ import android.widget.LinearLayout
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.R
 import ru.vizbash.grapevine.databinding.FileAttachmentBinding
 import ru.vizbash.grapevine.databinding.ForwardedMessageBinding
 import ru.vizbash.grapevine.databinding.ItemIngoingMessageBinding
 import ru.vizbash.grapevine.databinding.ItemOutgoingMessageBinding
-import ru.vizbash.grapevine.storage.contacts.ContactEntity
 import ru.vizbash.grapevine.storage.messages.MessageEntity
 import ru.vizbash.grapevine.storage.messages.MessageFile
 import ru.vizbash.grapevine.storage.messages.MessageWithOrig
-import ru.vizbash.grapevine.storage.profile.ProfileEntity
+import ru.vizbash.grapevine.storage.messages.MessageWithUsername
 import ru.vizbash.grapevine.util.toHumanSize
 import java.text.SimpleDateFormat
 import java.util.*
 
 class MessageAdapter(
-    private val currentProfile: ProfileEntity,
-    private val contact: ContactEntity,
+    private val myId: Long,
+    private val showIngoingSender: Boolean,
+    private val loadPhoto: suspend (Long) -> Bitmap?,
+    private val coroutineScope: CoroutineScope,
     private val messageReadCb: (MessageEntity) -> Unit,
 ) : PagingDataAdapter<MessageWithOrig, MessageAdapter.MessageViewHolder>(MessageDiffCallback()) {
     companion object {
         val TIMESTAMP_FORMAT = SimpleDateFormat("k:mm", Locale.US)
         private const val TYPE_OUTGOING = 0
-        private const val TYPE_INGOING = 2
+        private const val TYPE_INGOING = 1
     }
 
-    private fun ForwardedMessageBinding.bindOriginalMessage(message: MessageEntity?) {
+    private fun ForwardedMessageBinding.bindOriginalMessage(message: MessageWithUsername?) {
         if (message != null) {
-            tvForwardedUsername.text = if (message.senderId == currentProfile.nodeId) {
-                currentProfile.username
-            } else {
-                contact.username
-            }
-            tvForwardedText.text = message.text
-            tvForwardedTime.text = TIMESTAMP_FORMAT.format(message.timestamp)
+            tvForwardedUsername.text = message.username
+            tvForwardedText.text = message.msg.text
+            tvForwardedTime.text = TIMESTAMP_FORMAT.format(message.msg.timestamp)
 
             root.visibility = View.VISIBLE
         } else {
@@ -82,24 +83,24 @@ class MessageAdapter(
         override fun bind(item: MessageWithOrig) {
             boundItem = item
 
-            ui.layoutForwardedMessage.bindOriginalMessage(item.orig_msg)
-            ui.layoutFileAttachment.bindAttachment(item.msg.file, true)
+            ui.layoutForwardedMessage.bindOriginalMessage(item.origWithUsername)
+            ui.layoutFileAttachment.bindAttachment(item.withUsername.msg.file, true)
 
-            ui.tvMessageText.text = item.msg.text
+            ui.tvMessageText.text = item.withUsername.msg.text
             ui.layoutMessageBody.post {
-                val expand = ui.tvMessageText.lineCount > 1
-                        || item.orig_msg != null
-                        || item.msg.file != null
-                ui.layoutMessageBody.orientation = if (expand) {
+                val expanded = ui.tvMessageText.lineCount > 1
+                        || item.origWithUsername != null
+                        || item.withUsername.msg.file != null
+                ui.layoutMessageBody.orientation = if (expanded) {
                     LinearLayout.VERTICAL
                 } else {
                     LinearLayout.HORIZONTAL
                 }
             }
 
-            ui.tvMessageTime.text = TIMESTAMP_FORMAT.format(item.msg.timestamp)
+            ui.tvMessageTime.text = TIMESTAMP_FORMAT.format(item.withUsername.msg.timestamp)
 
-            val res = when (item.msg.state) {
+            val res = when (item.withUsername.msg.state) {
                 MessageEntity.State.SENT -> R.drawable.ic_msg_time
                 MessageEntity.State.DELIVERED -> R.drawable.ic_msg_check
                 MessageEntity.State.READ -> R.drawable.ic_msg_double_check
@@ -112,38 +113,60 @@ class MessageAdapter(
     inner class IngoingViewHolder(view: View) : MessageViewHolder(view) {
         private val ui = ItemIngoingMessageBinding.bind(view)
 
+        private lateinit var loadJob: Job
+
         override var boundItem: MessageWithOrig? = null
 
         override fun bind(item: MessageWithOrig) {
             boundItem = item
 
-            ui.layoutForwardedMessage.bindOriginalMessage(item.orig_msg)
-            ui.layoutFileAttachment.bindAttachment(item.msg.file, false)
+            ui.layoutForwardedMessage.bindOriginalMessage(item.origWithUsername)
+            ui.layoutFileAttachment.bindAttachment(item.withUsername.msg.file, false)
 
-            ui.cardPhoto.visibility = View.GONE
+            if (showIngoingSender) {
+                ui.tvUsername.text = item.withUsername.username
+                loadJob = coroutineScope.launch {
+                    val photo = loadPhoto(item.withUsername.msg.senderId)
+                    ui.ivPhoto.post {
+                        if (photo != null) {
+                            ui.ivPhoto.setImageBitmap(photo)
+                        } else {
+                            ui.ivPhoto.setImageResource(R.drawable.avatar_placeholder)
+                        }
+                    }
+                }
+                ui.cardPhoto.visibility = View.VISIBLE
+            } else {
+                ui.cardPhoto.visibility = View.GONE
+            }
 
-            ui.tvMessageText.text = item.msg.text
+            ui.tvMessageText.text = item.withUsername.msg.text
             ui.layoutMessageBody.post {
-                val expand = ui.tvMessageText.lineCount > 1
-                        || item.orig_msg != null
-                        || item.msg.file != null
-                ui.layoutMessageBody.orientation = if (expand) {
+                val expanded = ui.tvMessageText.lineCount > 1
+                        || item.origWithUsername != null
+                        || item.withUsername.msg.file != null
+                ui.layoutMessageBody.orientation = if (expanded) {
                     LinearLayout.VERTICAL
                 } else {
                     LinearLayout.HORIZONTAL
                 }
             }
 
-            ui.tvMessageTime.text = TIMESTAMP_FORMAT.format(item.msg.timestamp)
+            ui.tvMessageTime.text = TIMESTAMP_FORMAT.format(item.withUsername.msg.timestamp)
 
-            messageReadCb(item.msg)
+            messageReadCb(item.withUsername.msg)
+        }
+
+        override fun unbind() {
+            super.unbind()
+            loadJob.cancel()
         }
     }
 
     override fun getItemViewType(position: Int): Int {
-        val msg = getItem(position) ?: throw IllegalArgumentException()
+        val msg = requireNotNull(getItem(position))
 
-        return if (msg.msg.senderId == currentProfile.nodeId) {
+        return if (msg.withUsername.msg.senderId == myId) {
             TYPE_OUTGOING
         } else {
             TYPE_INGOING
@@ -178,7 +201,7 @@ class MessageAdapter(
 
     private class MessageDiffCallback : DiffUtil.ItemCallback<MessageWithOrig>() {
         override fun areItemsTheSame(oldItem: MessageWithOrig, newItem: MessageWithOrig): Boolean
-            = oldItem.msg.id == newItem.msg.id
+            = oldItem.withUsername.msg.id == newItem.withUsername.msg.id
 
         override fun areContentsTheSame(oldItem: MessageWithOrig, newItem: MessageWithOrig): Boolean
             = oldItem == newItem

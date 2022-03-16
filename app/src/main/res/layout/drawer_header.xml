@@ -17,13 +17,13 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:cardCornerRadius="40dp">
 
-    <ImageView
-        android:id="@+id/ivPhoto"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:scaleType="centerCrop"
-        android:src="@drawable/avatar_placeholder"
-        tools:ignore="ContentDescription" />
+        <ImageView
+            android:id="@+id/ivPhoto"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:src="@drawable/avatar_placeholder"
+            tools:ignore="ContentDescription" />
 
     </androidx.cardview.widget.CardView>
 

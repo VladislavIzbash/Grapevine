@@ -27,7 +27,7 @@ class MainViewModel : ViewModel() {
             }
         } catch (e: GVException) {
             e.printStackTrace()
-            CompletableDeferred(null)
+            viewModelScope.async { null }
         }
     }
 
@@ -56,5 +56,9 @@ class MainViewModel : ViewModel() {
 
     fun rejectContact(contact: ContactEntity) = launchCatching {
         service.rejectContact(contact)
+    }
+
+    fun createChat(name: String) = launchCatching {
+        service.createChat(name)
     }
 }

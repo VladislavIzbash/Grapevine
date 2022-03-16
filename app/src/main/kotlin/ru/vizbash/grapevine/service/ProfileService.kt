@@ -11,6 +11,8 @@ import kotlinx.coroutines.withContext
 import ru.vizbash.grapevine.network.Node
 import ru.vizbash.grapevine.network.messages.routed.TextMessage
 import ru.vizbash.grapevine.storage.UserDatabase
+import ru.vizbash.grapevine.storage.chats.ChatEntity
+import ru.vizbash.grapevine.storage.chats.ChatMember
 import ru.vizbash.grapevine.storage.contacts.ContactEntity
 import ru.vizbash.grapevine.storage.messages.MessageEntity
 import ru.vizbash.grapevine.storage.messages.MessageFile
@@ -19,6 +21,7 @@ import ru.vizbash.grapevine.storage.profile.ProfileDao
 import ru.vizbash.grapevine.storage.profile.ProfileEntity
 import ru.vizbash.grapevine.util.*
 import java.util.*
+import javax.crypto.SecretKey
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.absoluteValue
@@ -35,6 +38,8 @@ class ProfileService @Inject constructor(
     val profileList = profileDao.getAll()
 
     private lateinit var userDb: UserDatabase
+
+    private val photoCache = mutableMapOf<Long, Bitmap?>()
 
     suspend fun createProfile(
         username: String,
@@ -86,6 +91,10 @@ class ProfileService @Inject constructor(
 
     suspend fun getContact(id: Long) = userDb.contactDao().getById(id)
 
+    suspend fun loadPhoto(id: Long) = photoCache.getOrPut(id) {
+        userDb.contactDao().loadPhoto(id)
+    }
+
     suspend fun addContact(node: Node, photo: Bitmap?, state: ContactEntity.State): ContactEntity {
         val contact = ContactEntity(
             node.id,
@@ -106,9 +115,23 @@ class ProfileService @Inject constructor(
         userDb.contactDao().update(contact.copy(state = state))
     }
 
-    fun getContactMessages(contact: ContactEntity): PagingSource<Int, MessageWithOrig> {
-        return userDb.messageDao().getAllForChat(contact.nodeId)
+    val chatList get() = userDb.chatDao().getAll()
+
+    suspend fun getChat(id: Long) = userDb.chatDao().getById(id)
+
+    suspend fun getChatMembers(id: Long) = userDb.chatDao().getMembers(id)
+
+    suspend fun addChatMember(id: Long, nodeId: Long) {
+        userDb.chatDao().insertMember(ChatMember(id, nodeId))
     }
+
+    suspend fun addChat(id: Long, name: String, ownerId: Long): ChatEntity {
+        return ChatEntity(id, name, ownerId).also {
+            userDb.chatDao().insert(it)
+        }
+    }
+
+    fun getChatMessages(chatId: Long) = userDb.messageDao().getAllForChat(chatId)
 
     suspend fun getContactFailedMessages(contact: ContactEntity): List<MessageEntity> {
         return userDb.messageDao().getAllForChatWithState(
@@ -117,12 +140,12 @@ class ProfileService @Inject constructor(
         )
     }
 
-    suspend fun addReceivedMessage(contact: ContactEntity, message: TextMessage): MessageEntity {
+    suspend fun addReceivedMessage(senderId: Long, message: TextMessage): MessageEntity {
         val entity = MessageEntity(
             id = message.msgId,
             timestamp = Date(message.timestamp * 1000),
-            chatId = contact.nodeId,
-            senderId = contact.nodeId,
+            message.chatId,
+            senderId,
             text = message.text,
             originalMessageId = if (message.originalMsgId == 0L) null else message.originalMsgId,
             state = MessageEntity.State.DELIVERED,
@@ -140,20 +163,20 @@ class ProfileService @Inject constructor(
 
     suspend fun addSentMessage(
         id: Long,
-        contact: ContactEntity,
+        chatId: Long,
         text: String,
         orig: MessageEntity?,
         file: MessageFile?,
     ): MessageEntity {
         val entity = MessageEntity(
-            id = id,
+            id,
             timestamp = Calendar.getInstance().time,
-            chatId = contact.nodeId,
+            chatId,
             senderId = profile.entity.nodeId,
-            text = text,
+            text,
             originalMessageId = orig?.id,
             state = MessageEntity.State.SENT,
-            file = file,
+            file,
         )
         userDb.messageDao().insert(entity)
         return entity

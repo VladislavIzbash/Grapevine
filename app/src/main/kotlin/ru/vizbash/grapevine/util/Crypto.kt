@@ -46,6 +46,8 @@ fun decodeRsaPrivateKey(bytes: ByteArray): PrivateKey = KeyFactory
     .getInstance("RSA")
     .generatePrivate(PKCS8EncodedKeySpec(bytes))
 
+fun decodeSecretKey(bytes: ByteArray): SecretKey = SecretKeySpec(bytes, "AES")
+
 fun aesEncrypt(
     plain: ByteArray,
     key: SecretKey,
@@ -87,6 +89,11 @@ fun generateSharedSecret(
         generateSecret()
     }
     return SecretKeySpec(secret, 0, 16, "AES")
+}
+
+fun generateSecret() = KeyGenerator.getInstance("AES").run {
+    init(128)
+    generateKey()
 }
 
 fun signMessage(

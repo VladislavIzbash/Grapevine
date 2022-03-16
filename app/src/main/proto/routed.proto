@@ -12,6 +12,7 @@ message RoutedPayload {
     ContactInvitationMessage contact_invitation = 5;
     ContactInvitationAnswerMessage contact_invitation_answer = 6;
     FileDownloadRequest download_req = 7;
+    ChatInvitationMessage chat_invitation = 8;
   }
 }
 
@@ -51,6 +52,7 @@ message TextMessage {
   bool has_file = 5;
   string file_name = 6;
   uint32 file_size = 7;
+  uint64 chat_id = 8;
 }
 
 message ReadConfirmationMessage {
@@ -68,3 +70,16 @@ message FileChunkResponse {
   bytes chunk = 4;
 }
 
+message ChatInvitationMessage {
+  uint64 chat_id = 1;
+  string name = 2;
+}
+
+message ChatInfoRequest {
+  uint64 chat_id = 1;
+}
+
+message ChatInfoResponse {
+  string name = 2;
+  repeated uint64 members = 3;
+}
