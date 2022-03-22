@@ -2,32 +2,32 @@ package ru.vizbash.grapevine.network
 
 import android.util.Log
 import com.google.protobuf.ByteString
-import ru.vizbash.grapevine.util.GVException
+import ru.vizbash.grapevine.GvNodeNotAvailableException
+import ru.vizbash.grapevine.network.message.*
+import ru.vizbash.grapevine.network.message.GrapevineDirect.*
+import ru.vizbash.grapevine.network.transport.Neighbor
 import ru.vizbash.grapevine.service.ProfileProvider
-import ru.vizbash.grapevine.util.TAG
-import ru.vizbash.grapevine.network.messages.direct.*
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.random.Random
 
 @Singleton
-class Router @Inject constructor(private val profileService: ProfileProvider) {
+class Router @Inject constructor(private val profileProvider: ProfileProvider) {
     private data class NodeRoute(val neighbor: Neighbor, val hops: Int)
 
     class ReceivedMessage(val id: Long, val payload: ByteArray, val sign: ByteArray, val sender: Node)
 
-    class GVNodeOfflineException : GVException()
-
     companion object {
+        private const val TAG = "Router"
         private const val DEFAULT_TTL = 16
     }
 
     private val routingTable = mutableMapOf<Node, MutableSet<NodeRoute>>()
 
-    private val myNode get() = Node(profileService.profile)
+    private val myNode get() = Node(profileProvider.profile)
 
     @Volatile private var receiveCb: (ReceivedMessage) -> Unit = { _ -> }
-    @Volatile private var nodesUpdatedCb: () -> Unit = {}
+    @Volatile private var nodesChangedCb: () -> Unit = {}
 
     val nodes: List<Node>
         @Synchronized
@@ -36,9 +36,12 @@ class Router @Inject constructor(private val profileService: ProfileProvider) {
         }.distinctBy { it.id }
 
     fun addNeighbor(neighbor: Neighbor) {
-        val hello = HelloRequest.newBuilder().setNode(myNode.toMessage()).build()
-        val helloMsg = DirectMessage.newBuilder().setHelloReq(hello).build()
-        neighbor.send(helloMsg)
+        val hello = directMessage {
+            helloReq = helloRequest {
+                node = myNode.toProto()
+            }
+        }
+        neighbor.send(hello)
 
         Log.d(TAG, "Sent hello to $neighbor")
 
@@ -47,22 +50,23 @@ class Router @Inject constructor(private val profileService: ProfileProvider) {
 
     @Synchronized
     fun sendMessage(payload: ByteArray, sign: ByteArray, dest: Node): Long {
-        val routes = routingTable[dest]
-            ?: throw GVNodeOfflineException()
+        val routes = routingTable[dest] ?: throw GvNodeNotAvailableException()
 
         val id = Random.nextLong()
         val neighbor = routes.minByOrNull(NodeRoute::hops)!!.neighbor
 
         Log.d(TAG, "Sending routed message to $dest")
 
-        val msg = RoutedMessage.newBuilder()
-            .setMsgId(id)
-            .setSrcId(myNode.id)
-            .setDestId(dest.id)
-            .setPayload(ByteString.copyFrom(payload))
-            .setTtl(DEFAULT_TTL)
-            .setSign(ByteString.copyFrom(sign))
-        neighbor.send(DirectMessage.newBuilder().setRouted(msg).build())
+        val msg = directMessage {
+            routed = routedMessage {
+                msgId = id
+                srcId = myNode.id
+                this.payload = ByteString.copyFrom(payload)
+                ttl = DEFAULT_TTL
+                this.sign = ByteString.copyFrom(sign)
+            }
+        }
+        neighbor.send(msg)
 
         return id
     }
@@ -71,8 +75,8 @@ class Router @Inject constructor(private val profileService: ProfileProvider) {
         receiveCb = cb
     }
 
-    fun setOnNodesUpdated(cb: () -> Unit) {
-        nodesUpdatedCb = cb
+    fun setOnNodesChanged(cb: () -> Unit) {
+        nodesChangedCb = cb
     }
 
     @Synchronized
@@ -82,13 +86,15 @@ class Router @Inject constructor(private val profileService: ProfileProvider) {
         Log.d(TAG, "Asking ${neighbors.size} neighbors for nodes")
 
         for (neighbor in neighbors) {
-            val askNodesReq = AskNodesRequest.newBuilder().build()
-            neighbor.send(DirectMessage.newBuilder().setAskNodesReq(askNodesReq).build())
+            val req = directMessage {
+                askNodesReq = askNodesRequest {}
+            }
+            neighbor.send(req)
         }
     }
 
     private fun clearEmptyRoutes() {
-        routingTable.values.removeIf(Set<NodeRoute>::isEmpty)
+        routingTable.values.removeIf(Set<*>::isEmpty)
     }
 
     @Synchronized
@@ -97,7 +103,7 @@ class Router @Inject constructor(private val profileService: ProfileProvider) {
             route.removeIf { it.neighbor == neighbor }
         }
         clearEmptyRoutes()
-        nodesUpdatedCb()
+        nodesChangedCb()
 
         Log.d(TAG, "$neighbor disconnected, ${routingTable.values.size} nodes remaining")
     }
@@ -105,19 +111,22 @@ class Router @Inject constructor(private val profileService: ProfileProvider) {
     @Synchronized
     private fun onMessageReceived(neighbor: Neighbor, msg: DirectMessage) {
         when (msg.msgCase!!) {
-            DirectMessage.MsgCase.HELLO_REQ -> {
-                val hello = HelloResponse.newBuilder().setNode(myNode.toMessage()).build()
-                val helloMsg = DirectMessage.newBuilder().setHelloResp(hello).build()
-                neighbor.send(helloMsg)
-            }
+            DirectMessage.MsgCase.HELLO_REQ -> handleHelloRequest(neighbor)
             DirectMessage.MsgCase.HELLO_RESP -> handleHelloResponse(neighbor, msg.helloResp)
             DirectMessage.MsgCase.ASK_NODES_REQ -> handleNodesRequest(neighbor)
             DirectMessage.MsgCase.ASK_NODES_RESP -> handleNodesResponse(neighbor, msg.askNodesResp)
             DirectMessage.MsgCase.ROUTED -> routeIncomingMessage(msg)
-            DirectMessage.MsgCase.MSG_NOT_SET -> {
-                Log.w(TAG, "$neighbor sent invalid message")
+            DirectMessage.MsgCase.MSG_NOT_SET -> Log.w(TAG, "$neighbor sent invalid message")
+        }
+    }
+
+    private fun handleHelloRequest(neighbor: Neighbor) {
+        val resp = directMessage {
+            helloResp = helloResponse {
+                node = myNode.toProto()
             }
         }
+        neighbor.send(resp)
     }
 
     private fun routeIncomingMessage(msg: DirectMessage) {
@@ -144,12 +153,14 @@ class Router @Inject constructor(private val profileService: ProfileProvider) {
             return
         }
 
-        val withTtl = msg.routed.toBuilder().setTtl(ttl).build()
-        val outMsg = DirectMessage.newBuilder().setRouted(withTtl).build()
-
         val destNode = routingTable.keys.find { it.id == routed.destId } ?: return
         val nextHop = routingTable[destNode]!!.minByOrNull(NodeRoute::hops)!!.neighbor
-        nextHop.send(outMsg)
+
+        val newMsg = directMessage {
+            this.routed = msg.routed.toBuilder().setTtl(ttl).build()
+        }
+
+        nextHop.send(newMsg)
     }
 
     private fun handleHelloResponse(neighbor: Neighbor, nodeMsg: HelloResponse) {
@@ -163,21 +174,23 @@ class Router @Inject constructor(private val profileService: ProfileProvider) {
             Log.d(TAG, "Discovered neighbor $neighbor with node: $node")
             nodeRoutes.add(nodeRoute)
         }
-        nodesUpdatedCb()
+        nodesChangedCb()
     }
 
     private fun handleNodesRequest(neighbor: Neighbor) {
         val nodeRoutes = routingTable.map { (node, routes) ->
-            NodeRouteMessage.newBuilder()
-                .setNode(node.toMessage())
-                .setHops(routes.minOf(NodeRoute::hops))
-                .build()
+            nodeRoute {
+                this.node = node.toProto()
+                this.hops = routes.minOf(NodeRoute::hops)
+            }
         }
 
-        val askNodesResp = AskNodesResponse.newBuilder()
-            .addAllNodes(nodeRoutes)
-            .build()
-        neighbor.send(DirectMessage.newBuilder().setAskNodesResp(askNodesResp).build())
+        val resp = directMessage {
+            askNodesResp = askNodesResponse {
+                nodes.addAll(nodeRoutes)
+            }
+        }
+        neighbor.send(resp)
     }
 
     private fun handleNodesResponse(neighbor: Neighbor, askNodesResp: AskNodesResponse) {
@@ -208,6 +221,6 @@ class Router @Inject constructor(private val profileService: ProfileProvider) {
         }
         clearEmptyRoutes()
 
-        nodesUpdatedCb()
+        nodesChangedCb()
     }
 }

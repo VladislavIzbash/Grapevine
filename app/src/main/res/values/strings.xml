@@ -1,74 +1,7 @@
 <resources>
-    <string name="launcher_name">Grapevine</string>
-    <string name="appname">Grapevine</string>
-    <string name="settings">Настройки</string>
-    <string name="contacts">Контакты</string>
-    <string name="chats">Чаты</string>
-    <string name="people_around">Люди поблизости</string>
-    <string name="logout">Выйти</string>
-    <string name="wifi">Wi-Fi</string>
-    <string name="bluetooth">Bluetooth</string>
-    <string name="name">Имя</string>
-    <string name="login">Войти</string>
-    <string name="login_title">Вход в Grapevine</string>
-    <string name="error_empty_field">Поле не должно быть пустым</string>
-    <string name="message_prompt">Введите сообщение</string>
-    <string name="message_text_placeholder">Текст сообщения</string>
-    <string name="message_time_placeholder">00:00</string>
-    <string name="zero_time">00:00</string>
-    <string name="password">Пароль</string>
-    <string name="auto_login">Автоматический вход</string>
-    <string name="create_profile">Создать профиль</string>
-    <string name="identity_creation">Создание профиля</string>
-    <string name="repeat_password">Повторите пароль</string>
-    <string name="error_invalid_username">Имя слишком короткое или содержит спецсимволы</string>
-    <string name="passwords_dont_match">Пароли не совпадают</string>
-    <string name="password_too_short">Пароль слишком короткий</string>
-    <string name="password_is_blank">Пароль не может быть пустым</string>
-    <string name="error_invalid_password">Неверный пароль</string>
-    <string name="error_network">Ошибка сети</string>
-    <string name="no_profiles">Нет профилей</string>
-    <string name="username">Имя пользователя</string>
-    <string name="no_nodes_around">Вы совсем один</string>
-    <string name="no_contacts">У вас пока нет контактов</string>
-    <string name="last_message">Последнее сообщение</string>
-    <string name="header">Заголовок</string>
-    <string name="ingoing_contacts">Входящие запросы</string>
-    <string name="outgoing_contacts">Исходящие запросы</string>
-    <string name="accepted_contacts">Список контактов</string>
-    <string name="type_message">Введите сообщение</string>
-    <string name="file_name_placeholder">Название</string>
-    <string name="file_size_placeholder">2.2 МиБ</string>
-    <string name="under_construction">Under construction</string>
-    <string-array name="size_units">
-        <item>Б</item>
-        <item>КиБ</item>
-        <item>МиБ</item>
-        <item>ГиБ</item>
-    </string-array>
-    <string name="status_channel_name">Статус</string>
-    <string name="message_channel_name">Сообщения</string>
-    <string name="message_channel_desc">Отображение входящих сообщений</string>
-    <string name="status_channel_desc">Отображение статуса сервиса Grapevine</string>
-    <string name="grapevine_service">Сервис Grapevine</string>
-    <string name="status_text">Bluetooth: %1$s\nWi-FI: %2$s</string>
-    <string name="on">вкл.</string>
-    <string name="off">выкл.</string>
-    <string name="reply">Ответить</string>
-    <string name="mark_as_read">Прочитано</string>
-    <string name="notification_forwarded_message">Пересланное сообщение</string>
-    <string name="notification_attachment">Файл: %1$s</string>
-    <string name="location_alert">Для обнаружения устройств поблизости необходимо включить местоположение</string>
-    <string name="enable">Включить</string>
-    <string name="close">Закрыть</string>
-    <string name="error_need_location_permission">Необходим доступ к местоположению</string>
-    <string name="invitations_channel_desc">Отображение запросов на добавление в контакты и приглашений в чаты</string>
-    <string name="invitation_message_text">Хочет добавить вас в контакты</string>
-    <string name="accept">Принять</string>
-    <string name="reject">Отклонить</string>
-    <string name="chat_name">Название чата</string>
-    <string name="create">Создать</string>
-    <string name="cancel">Отмена</string>
-    <string name="chat_name_hint">Введите название</string>
-    <string name="error_empty_chat_name">Имя чата не может быть пустым</string>
+    <string name="app_name">Grapevine</string>
+    <string name="node_offline">получателя нет в сети</string>
+    <string name="message_rejected">узел отклонил сообщение</string>
+    <string name="timeout">превышено время ожидания</string>
+    <string name="invalid_respose_received">получен неверный ответ</string>
 </resources>

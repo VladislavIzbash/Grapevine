@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+option java_package = "ru.vizbash.grapevine.network.message";
+
+message RoutedPayload {
+  oneof payload {
+    RoutedResponse response = 1;
+    PhotoRequest photo_req = 2;
+    TextMessage text = 3;
+    ReadConfirmation read_confirmation = 4;
+    FileDownloadRequest download_req = 7;
+    ChatInvitation chat_invitation = 8;
+    ChatInfoRequest chat_info_req = 9;
+  }
+}
+
+enum Error {
+  NO_ERROR = 0;
+  BAD_SIGNATURE = 1;
+  BAD_REQUEST = 2;
+  CANNOT_DECRYPT = 3;
+  INVALID_IDENTITY = 4;
+  NOT_FOUND = 5;
+}
+
+message RoutedResponse {
+  uint64 request_id = 1;
+  Error error = 2;
+  oneof response {
+    PhotoResponse photo_resp = 3;
+    FileChunkResponse file_chunk_resp = 8;
+    ChatInfoResponse chat_info_resp = 9;
+  }
+}
+
+message PhotoRequest {}
+message PhotoResponse {
+  bool hasPhoto = 1;
+  bytes photo = 2;
+}
+
+message TextMessage {
+  uint64 msg_id = 1;
+  string text = 2;
+  int64 timestamp = 3;
+  uint64 original_msg_id = 4;
+  bool has_file = 5;
+  string file_name = 6;
+  uint32 file_size = 7;
+  uint64 chat_id = 8;
+}
+
+message ReadConfirmation {
+  uint64 msg_id = 1;
+}
+
+message FileDownloadRequest {
+  uint64 msg_id = 1;
+  uint32 chunk_size = 2;
+}
+
+message FileChunkResponse {
+  uint32 chunk_num = 3;
+  bytes chunk = 4;
+}
+
+message ChatInvitation {
+  uint64 chat_id = 1;
+}
+
+message ChatInfoRequest {
+  uint64 chat_id = 1;
+}
+
+message ChatInfoResponse {
+  string name = 1;
+  uint64 ownerId = 2;
+  bool has_photo = 3;
+  bytes photo = 4;
+  repeated uint64 members = 5;
+}

@@ -2,191 +2,96 @@ package ru.vizbash.grapevine.service
 
 import android.content.Context
 import android.graphics.Bitmap
-import androidx.paging.PagingSource
-import androidx.room.Room
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.cbor.Cbor
+import kotlinx.serialization.decodeFromByteArray
 import ru.vizbash.grapevine.network.Node
-import ru.vizbash.grapevine.network.messages.routed.TextMessage
-import ru.vizbash.grapevine.storage.UserDatabase
-import ru.vizbash.grapevine.storage.chats.ChatEntity
-import ru.vizbash.grapevine.storage.chats.ChatMember
-import ru.vizbash.grapevine.storage.contacts.ContactEntity
-import ru.vizbash.grapevine.storage.messages.MessageEntity
-import ru.vizbash.grapevine.storage.messages.MessageFile
-import ru.vizbash.grapevine.storage.messages.MessageWithOrig
-import ru.vizbash.grapevine.storage.profile.ProfileDao
-import ru.vizbash.grapevine.storage.profile.ProfileEntity
+import ru.vizbash.grapevine.storage.StoredProfile
+import ru.vizbash.grapevine.storage.node.NodeDao
 import ru.vizbash.grapevine.util.*
-import java.util.*
-import javax.crypto.SecretKey
-import javax.inject.Inject
+import java.io.IOException
+import javax.crypto.interfaces.DHPrivateKey
+import javax.crypto.interfaces.DHPublicKey
 import javax.inject.Singleton
-import kotlin.math.absoluteValue
 import kotlin.random.Random
 
+@OptIn(ExperimentalSerializationApi::class)
 @Singleton
-class ProfileService @Inject constructor(
+class ProfileService(
     @ApplicationContext private val context: Context,
-    private val profileDao: ProfileDao,
+    private val nodeDao: NodeDao,
 ) : ProfileProvider, NodeVerifier {
     override lateinit var profile: Profile
-        private set
 
-    val profileList = profileDao.getAll()
+    private var storedProfile: StoredProfile? = null
 
-    private lateinit var userDb: UserDatabase
+    val hasProfile get() = storedProfile != null
 
-    private val photoCache = mutableMapOf<Long, Bitmap?>()
+    val storedName get() = storedProfile!!.username
 
-    suspend fun createProfile(
-        username: String,
-        password: String,
-        photo: Bitmap?,
-    ) = withContext(Dispatchers.Default) {
-        val keyPair = createRsaKeyPair()
-
-        val profile = ProfileEntity(
-            Random.nextLong(),
-            username,
-            keyPair.public,
-            aesEncrypt(keyPair.private.encoded, generatePasswordSecret(password)),
-            photo,
-        )
-        profileDao.insert(profile)
+    init {
+        try {
+            context.openFileInput("profile").use {
+                storedProfile = Cbor.decodeFromByteArray(it.readBytes())
+            }
+        } catch (e: IOException) {
+        }
     }
 
-    suspend fun tryLogin(profile: ProfileEntity, password: String) = withContext(Dispatchers.Default) {
-        val privKey = aesDecrypt(profile.privateKeyEnc, generatePasswordSecret(password))
+    suspend fun tryLogin(password: String): Boolean = withContext(Dispatchers.Default) {
+        val storedProfile = storedProfile ?: return@withContext false
+
+        val privKey = aesDecrypt(storedProfile.encryptedPrivKey, generatePasswordSecret(password))
             ?: return@withContext false
 
-        val dhKeyPair = createDhKeyPair()
-        this@ProfileService.profile = Profile(
-            profile,
-            decodeRsaPrivateKey(privKey),
-            dhKeyPair.public,
-            dhKeyPair.private,
+        val sessionKeys = generateSessionKeys()
+
+        profile = Profile(
+            nodeId = storedProfile.nodeId,
+            username = storedProfile.username,
+            pubKey = storedProfile.pubKey,
+            privKey = decodeRsaPrivateKey(privKey),
+            sessionPubKey = sessionKeys.public as DHPublicKey,
+            sessionPrivKey = sessionKeys.private as DHPrivateKey,
+            photo = storedProfile.photo?.let { decodeBitmap(it) },
         )
-        loadUserDb()
 
         true
     }
 
-    private fun loadUserDb() {
-        userDb = Room.databaseBuilder(
-            context,
-            UserDatabase::class.java,
-            "profile_${profile.entity.nodeId.absoluteValue}",
-        ).build()
-    }
+    suspend fun loginWithNewProfile(username: String, password: String, photo: Bitmap?) {
+        withContext(Dispatchers.Default) {
+            val keyPair = generateRsaKeys()
+            val sessionKeyPair = generateSessionKeys()
 
-    override suspend fun checkNode(node: Node): Boolean {
-        val contact = userDb.contactDao().getById(node.id) ?: return true
-        return contact.publicKey == node.publicKey
-    }
-
-    val contactList get() = userDb.contactDao().getAll()
-
-    suspend fun getContact(id: Long) = userDb.contactDao().getById(id)
-
-    suspend fun loadPhoto(id: Long) = photoCache.getOrPut(id) {
-        userDb.contactDao().loadPhoto(id)
-    }
-
-    suspend fun addContact(node: Node, photo: Bitmap?, state: ContactEntity.State): ContactEntity {
-        val contact = ContactEntity(
-            node.id,
-            node.username,
-            node.publicKey,
-            photo,
-            state,
-        )
-        userDb.contactDao().insert(contact)
-        return contact
-    }
-
-    suspend fun deleteContact(contact: ContactEntity) {
-        userDb.contactDao().delete(contact)
-    }
-
-    suspend fun setContactState(contact: ContactEntity, state: ContactEntity.State) {
-        userDb.contactDao().update(contact.copy(state = state))
-    }
-
-    val chatList get() = userDb.chatDao().getAll()
-
-    suspend fun getChat(id: Long) = userDb.chatDao().getById(id)
-
-    suspend fun getChatMembers(id: Long) = userDb.chatDao().getMembers(id)
-
-    suspend fun addChatMember(id: Long, nodeId: Long) {
-        userDb.chatDao().insertMember(ChatMember(id, nodeId))
-    }
-
-    suspend fun addChat(id: Long, name: String, ownerId: Long): ChatEntity {
-        return ChatEntity(id, name, ownerId).also {
-            userDb.chatDao().insert(it)
+            profile = Profile(
+                nodeId = Random.nextLong(),
+                username = username,
+                pubKey = keyPair.public,
+                privKey = keyPair.private,
+                sessionPubKey = sessionKeyPair.public as DHPublicKey,
+                sessionPrivKey = sessionKeyPair.private as DHPrivateKey,
+                photo = photo,
+            )
+            saveProfile(password)
         }
     }
 
-    fun getChatMessages(chatId: Long) = userDb.messageDao().getAllForChat(chatId)
-
-    suspend fun getContactFailedMessages(contact: ContactEntity): List<MessageEntity> {
-        return userDb.messageDao().getAllForChatWithState(
-            contact.nodeId,
-            MessageEntity.State.DELIVERY_FAILED,
+    private fun saveProfile(password: String) {
+        storedProfile = StoredProfile(
+            nodeId = profile.nodeId,
+            username = profile.username,
+            pubKey = profile.pubKey,
+            encryptedPrivKey = aesEncrypt(profile.privKey.encoded, generatePasswordSecret(password)),
+            photo = profile.photo?.let { encodeBitmap(it) },
         )
     }
 
-    suspend fun addReceivedMessage(senderId: Long, message: TextMessage): MessageEntity {
-        val entity = MessageEntity(
-            id = message.msgId,
-            timestamp = Date(message.timestamp * 1000),
-            message.chatId,
-            senderId,
-            text = message.text,
-            originalMessageId = if (message.originalMsgId == 0L) null else message.originalMsgId,
-            state = MessageEntity.State.DELIVERED,
-            file = if (message.hasFile) MessageFile(
-                uri = null,
-                name = message.fileName,
-                size = message.fileSize,
-                downloaded = false,
-            ) else null,
-        )
-
-        userDb.messageDao().insert(entity)
-        return entity
-    }
-
-    suspend fun addSentMessage(
-        id: Long,
-        chatId: Long,
-        text: String,
-        orig: MessageEntity?,
-        file: MessageFile?,
-    ): MessageEntity {
-        val entity = MessageEntity(
-            id,
-            timestamp = Calendar.getInstance().time,
-            chatId,
-            senderId = profile.entity.nodeId,
-            text,
-            originalMessageId = orig?.id,
-            state = MessageEntity.State.SENT,
-            file,
-        )
-        userDb.messageDao().insert(entity)
-        return entity
-    }
-
-    suspend fun setMessageState(msgId: Long, state: MessageEntity.State) {
-        userDb.messageDao().setState(msgId, state)
-    }
-
-    fun getLastMessage(contact: ContactEntity): Flow<MessageEntity?> {
-        return userDb.messageDao().getLastMessage(contact.nodeId)
+    override suspend fun checkNode(node: Node): Boolean {
+        val knownNode = nodeDao.getById(node.id) ?: return true
+        return knownNode.pubKey == node.pubKey
     }
 }

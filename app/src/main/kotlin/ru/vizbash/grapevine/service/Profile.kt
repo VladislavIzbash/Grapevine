@@ -1,12 +1,20 @@
 package ru.vizbash.grapevine.service
 
-import ru.vizbash.grapevine.storage.profile.ProfileEntity
+import android.graphics.Bitmap
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
+import java.io.Serializable
 import java.security.PrivateKey
 import java.security.PublicKey
+import javax.crypto.interfaces.DHPrivateKey
+import javax.crypto.interfaces.DHPublicKey
 
 data class Profile(
-    val entity: ProfileEntity,
-    val privateKey: PrivateKey,
-    val dhPublicKey: PublicKey,
-    val dhPrivateKey: PrivateKey,
+    val nodeId: Long,
+    val username: String,
+    val pubKey: PublicKey,
+    val privKey: PrivateKey,
+    val sessionPubKey: DHPublicKey,
+    val sessionPrivKey: DHPrivateKey,
+    val photo: Bitmap?,
 )

@@ -2,9 +2,12 @@ package ru.vizbash.grapevine.util
 
 import java.math.BigInteger
 import java.security.*
+import java.security.interfaces.RSAPublicKey
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 import javax.crypto.*
+import javax.crypto.interfaces.DHPrivateKey
+import javax.crypto.interfaces.DHPublicKey
 import javax.crypto.spec.DHParameterSpec
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.PBEKeySpec
@@ -24,23 +27,23 @@ private val DH_PARAMS = DHParameterSpec(
     0,
 )
 
-fun createRsaKeyPair(): KeyPair = KeyPairGenerator.getInstance("RSA").run {
+fun generateRsaKeys(): KeyPair = KeyPairGenerator.getInstance("RSA").run {
     initialize(2048)
     genKeyPair()
 }
 
-fun createDhKeyPair(): KeyPair = KeyPairGenerator.getInstance("DH").run {
+fun generateSessionKeys(): KeyPair = KeyPairGenerator.getInstance("DH").run {
     initialize(DH_PARAMS)
     genKeyPair()
 }
 
-fun decodeDhPublicKey(bytes: ByteArray): PublicKey = KeyFactory
+fun decodeDhPublicKey(bytes: ByteArray): DHPublicKey = KeyFactory
     .getInstance("DH")
-    .generatePublic(X509EncodedKeySpec(bytes))
+    .generatePublic(X509EncodedKeySpec(bytes)) as DHPublicKey
 
-fun decodeRsaPublicKey(bytes: ByteArray): PublicKey = KeyFactory
+fun decodeRsaPublicKey(bytes: ByteArray): RSAPublicKey = KeyFactory
     .getInstance("RSA")
-    .generatePublic(X509EncodedKeySpec(bytes))
+    .generatePublic(X509EncodedKeySpec(bytes)) as RSAPublicKey
 
 fun decodeRsaPrivateKey(bytes: ByteArray): PrivateKey = KeyFactory
     .getInstance("RSA")
@@ -80,20 +83,15 @@ fun generatePasswordSecret(password: String): SecretKey {
 }
 
 fun generateSharedSecret(
-    dhPrivKey: PrivateKey,
-    remoteDhPubKey: PublicKey,
+    privKey: DHPrivateKey,
+    remotePubKey: DHPublicKey,
 ): SecretKey {
     val secret = KeyAgreement.getInstance("DH").run {
-        init(dhPrivKey)
-        doPhase(remoteDhPubKey, true)
+        init(privKey)
+        doPhase(remotePubKey, true)
         generateSecret()
     }
     return SecretKeySpec(secret, 0, 16, "AES")
-}
-
-fun generateSecret() = KeyGenerator.getInstance("AES").run {
-    init(128)
-    generateKey()
 }
 
 fun signMessage(

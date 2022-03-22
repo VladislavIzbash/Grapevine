@@ -1,44 +1,41 @@
 package ru.vizbash.grapevine.network
 
 import com.google.protobuf.ByteString
+import ru.vizbash.grapevine.network.message.GrapevineDirect
+import ru.vizbash.grapevine.network.message.node
 import ru.vizbash.grapevine.service.Profile
 import ru.vizbash.grapevine.util.decodeDhPublicKey
 import ru.vizbash.grapevine.util.decodeRsaPublicKey
-import ru.vizbash.grapevine.network.messages.direct.NodeMessage
 import java.security.PublicKey
+import javax.crypto.interfaces.DHPublicKey
 
 data class Node(
-    var id: Long,
-    var username: String,
-    var publicKey: PublicKey,
-    var dhPublicKey: PublicKey,
+    val id: Long,
+    val username: String,
+    val pubKey: PublicKey,
+    val sessionPubKey: DHPublicKey,
     var primarySource: SourceType? = null,
 ) {
-    constructor(msg: NodeMessage) : this(
-        msg.userId,
-        msg.username,
-        decodeRsaPublicKey(msg.publicKey.toByteArray()),
-        decodeDhPublicKey(msg.dhPublicKey.toByteArray()),
+    constructor(proto: GrapevineDirect.Node) : this(
+        proto.userId,
+        proto.username,
+        decodeRsaPublicKey(proto.pubKey.toByteArray()),
+        decodeDhPublicKey(proto.sessionPubKey.toByteArray()),
     )
 
-    constructor(profile: Profile): this(
-        profile.entity.nodeId,
-        profile.entity.username,
-        profile.entity.publicKey,
-        profile.dhPublicKey,
+    constructor(profile: Profile) : this(
+        profile.nodeId,
+        profile.username,
+        profile.pubKey,
+        profile.sessionPubKey,
     )
 
-    fun toMessage(): NodeMessage = NodeMessage.newBuilder()
-        .setUserId(id)
-        .setUsername(username)
-        .setPublicKey(ByteString.copyFrom(publicKey.encoded))
-        .setDhPublicKey(ByteString.copyFrom(dhPublicKey.encoded))
-        .build()
+    fun toProto(): GrapevineDirect.Node = node {
+        userId = this@Node.id
+        username = this@Node.username
+        pubKey = ByteString.copyFrom(this@Node.pubKey.encoded)
+        sessionPubKey = ByteString.copyFrom(this@Node.sessionPubKey.encoded)
+    }
 
     override fun toString() = "$username ($id)"
-
-    override fun equals(other: Any?) = other is Node
-            && other.id == id
-
-    override fun hashCode() = id.hashCode()
 }

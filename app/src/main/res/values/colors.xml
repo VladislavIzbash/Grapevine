@@ -1,17 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary">#A33263</color>
-    <color name="primaryDark">#671A3B</color>
-    <color name="onPrimary">#FFFFFF</color>
-    <color name="background">#FFF5F5</color>
-    <color name="attachmentBackground">#FFF0F0</color>
-    <color name="chatBackground">#f7e5e5</color>
-    <color name="darkerBackground">#E5E0E0</color>
-    <color name="textInputBackground">#F5F0F0</color>
-    <color name="error">#B50000</color>
-    <color name="bad">#B80000</color>
-    <color name="good">#008E00</color>
-    <color name="fadedText">#9E9E9E</color>
-    <color name="white">#ffffff</color>
-    <color name="messageText">#000000</color>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
 </resources>

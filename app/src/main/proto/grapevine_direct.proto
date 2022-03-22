@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+option java_package = "ru.vizbash.grapevine.network.message";
+
+message DirectMessage {
+  oneof msg {
+    HelloRequest hello_req = 1;
+    HelloResponse hello_resp = 2;
+    AskNodesRequest ask_nodes_req = 3;
+    AskNodesResponse ask_nodes_resp = 4;
+    RoutedMessage routed = 5;
+  }
+}
+
+message HelloRequest {
+  Node node = 1;
+}
+
+message HelloResponse {
+  Node node = 1;
+}
+
+message Node {
+  uint64 user_id = 1;
+  string username = 2;
+  bytes pub_key = 3;
+  bytes session_pub_key = 4;
+}
+
+message NodeRoute {
+  Node node = 1;
+  uint32 hops = 2;
+}
+
+message AskNodesRequest {}
+
+message AskNodesResponse {
+  repeated NodeRoute nodes = 1;
+}
+
+message RoutedMessage {
+  uint64 msg_id = 1;
+  uint64 src_id = 2;
+  uint64 dest_id = 3;
+  bytes payload = 4;
+  uint32 ttl = 5;
+  bytes sign = 6;
+}
+
+
