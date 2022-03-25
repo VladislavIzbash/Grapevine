@@ -1,7 +1,6 @@
 package ru.vizbash.grapevine.network.dispatch
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.util.Log
 import com.google.protobuf.ByteString
 import kotlinx.coroutines.CoroutineScope
@@ -12,7 +11,7 @@ import ru.vizbash.grapevine.GvInvalidResponseException
 import ru.vizbash.grapevine.network.DispatcherCoroutineScope
 import ru.vizbash.grapevine.network.Node
 import ru.vizbash.grapevine.network.message.*
-import ru.vizbash.grapevine.service.ProfileProvider
+import ru.vizbash.grapevine.service.profile.ProfileProvider
 import ru.vizbash.grapevine.util.decodeBitmap
 import ru.vizbash.grapevine.util.encodeBitmap
 import javax.inject.Inject
@@ -53,7 +52,7 @@ class PhotoDispatcher @Inject constructor(
         val resp = routedPayload {
             response = routedResponse {
                 this.requestId = msg.id
-                this.error = GrapevineRouted.Error.NO_ERROR
+                this.error = RoutedMessages.Error.NO_ERROR
                 this.photoResp = photoResp
             }
         }

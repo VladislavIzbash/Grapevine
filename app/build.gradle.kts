@@ -6,11 +6,14 @@ plugins {
     id("org.jetbrains.kotlin.kapt")
     id("dagger.hilt.android.plugin")
     id("com.google.protobuf")
-    kotlin("plugin.serialization")
 }
 
 android {
     compileSdk = 31
+
+    buildFeatures {
+        viewBinding = true
+    }
 
     defaultConfig {
         applicationId = "ru.vizbash.grapevine"
@@ -36,6 +39,7 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
         freeCompilerArgs += "-XXLanguage:-ProhibitJvmFieldOnOverrideFromInterfaceInPrimaryConstructor"
+        freeCompilerArgs += "-opt-in=kotlin.RequiresOptIn"
     }
 }
 
@@ -61,8 +65,6 @@ dependencies {
     kapt("com.google.dagger:hilt-compiler:2.41")
 
     implementation("com.google.protobuf:protobuf-kotlin-lite:3.20.0-rc-1")
-
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-cbor:1.3.2")
 
     implementation("com.github.dhaval2404:imagepicker:2.1")
 

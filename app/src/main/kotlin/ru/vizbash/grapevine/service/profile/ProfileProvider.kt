@@ -1,4 +1,4 @@
-package ru.vizbash.grapevine.service
+package ru.vizbash.grapevine.service.profile
 
 interface ProfileProvider {
     val profile: Profile

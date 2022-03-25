@@ -4,9 +4,9 @@ import android.util.Log
 import com.google.protobuf.ByteString
 import ru.vizbash.grapevine.GvNodeNotAvailableException
 import ru.vizbash.grapevine.network.message.*
-import ru.vizbash.grapevine.network.message.GrapevineDirect.*
+import ru.vizbash.grapevine.network.message.DirectMessages.*
 import ru.vizbash.grapevine.network.transport.Neighbor
-import ru.vizbash.grapevine.service.ProfileProvider
+import ru.vizbash.grapevine.service.profile.ProfileProvider
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.random.Random

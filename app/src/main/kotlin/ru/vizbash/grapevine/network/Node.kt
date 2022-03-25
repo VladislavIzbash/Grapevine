@@ -1,9 +1,9 @@
 package ru.vizbash.grapevine.network
 
 import com.google.protobuf.ByteString
-import ru.vizbash.grapevine.network.message.GrapevineDirect
+import ru.vizbash.grapevine.network.message.DirectMessages
 import ru.vizbash.grapevine.network.message.node
-import ru.vizbash.grapevine.service.Profile
+import ru.vizbash.grapevine.service.profile.Profile
 import ru.vizbash.grapevine.util.decodeDhPublicKey
 import ru.vizbash.grapevine.util.decodeRsaPublicKey
 import java.security.PublicKey
@@ -16,7 +16,7 @@ data class Node(
     val sessionPubKey: DHPublicKey,
     var primarySource: SourceType? = null,
 ) {
-    constructor(proto: GrapevineDirect.Node) : this(
+    constructor(proto: DirectMessages.Node) : this(
         proto.userId,
         proto.username,
         decodeRsaPublicKey(proto.pubKey.toByteArray()),
@@ -30,7 +30,7 @@ data class Node(
         profile.sessionPubKey,
     )
 
-    fun toProto(): GrapevineDirect.Node = node {
+    fun toProto(): DirectMessages.Node = node {
         userId = this@Node.id
         username = this@Node.username
         pubKey = ByteString.copyFrom(this@Node.pubKey.encoded)

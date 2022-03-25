@@ -12,6 +12,7 @@ import ru.vizbash.grapevine.network.Node
 import ru.vizbash.grapevine.network.NodeProvider
 import ru.vizbash.grapevine.network.dispatch.GroupChatDispatcher
 import ru.vizbash.grapevine.network.dispatch.PhotoDispatcher
+import ru.vizbash.grapevine.service.profile.ProfileProvider
 import ru.vizbash.grapevine.storage.chat.Chat
 import ru.vizbash.grapevine.storage.chat.ChatDao
 import ru.vizbash.grapevine.storage.chat.GroupChatMember

@@ -15,7 +15,7 @@ class GvRejectedException : GvException() {
 }
 
 class GvInvalidResponseException : GvException() {
-    override fun localizedMessage(context: Context) = context.getString(R.string.invalid_respose_received)
+    override fun localizedMessage(context: Context) = context.getString(R.string.invalid_response_received)
 }
 
 class GvTimeoutException : GvException() {

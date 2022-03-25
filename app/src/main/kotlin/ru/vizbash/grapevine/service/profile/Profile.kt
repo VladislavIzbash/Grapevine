@@ -1,9 +1,6 @@
-package ru.vizbash.grapevine.service
+package ru.vizbash.grapevine.service.profile
 
 import android.graphics.Bitmap
-import android.os.Parcelable
-import kotlinx.parcelize.Parcelize
-import java.io.Serializable
 import java.security.PrivateKey
 import java.security.PublicKey
 import javax.crypto.interfaces.DHPrivateKey

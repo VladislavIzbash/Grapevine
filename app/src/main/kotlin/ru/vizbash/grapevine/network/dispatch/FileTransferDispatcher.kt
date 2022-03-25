@@ -49,7 +49,7 @@ class FileTransferDispatcher @Inject constructor(
         val chunkSize = if (req.payload.downloadReq.chunkSize <= MAX_CHUNK_SIZE) {
             req.payload.downloadReq.chunkSize
         } else {
-            network.sendErrorResponse(GrapevineRouted.Error.BAD_REQUEST, req.id, req.sender)
+            network.sendErrorResponse(RoutedMessages.Error.BAD_REQUEST, req.id, req.sender)
             return
         }
 
@@ -65,7 +65,7 @@ class FileTransferDispatcher @Inject constructor(
                 val resp = routedPayload {
                     response = routedResponse {
                         requestId = req.id
-                        error = GrapevineRouted.Error.NO_ERROR
+                        error = RoutedMessages.Error.NO_ERROR
                         fileChunkResp = fileChunkResponse {
                             this.chunkNum = chunkNum
                             this.chunk = ByteString.copyFrom(chunk)

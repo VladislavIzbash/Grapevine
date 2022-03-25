@@ -1,7 +1,6 @@
 package ru.vizbash.grapevine.network.dispatch
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.util.Log
 import com.google.protobuf.ByteString
 import kotlinx.coroutines.CoroutineScope
@@ -68,7 +67,7 @@ class GroupChatDispatcher @Inject constructor(
 
         val chatInfo = getChatInfo?.invoke(chatId, req.sender.id)
         if (chatInfo == null) {
-            network.sendErrorResponse(GrapevineRouted.Error.NOT_FOUND, req.id, req.sender)
+            network.sendErrorResponse(RoutedMessages.Error.NOT_FOUND, req.id, req.sender)
             return
         }
 

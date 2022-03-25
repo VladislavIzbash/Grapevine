@@ -15,9 +15,10 @@ import android.os.Looper
 import android.util.Log
 import com.google.protobuf.InvalidProtocolBufferException
 import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.android.scopes.ServiceScoped
 import ru.vizbash.grapevine.network.Router
 import ru.vizbash.grapevine.network.SourceType
-import ru.vizbash.grapevine.network.message.GrapevineDirect.DirectMessage
+import ru.vizbash.grapevine.network.message.DirectMessages.DirectMessage
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
@@ -26,11 +27,10 @@ import java.nio.channels.ServerSocketChannel
 import java.nio.channels.SocketChannel
 import java.util.*
 import javax.inject.Inject
-import javax.inject.Singleton
 import kotlin.concurrent.thread
 
 @SuppressLint("MissingPermission")
-@Singleton
+@ServiceScoped
 class WifiTransport @Inject constructor(
     @ApplicationContext private val context: Context,
     private val router: Router,

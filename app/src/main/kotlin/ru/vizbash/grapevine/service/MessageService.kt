@@ -12,6 +12,7 @@ import ru.vizbash.grapevine.GvException
 import ru.vizbash.grapevine.network.NodeProvider
 import ru.vizbash.grapevine.network.dispatch.FileTransferDispatcher
 import ru.vizbash.grapevine.network.dispatch.TextMessageDispatcher
+import ru.vizbash.grapevine.service.profile.ProfileProvider
 import ru.vizbash.grapevine.storage.chat.ChatDao
 import ru.vizbash.grapevine.storage.message.Message
 import ru.vizbash.grapevine.storage.message.MessageDao
@@ -25,7 +26,7 @@ import kotlin.Exception
 import kotlin.random.Random
 
 @Singleton
-class TextMessageService @Inject constructor(
+class MessageService @Inject constructor(
     @ServiceCoroutineScope private val coroutineScope: CoroutineScope,
     private val profileProvider: ProfileProvider,
     private val textDispatcher: TextMessageDispatcher,

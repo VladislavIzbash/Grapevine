@@ -6,11 +6,7 @@ import kotlinx.coroutines.flow.*
 import ru.vizbash.grapevine.GvInvalidResponseException
 import ru.vizbash.grapevine.network.DispatcherCoroutineScope
 import ru.vizbash.grapevine.network.Node
-import ru.vizbash.grapevine.network.message.GrapevineRouted
-import ru.vizbash.grapevine.network.message.GrapevineRouted.TextMessage
-import ru.vizbash.grapevine.network.message.readConfirmation
-import ru.vizbash.grapevine.network.message.routedPayload
-import ru.vizbash.grapevine.network.message.textMessage
+import ru.vizbash.grapevine.network.message.*
 import ru.vizbash.grapevine.storage.message.Message
 import ru.vizbash.grapevine.storage.message.MessageFile
 import ru.vizbash.grapevine.util.validateMessageText
@@ -43,7 +39,7 @@ class TextMessageDispatcher @Inject constructor(
         if (!validateMessageText(req.payload.text.text)
             || req.payload.text.fileName.length > 1000) {
 
-            network.sendErrorResponse(GrapevineRouted.Error.BAD_REQUEST, req.id, req.sender)
+            network.sendErrorResponse(RoutedMessages.Error.BAD_REQUEST, req.id, req.sender)
             throw GvInvalidResponseException()
         }
 

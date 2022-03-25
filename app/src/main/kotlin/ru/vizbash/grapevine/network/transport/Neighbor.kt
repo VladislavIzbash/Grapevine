@@ -1,7 +1,7 @@
 package ru.vizbash.grapevine.network.transport
 
 import ru.vizbash.grapevine.network.SourceType
-import ru.vizbash.grapevine.network.message.GrapevineDirect.DirectMessage
+import ru.vizbash.grapevine.network.message.DirectMessages.DirectMessage
 
 interface Neighbor {
     val sourceType: SourceType

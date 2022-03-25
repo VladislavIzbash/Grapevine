@@ -8,12 +8,12 @@ import java.util.*
         ForeignKey(
             entity = Message::class,
             parentColumns = ["id"],
-            childColumns = ["orig_msg_id"],
+            childColumns = ["origMsgId"],
             onDelete = ForeignKey.SET_NULL,
         ),
     ],
     indices = [
-        Index(value = ["orig_msg_id"]),
+        Index(value = ["origMsgId"]),
     ],
 )
 data class Message(

@@ -3,5 +3,22 @@
     <string name="node_offline">получателя нет в сети</string>
     <string name="message_rejected">узел отклонил сообщение</string>
     <string name="timeout">превышено время ожидания</string>
-    <string name="invalid_respose_received">получен неверный ответ</string>
+    <string name="invalid_response_received">получен неверный ответ</string>
+    <string name="status_channel_name">Статус</string>
+    <string name="status_channel_desc">Отображение статуса сервиса Grapevine</string>
+    <string name="message_channel_name">Сообщения</string>
+    <string name="message_channel_desc">Отображение входящих сообщений</string>
+    <string name="grapevine_service">Сервис Grapevine</string>
+    <string name="status_text">Bluetooth: %1$s\nWi-FI: %2$s</string>
+    <string name="on">вкл.</string>
+    <string name="off">выкл.</string>
+    <string name="name">Имя</string>
+    <string name="password">Пароль</string>
+    <string name="repeat_password">Повторите пароль</string>
+    <string name="auto_login">Автоматический вход</string>
+    <string name="create_profile">Создать профиль</string>
+    <string name="invalid_username">Имя слишком короткое или содержит спецсимволы</string>
+    <string name="password_too_short">Пароль слишком короткий</string>
+    <string name="password_is_blank">Пароль не может быть пустым</string>
+    <string name="passwords_dont_match">Пароли не совпадают</string>
 </resources>

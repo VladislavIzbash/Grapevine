@@ -11,12 +11,11 @@ import ru.vizbash.grapevine.network.DispatcherCoroutineScope
 import ru.vizbash.grapevine.network.Node
 import ru.vizbash.grapevine.network.NodeProvider
 import ru.vizbash.grapevine.network.Router
-import ru.vizbash.grapevine.network.message.GrapevineRouted
-import ru.vizbash.grapevine.network.message.GrapevineRouted.RoutedPayload
+import ru.vizbash.grapevine.network.message.RoutedMessages
 import ru.vizbash.grapevine.network.message.routedPayload
 import ru.vizbash.grapevine.network.message.routedResponse
 import ru.vizbash.grapevine.service.NodeVerifier
-import ru.vizbash.grapevine.service.ProfileProvider
+import ru.vizbash.grapevine.service.profile.ProfileProvider
 import ru.vizbash.grapevine.util.*
 import java.util.concurrent.ConcurrentHashMap
 import javax.crypto.SecretKey
@@ -69,34 +68,34 @@ class GrapevineNetwork @Inject constructor(
     private fun Flow<Router.ReceivedMessage>.acceptMessages(): Flow<AcceptedMessage> = transform { msg ->
         if (!nodeVerifier.checkNode(msg.sender)) {
             Log.w(TAG, "${msg.sender} is not who his claims to be")
-            sendErrorResponse(GrapevineRouted.Error.INVALID_IDENTITY, msg.id, msg.sender)
+            sendErrorResponse(RoutedMessages.Error.INVALID_IDENTITY, msg.id, msg.sender)
             return@transform
         }
         if (!validateName(msg.sender.username)) {
             Log.w(TAG, "${msg.sender} has invalid username: ${msg.sender.username}")
-            sendErrorResponse(GrapevineRouted.Error.BAD_REQUEST, msg.id, msg.sender)
+            sendErrorResponse(RoutedMessages.Error.BAD_REQUEST, msg.id, msg.sender)
             return@transform
         }
         if (!verifyMessage(msg.payload, msg.sign, msg.sender.pubKey)) {
             Log.w(TAG, "${msg.sender} sent message with bad signature")
-            sendErrorResponse(GrapevineRouted.Error.BAD_SIGNATURE, msg.id, msg.sender)
+            sendErrorResponse(RoutedMessages.Error.BAD_SIGNATURE, msg.id, msg.sender)
             return@transform
         }
 
         val payloadBytes = aesDecrypt(msg.payload, getSecret(msg.sender))
         if (payloadBytes == null) {
             Log.w(TAG, "Cannot decrypt message from ${msg.sender}")
-            sendErrorResponse(GrapevineRouted.Error.CANNOT_DECRYPT, msg.id, msg.sender)
+            sendErrorResponse(RoutedMessages.Error.CANNOT_DECRYPT, msg.id, msg.sender)
             return@transform
         }
 
         try {
-            val payload = RoutedPayload.parseFrom(payloadBytes)
+            val payload = RoutedMessages.RoutedPayload.parseFrom(payloadBytes)
             Log.d(TAG, "Accepted message ${msg.id} from ${msg.sender}")
             emit(AcceptedMessage(msg.id, payload, msg.sender))
         } catch (e: InvalidProtocolBufferException) {
             Log.w(TAG, "Cannot decode message from ${msg.sender}")
-            sendErrorResponse(GrapevineRouted.Error.BAD_REQUEST, msg.id, msg.sender)
+            sendErrorResponse(RoutedMessages.Error.BAD_REQUEST, msg.id, msg.sender)
         }
     }
 
@@ -123,14 +122,14 @@ class GrapevineNetwork @Inject constructor(
 
     suspend fun receiveResponse(
         reqId: Long,
-    ): GrapevineRouted.RoutedResponse = withContext(Dispatchers.Default) {
+    ): RoutedMessages.RoutedResponse = withContext(Dispatchers.Default) {
         try {
             withTimeout(RECEIVE_TIMEOUT_MS) {
                 acceptedMessages
                     .filter { it.payload.hasResponse() && it.payload.response.requestId == reqId }
                     .map { msg ->
                         val resp = msg.payload.response
-                        if (resp.error == GrapevineRouted.Error.NO_ERROR) {
+                        if (resp.error == RoutedMessages.Error.NO_ERROR) {
                             resp
                         } else {
                             throw GvRejectedException()
@@ -144,7 +143,7 @@ class GrapevineNetwork @Inject constructor(
     }
 
     suspend fun send(
-        payload: RoutedPayload,
+        payload: RoutedMessages.RoutedPayload,
         dest: Node,
     ) = withContext(Dispatchers.Default) {
         val payloadEnc = aesEncrypt(payload.toByteArray(), getSecret(dest))
@@ -156,10 +155,10 @@ class GrapevineNetwork @Inject constructor(
     }
 
     suspend fun sendEmptyResponse(requestId: Long, dest: Node) {
-        sendErrorResponse(GrapevineRouted.Error.NO_ERROR, requestId, dest)
+        sendErrorResponse(RoutedMessages.Error.NO_ERROR, requestId, dest)
     }
 
-    suspend fun sendErrorResponse(error: GrapevineRouted.Error, requestId: Long, dest: Node) {
+    suspend fun sendErrorResponse(error: RoutedMessages.Error, requestId: Long, dest: Node) {
         val payload = routedPayload {
             response = routedResponse {
                 this.requestId = requestId
