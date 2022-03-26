@@ -16,7 +16,7 @@ import javax.inject.Singleton
 
 @Singleton
 class TextMessageDispatcher @Inject constructor(
-    private val network: GrapevineNetwork,
+    private val network: NetworkController,
     @DispatcherCoroutineScope private val coroutineScope: CoroutineScope,
 ) {
     companion object {

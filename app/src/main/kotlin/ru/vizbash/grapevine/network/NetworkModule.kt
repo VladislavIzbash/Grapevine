@@ -7,7 +7,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import ru.vizbash.grapevine.network.dispatch.GrapevineNetwork
+import ru.vizbash.grapevine.network.dispatch.NetworkController
 import javax.inject.Singleton
 
 @Module
@@ -22,5 +22,5 @@ abstract class NetworkModule {
     }
 
     @Binds
-    abstract fun bindNodeProvider(grapevineNetwork: GrapevineNetwork): NodeProvider
+    abstract fun bindNodeProvider(grapevineNetwork: NetworkController): NodeProvider
 }

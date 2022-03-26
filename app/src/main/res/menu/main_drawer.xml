@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <group android:id="@+id/group_communication">
+        <item
+            android:id="@+id/fragment_chat_list"
+            android:title="@string/chats"
+            android:icon="@drawable/ic_chats" />
+        <item
+            android:id="@+id/fragment_people_around"
+            android:title="@string/people_around"
+            android:icon="@drawable/ic_search" />
+
+        <item
+            android:id="@+id/fragment_global_chat"
+            android:title="@string/global_chat"
+            android:icon="@drawable/ic_chat" />
+    </group>
+
+    <group android:id="@+id/group_settings">
+        <item
+            android:id="@+id/item_settings"
+            android:title="@string/settings"
+            android:icon="@drawable/ic_settings" />
+        <item
+            android:id="@+id/item_logout"
+            android:title="@string/logout"
+            android:icon="@drawable/ic_logout" />
+    </group>
+
+    <group android:id="@+id/group_services">
+        <item
+            android:id="@+id/item_wifi_switch"
+            android:title="@string/wifi"
+            android:icon="@drawable/ic_wifi"
+            app:actionViewClass="com.google.android.material.switchmaterial.SwitchMaterial" />
+        <item
+            android:id="@+id/item_bluetooth_switch"
+            android:title="@string/bluetooth"
+            android:icon="@drawable/ic_bluetooth"
+            app:actionViewClass="com.google.android.material.switchmaterial.SwitchMaterial" />
+    </group>
+
+</menu>

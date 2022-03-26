@@ -4,7 +4,18 @@
     <option name="filePathToZoomLevelMap">
       <map>
         <entry key="app/src/main/res/drawable-v24/avatar_placeholder.xml" value="0.2395" />
+        <entry key="app/src/main/res/drawable/ic_bluetooth.xml" value="0.22" />
+        <entry key="app/src/main/res/drawable/ic_chat.xml" value="0.17" />
+        <entry key="app/src/main/res/drawable/ic_chats.xml" value="0.211" />
+        <entry key="app/src/main/res/drawable/ic_logout.xml" value="0.211" />
+        <entry key="app/src/main/res/drawable/ic_search.xml" value="0.211" />
+        <entry key="app/src/main/res/drawable/ic_settings.xml" value="0.211" />
+        <entry key="app/src/main/res/drawable/ic_wifi.xml" value="0.211" />
+        <entry key="app/src/main/res/layout/activity_login.xml" value="0.3494791666666667" />
+        <entry key="app/src/main/res/layout/activity_main.xml" value="0.33" />
         <entry key="app/src/main/res/layout/activity_new_profile.xml" value="0.35" />
+        <entry key="app/src/main/res/layout/drawer_header.xml" value="0.33" />
+        <entry key="app/src/main/res/menu/main_drawer.xml" value="0.1" />
       </map>
     </option>
   </component>

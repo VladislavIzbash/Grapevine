@@ -1,6 +1,7 @@
 package ru.vizbash.grapevine.ui.newprofile
 
 import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -16,8 +17,8 @@ import com.github.dhaval2404.imagepicker.ImagePicker
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
-import ru.vizbash.grapevine.R
 import ru.vizbash.grapevine.databinding.ActivityNewProfileBinding
+import ru.vizbash.grapevine.ui.main.MainActivity
 import ru.vizbash.grapevine.ui.newprofile.NewProfileModel.CreationState.*
 
 @AndroidEntryPoint
@@ -46,42 +47,33 @@ class NewProfileActivity : AppCompatActivity() {
                     }
                 }
                 launch {
-                    model.creationState.collect { state ->
-                        when (state) {
-                            INVALID -> ui.createProfile.isEnabled = false
-                            VALID -> ui.createProfile.isEnabled = true
-                            LOADING -> ui.creatingProgress.visibility = View.VISIBLE
-                            CREATED -> TODO()
-                        }
-                    }
+                    model.creationState.collect(::applyState)
                 }
             }
         }
     }
 
     private fun initUi() {
-        ui.nameField.setText(model.form.value.name)
+        ui.nameField.setText(model.form.value.username)
         ui.passwordField.setText(model.form.value.password)
         ui.passwordRepeatField.setText(model.form.value.passwordRepeat)
+        ui.autoLoginCheck.isChecked = model.form.value.autoLogin
         model.form.value.photoUri?.let {
             ui.photo.setImageURI(it)
         }
 
         ui.nameField.addTextChangedListener(AfterTextWatcher {
-            model.form.value = model.form.value.copy(
-                name = it,
-            )
+            model.form.value = model.form.value.copy(username = it)
         })
         ui.passwordField.addTextChangedListener(AfterTextWatcher {
-            model.form.value = model.form.value.copy(
-                password = it,
-            )
+            model.form.value = model.form.value.copy(password = it)
         })
         ui.passwordRepeatField.addTextChangedListener(AfterTextWatcher {
-            model.form.value = model.form.value.copy(
-                passwordRepeat = it,
-            )
+            model.form.value = model.form.value.copy(passwordRepeat = it)
         })
+        ui.autoLoginCheck.setOnCheckedChangeListener { _, checked ->
+            model.form.value = model.form.value.copy(autoLogin = checked)
+        }
 
         val pickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
             when (res.resultCode) {
@@ -103,6 +95,20 @@ class NewProfileActivity : AppCompatActivity() {
                 .createIntent {
                     pickerLauncher.launch(it)
                 }
+        }
+
+        ui.createProfileButton.setOnClickListener {
+            model.createProfile()
+        }
+    }
+
+    private fun applyState(state: NewProfileModel.CreationState) = when (state) {
+        INVALID -> ui.createProfileButton.isEnabled = false
+        VALID -> ui.createProfileButton.isEnabled = true
+        CREATING -> ui.creatingProgress.visibility = View.VISIBLE
+        CREATED -> {
+            startActivity(Intent(this, MainActivity::class.java))
+            finish()
         }
     }
 

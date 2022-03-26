@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main_nav"
+    app:startDestination="@id/fragment_chat_list">
+
+    <fragment
+        android:id="@+id/fragment_chat_list"
+        android:name="ru.vizbash.grapevine.ui.main.chats.ChatListFragment"
+        android:label="@string/chats"/>
+
+    <fragment
+        android:id="@+id/fragment_people_around"
+        android:label="@string/people_around" />
+
+    <fragment
+        android:id="@+id/fragment_global_chat"
+        android:label="@string/global_chat" />
+
+</navigation>

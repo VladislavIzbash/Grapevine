@@ -1,26 +1,37 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="Theme.Grapevine.Startup" parent="Theme.AppCompat" >
+    <style name="Theme.Grapevine.Startup" parent="Theme.AppCompat.NoActionBar" >
         <item name="android:windowBackground">@color/lavender_blush</item>
     </style>
 
     <style name="Theme.Grapevine.ActionBar" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
         <item name="colorPrimary">@color/blush</item>
         <item name="colorPrimaryVariant">@color/deep_blush</item>
+        <item name="colorPrimaryDark">@color/deep_blush</item>
         <item name="colorOnPrimary">@color/white</item>
-
         <item name="colorSecondary">@color/lime_green</item>
         <item name="colorSecondaryVariant">@color/lime_green</item>
         <item name="colorOnSecondary">@color/white</item>
-
         <item name="colorControlNormal">?attr/colorPrimary</item>
+        <item name="colorError">@color/red</item>
+
+        <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryDark</item>
+        <item name="android:windowBackground">@color/lavender_blush</item>
+
         <item name="textInputStyle">@style/Widget.Grapevine.TextInputLayout</item>
-        <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
+        <item name="toolbarStyle">@style/Widget.Grapevine.Toolbar</item>
+        <item name="snackbarStyle">@style/Widget.Grapevine.Snackbar</item>
+        <item name="snackbarTextViewStyle">@style/Widget.Grapevine.Snackbar.TextView</item>
     </style>
 
     <style name="Theme.Grapevine.NoActionBar" parent="Theme.Grapevine.ActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:windowTranslucentStatus">true</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+    </style>
+
+    <style name="ThemeOverlay.Grapevine.Toolbar" parent="">
+        <item name="colorControlNormal">@color/white</item>
     </style>
 
 </resources>

@@ -8,29 +8,31 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
-import ru.vizbash.grapevine.network.dispatch.GrapevineNetwork
+import ru.vizbash.grapevine.network.dispatch.NetworkController
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class ForegroundService : Service() {
-    @Inject lateinit var grapevineNetwork: GrapevineNetwork
+    @Inject lateinit var networkController: NetworkController
     @Inject lateinit var transportController: TransportController
     @Inject lateinit var notificationSender: NotificationSender
 
     companion object {
         private const val TAG = "ForegroundService"
 
-        const val ACTION_WIFI_HARDWARE_STATE_CHANGED
-            = "ru.vizbash.grapevine.action.WIFI_HARDWARE_STATE_CHANGED"
-        const val ACTION_WIFI_STATE_CHANGED
-            = "ru.vizbash.grapevine.action.WIFI_STATE_CHANGED"
-        const val ACTION_BLUETOOTH_HARDWARE_STATE_CHANGED
-            = "ru.vizbash.grapevine.action.BLUETOOTH_HARDWARE_STATE_CHANGED"
-        const val ACTION_BLUETOOTH_STATE_CHANGED
-            = "ru.vizbash.grapevine.action.BLUETOOTH_STATE_CHANGED"
-        const val ACTION_ENABLE_WIFI = "ru.vizbash.grapevine.action.ENABLE_WIFI"
-        const val ACTION_ENABLE_BLUETOOTH = "ru.vizbash.grapevine.action.ENABLE_BLUETOOTH"
+        const val ACTION_ENABLE_TRANSPORT = "ru.vizbash.grapevine.action.ENABLE_TRANSPORT"
+        const val ACTION_GET_TRANSPORT_STATE = "ru.vizbash.grapevine.action.ACTION_GET_TRANSPORT_STATE"
+
+        const val ACTION_TRANSPORT_STATE_CHANGED
+            = "ru.vizbash.grapevine.action.ACTION_TRANSPORT_STATE_CHANGED"
+        const val ACTION_TRANSPORT_HARDWARE_STATE_CHANGED
+            = "ru.vizbash.grapevine.action.ACTION_TRANSPORT_HARDWARE_STATE_CHANGED"
+
         const val EXTRA_STATE = "state"
+
+        const val EXTRA_TRANSPORT_TYPE = "transport_type"
+        const val TRANSPORT_WIFI = 0
+        const val TRANSPORT_BLUETOOTH = 1
     }
 
     private val coroutineScope = CoroutineScope(Dispatchers.Default)
@@ -38,12 +40,13 @@ class ForegroundService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
-        transportController.start(coroutineScope)
+        super.onCreate()
+
+        transportController.start()
         notificationSender.start(coroutineScope) { notifId, notif ->
             startForeground(notifId, notif)
         }
-        grapevineNetwork.start()
-
+        networkController.start()
 
         Log.i(TAG, "Started")
     }
@@ -52,18 +55,23 @@ class ForegroundService : Service() {
         Log.d(TAG, "Received ${intent?.action}")
 
         when (intent?.action) {
-            ACTION_ENABLE_WIFI -> {
-                transportController.wifiUserEnabled.value = intent.getBooleanExtra(EXTRA_STATE, false)
+            ACTION_ENABLE_TRANSPORT -> {
+                val enabled = intent.getBooleanExtra(EXTRA_STATE, false)
+
+                when (intent.getIntExtra(EXTRA_TRANSPORT_TYPE, -1)) {
+                    TRANSPORT_WIFI -> transportController.wifiUserEnabled = enabled
+                    TRANSPORT_BLUETOOTH -> transportController.btUserEnabled = enabled
+                }
             }
-            ACTION_ENABLE_BLUETOOTH -> {
-                transportController.bluetoothUserEnabled.value = intent.getBooleanExtra(EXTRA_STATE, false)
-            }
+            ACTION_GET_TRANSPORT_STATE -> transportController.broadcastState()
         }
 
         return START_STICKY
     }
 
     override fun onDestroy() {
+        super.onDestroy()
+
         coroutineScope.cancel()
         transportController.stop()
         notificationSender.stop()

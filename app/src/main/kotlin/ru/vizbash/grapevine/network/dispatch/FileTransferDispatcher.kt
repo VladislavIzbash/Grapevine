@@ -19,7 +19,7 @@ import javax.inject.Singleton
 
 @Singleton
 class FileTransferDispatcher @Inject constructor(
-    private val network: GrapevineNetwork,
+    private val network: NetworkController,
     @DispatcherCoroutineScope private val coroutineScope: CoroutineScope,
 ) {
     companion object {

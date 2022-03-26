@@ -37,7 +37,7 @@ class MessageService @Inject constructor(
     private val nodeProvider: NodeProvider,
 ) {
     companion object {
-        private const val TAG = "TextMessageService"
+        private const val TAG = "MessageService"
 
         private const val REDELIVER_INTERVAL_MS = 5000L
     }
@@ -119,7 +119,9 @@ class MessageService @Inject constructor(
     private suspend fun redeliverMessages() {
         val messages = messageDao.getAllWithState(Message.State.DELIVERY_FAILED, 5)
 
-        Log.d(TAG, "Redelivering ${messages.size} messages")
+        if (messages.size > 0) {
+            Log.d(TAG, "Redelivering ${messages.size} messages")
+        }
 
         for (msg in messages) {
             sendMessage(msg.chatId, msg.text, msg.origMsgId, msg.file)

@@ -19,7 +19,7 @@ import javax.inject.Singleton
 
 @Singleton
 class PhotoDispatcher @Inject constructor(
-    private val network: GrapevineNetwork,
+    private val network: NetworkController,
     @DispatcherCoroutineScope private val coroutineScope: CoroutineScope,
     private val profileProvider: ProfileProvider,
 ) {

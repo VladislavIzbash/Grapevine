@@ -1,10 +1,8 @@
 package ru.vizbash.grapevine.service.foreground
 
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.Service
+import android.app.*
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -16,6 +14,7 @@ import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.R
 import ru.vizbash.grapevine.service.ChatService
 import ru.vizbash.grapevine.service.MessageService
+import ru.vizbash.grapevine.ui.main.MainActivity
 import javax.inject.Inject
 
 @ServiceScoped
@@ -34,21 +33,23 @@ class NotificationSender @Inject constructor(
     }
 
     fun start(coroutineScope: CoroutineScope, startForeground: (Int, Notification) -> Unit) {
-//        val pendingIntent = PendingIntent.getActivity(
-//            this,
-//            0,
-//            Intent(this, MainActivity::class.java),
-//            PendingIntent.FLAG_IMMUTABLE,
-//        )
-
         registerChannels()
+
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            0,
+            Intent(context, MainActivity::class.java),
+            PendingIntent.FLAG_IMMUTABLE,
+        )
 
         val fgNotification = NotificationCompat.Builder(context, FOREGROUND_CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_notification)
             .setContentTitle(context.getString(R.string.grapevine_service))
-//            .setContentIntent(pendingIntent)
+            .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setContentText(transportController.statusText.value)
+            .setStyle(NotificationCompat.BigTextStyle()
+                .bigText(transportController.statusText.value))
+//            .setContentText(transportController.statusText.value)
 
         startForeground(FOREGROUND_NOTIFICATION_ID, fgNotification.build())
 

@@ -23,7 +23,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class GrapevineNetwork @Inject constructor(
+class NetworkController @Inject constructor(
     private val router: Router,
     private val profileProvider: ProfileProvider,
     private val nodeVerifier: NodeVerifier,

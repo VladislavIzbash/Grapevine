@@ -27,7 +27,8 @@
 
         <service android:name=".service.foreground.ForegroundService" android:exported="false" />
 
-        <activity android:name=".StartupActivity"
+        <activity
+            android:name=".StartupActivity"
             android:theme="@style/Theme.Grapevine.Startup"
             android:noHistory="true"
             android:exported="true">
@@ -38,7 +39,24 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".ui.newprofile.NewProfileActivity" />
+        <activity
+            android:name=".ui.newprofile.NewProfileActivity"
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|orientation"
+            android:windowSoftInputMode="adjustResize"
+            android:label="@string/profile_creation" />
+
+        <activity
+            android:name=".ui.login.LoginActivity"
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|orientation"
+            android:windowSoftInputMode="adjustResize"
+            android:label="@string/login_label"/>
+
+        <activity
+            android:name=".ui.main.MainActivity"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.Grapevine.NoActionBar" />
 
     </application>
 

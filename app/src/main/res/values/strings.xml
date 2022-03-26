@@ -17,8 +17,26 @@
     <string name="repeat_password">Повторите пароль</string>
     <string name="auto_login">Автоматический вход</string>
     <string name="create_profile">Создать профиль</string>
-    <string name="invalid_username">Имя слишком короткое или содержит спецсимволы</string>
+    <string name="invalid_username">Имя должно быть длиной от 4 до 35 и не содержать спецсимволов</string>
     <string name="password_too_short">Пароль слишком короткий</string>
     <string name="password_is_blank">Пароль не может быть пустым</string>
     <string name="passwords_dont_match">Пароли не совпадают</string>
+    <string name="profile_creation">Создание профиля</string>
+    <string name="login_label">Вход в Grapevine</string>
+    <string name="login_welcome">Здравствуйте, %1$s</string>
+    <string name="password_prompt">Введите пароль</string>
+    <string name="login">Войти</string>
+    <string name="invalid_password">Неверный пароль</string>
+    <string name="chats">Чаты</string>
+    <string name="people_around">Люди поблизости</string>
+    <string name="global_chat">Общий чат</string>
+    <string name="settings">Настройки</string>
+    <string name="logout">Выйти</string>
+    <string name="wifi">Wi-Fi</string>
+    <string name="bluetooth">Bluetooth</string>
+    <string name="username">Имя пользователя</string>
+    <string name="location_alert">Для обнаружения окружающих устройств необходимо включить местоположение</string>
+    <string name="error_need_location_permission">Необходим доступ к местоположению</string>
+    <string name="enable">Включить</string>
+    <string name="close">Закрыть</string>
 </resources>

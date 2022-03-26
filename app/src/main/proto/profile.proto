@@ -7,6 +7,6 @@ message StoredProfile {
   string username = 2;
   bytes public_key = 3;
   bytes private_key_enc = 4;
-  bytes has_photo = 5;
+  bool has_photo = 5;
   bytes photo = 6;
 }
