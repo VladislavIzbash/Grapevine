@@ -32,6 +32,11 @@ class BluetoothTransport @Inject constructor(
         private val SERVICE_UUID = UUID.fromString("f8393dd1-32a9-49ef-9768-749bafed80ed")
     }
 
+    var packetsSent = 0
+        private set
+    var packetsReceived = 0
+        private set
+
     private val adapter by lazy {
         context.getSystemService(BluetoothManager::class.java).adapter
     }
@@ -119,6 +124,8 @@ class BluetoothTransport @Inject constructor(
         try {
             while (running && neighbor != null) {
                 val msg = DirectMessage.parseDelimitedFrom(neighbor!!.socket.inputStream)
+                packetsReceived++
+
                 Log.d(TAG, "read ${msg.serializedSize} bytes")
 
                 neighbor!!.receiveCb(msg)
@@ -191,6 +198,8 @@ class BluetoothTransport @Inject constructor(
         override fun send(msg: DirectMessage) {
             try {
                 msg.writeDelimitedTo(socket.outputStream)
+                packetsSent++
+
                 Log.d(TAG, "written ${msg.toByteArray().size} bytes")
             } catch (e: IOException) {
                 if (neighbor != null) {

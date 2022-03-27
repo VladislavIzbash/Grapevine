@@ -9,7 +9,7 @@
     <string name="message_channel_name">Сообщения</string>
     <string name="message_channel_desc">Отображение входящих сообщений</string>
     <string name="grapevine_service">Сервис Grapevine</string>
-    <string name="status_text">Bluetooth: %1$s\nWi-FI: %2$s</string>
+    <string name="status_text">Bluetooth: %1$s\nWi-FI: %2$s\n\nОтдано: %3$d Получено: %4$d</string>
     <string name="on">вкл.</string>
     <string name="off">выкл.</string>
     <string name="name">Имя</string>
@@ -39,4 +39,5 @@
     <string name="error_need_location_permission">Необходим доступ к местоположению</string>
     <string name="enable">Включить</string>
     <string name="close">Закрыть</string>
+    <string name="stop">Остановить</string>
 </resources>

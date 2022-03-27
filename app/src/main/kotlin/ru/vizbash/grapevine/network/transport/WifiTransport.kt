@@ -47,6 +47,11 @@ class WifiTransport @Inject constructor(
         private const val TICK_INTERVAL_MS = 200L
     }
 
+    var packetsSent = 0
+        private set
+    var packetsReceived = 0
+        private set
+
     private val p2pManager by lazy {
         context.getSystemService(Context.WIFI_P2P_SERVICE) as WifiP2pManager
     }
@@ -290,6 +295,8 @@ class WifiTransport @Inject constructor(
                     buffer.flip()
                     try {
                         val msg = DirectMessage.parseFrom(buffer)
+                        packetsReceived++
+
                         neighbor.receiveCb(msg)
                     } catch (e: InvalidProtocolBufferException) {
                     }
@@ -338,6 +345,8 @@ class WifiTransport @Inject constructor(
                 while (buf.remaining() > 0) {
                     channel.write(buf)
                 }
+
+                packetsSent++
 
                 Log.d(TAG, "written ${buf.capacity()} bytes")
             } catch (e: IOException) {

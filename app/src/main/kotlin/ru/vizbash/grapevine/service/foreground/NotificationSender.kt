@@ -9,9 +9,11 @@ import androidx.core.app.NotificationManagerCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.scopes.ServiceScoped
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.R
+import ru.vizbash.grapevine.network.transport.BluetoothTransport
+import ru.vizbash.grapevine.network.transport.WifiTransport
 import ru.vizbash.grapevine.service.ChatService
 import ru.vizbash.grapevine.service.MessageService
 import ru.vizbash.grapevine.ui.main.MainActivity
@@ -21,6 +23,8 @@ import javax.inject.Inject
 class NotificationSender @Inject constructor(
     @ApplicationContext private val context: Context,
     private val transportController: TransportController,
+    private val bluetoothTransport: BluetoothTransport,
+    private val wifiTransport: WifiTransport,
     private val chatService: ChatService,
     private val messageService: MessageService,
 ) {
@@ -30,6 +34,8 @@ class NotificationSender @Inject constructor(
         
         private const val MESSAGE_CHANNEL_ID = "message_channel"
         private const val INVITATIONS_CHANNEL_ID = "invitations_channel"
+
+        private const val STATS_UPDATE_INTERVAL = 10_000L
     }
 
     fun start(coroutineScope: CoroutineScope, startForeground: (Int, Notification) -> Unit) {
@@ -42,28 +48,46 @@ class NotificationSender @Inject constructor(
             PendingIntent.FLAG_IMMUTABLE,
         )
 
+        val stopIntent = PendingIntent.getService(
+            context,
+            0,
+            Intent(context, ForegroundService::class.java).apply {
+                action = ForegroundService.ACTION_STOP_SERVICE
+            },
+            PendingIntent.FLAG_IMMUTABLE,
+        )
+
         val fgNotification = NotificationCompat.Builder(context, FOREGROUND_CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_notification)
             .setContentTitle(context.getString(R.string.grapevine_service))
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setStyle(NotificationCompat.BigTextStyle()
-                .bigText(transportController.statusText.value))
-//            .setContentText(transportController.statusText.value)
+                .bigText(getStatusText()))
+            .addAction(R.drawable.ic_stop, context.getString(R.string.stop), stopIntent)
 
         startForeground(FOREGROUND_NOTIFICATION_ID, fgNotification.build())
 
         val notificationManager = NotificationManagerCompat.from(context)
 
+        transportController.setOnStateChanged {
+            fgNotification.setStyle(NotificationCompat.BigTextStyle()
+                .bigText(getStatusText()))
+            notificationManager.notify(FOREGROUND_NOTIFICATION_ID, fgNotification.build())
+        }
         coroutineScope.launch {
-            transportController.statusText.collect {
-                fgNotification.setContentText(it)
+            while (true) {
+                delay(STATS_UPDATE_INTERVAL)
+
+                fgNotification.setStyle(NotificationCompat.BigTextStyle()
+                    .bigText(getStatusText()))
                 notificationManager.notify(FOREGROUND_NOTIFICATION_ID, fgNotification.build())
             }
         }
     }
 
     fun stop() {
+        transportController.setOnStateChanged {  }
     }
 
     private fun registerChannels() {
@@ -88,5 +112,18 @@ class NotificationSender @Inject constructor(
                     as NotificationManager
             notificationManager.createNotificationChannels(listOf(statusChannel, messageChannel))
         }
+    }
+
+    private fun getStatusText(): String {
+        val bluetoothStatus = if (transportController.btEnabled) R.string.on else R.string.off
+        val wifiStatus = if (transportController.wifiEnabled) R.string.on else R.string.off
+
+        return context.getString(
+            R.string.status_text,
+            context.getString(bluetoothStatus),
+            context.getString(wifiStatus),
+            wifiTransport.packetsSent + bluetoothTransport.packetsSent,
+            wifiTransport.packetsReceived + bluetoothTransport.packetsReceived,
+        )
     }
 }

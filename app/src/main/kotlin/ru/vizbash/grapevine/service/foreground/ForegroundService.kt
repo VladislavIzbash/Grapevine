@@ -27,6 +27,8 @@ class ForegroundService : Service() {
             = "ru.vizbash.grapevine.action.ACTION_TRANSPORT_STATE_CHANGED"
         const val ACTION_TRANSPORT_HARDWARE_STATE_CHANGED
             = "ru.vizbash.grapevine.action.ACTION_TRANSPORT_HARDWARE_STATE_CHANGED"
+        const val ACTION_STOP_SERVICE
+            = "ru.vizbash.grapevine.action.ACTION_STOP_SERVICE"
 
         const val EXTRA_STATE = "state"
 
@@ -64,6 +66,7 @@ class ForegroundService : Service() {
                 }
             }
             ACTION_GET_TRANSPORT_STATE -> transportController.broadcastState()
+            ACTION_STOP_SERVICE -> stopSelf()
         }
 
         return START_STICKY
@@ -76,6 +79,6 @@ class ForegroundService : Service() {
         transportController.stop()
         notificationSender.stop()
 
-        Log.i(TAG, "Destroyed")
+        Log.i(TAG, "Stopped")
     }
 }

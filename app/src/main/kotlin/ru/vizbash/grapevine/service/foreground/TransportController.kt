@@ -40,7 +40,7 @@ class TransportController @Inject constructor(
             sharedPrefs.edit().putBoolean(WIFI_ENABLED_KEY, value).apply()
         }
     private var wifiHardwareEnabled = false
-    private val wifiEnabled get() = wifiUserEnabled && wifiHardwareEnabled
+    val wifiEnabled get() = wifiUserEnabled && wifiHardwareEnabled
 
     var btUserEnabled = sharedPrefs.getBoolean(BT_ENABLED_KEY, false)
         set(value) {
@@ -50,7 +50,9 @@ class TransportController @Inject constructor(
 
         }
     private var btHardwareEnabled = bluetoothTransport.isAdapterEnabled
-    private val btEnabled get() = btUserEnabled && btHardwareEnabled
+    val btEnabled get() = btUserEnabled && btHardwareEnabled
+
+    private var onStateChanged: () -> Unit = {}
 
     private val broadcastManager = LocalBroadcastManager.getInstance(context)
 
@@ -84,9 +86,6 @@ class TransportController @Inject constructor(
         }
     }
 
-    private val _statusText = MutableStateFlow(getStatusText())
-    val statusText = _statusText.asStateFlow()
-
     fun start() {
         val intentFilter = IntentFilter().apply {
             addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
@@ -94,6 +93,10 @@ class TransportController @Inject constructor(
             addAction(LocationManager.MODE_CHANGED_ACTION)
         }
         context.registerReceiver(hardwareStateReceiver, intentFilter)
+    }
+
+    fun setOnStateChanged(cb: () -> Unit) {
+        onStateChanged = cb
     }
 
     private fun updateState() {
@@ -108,9 +111,8 @@ class TransportController @Inject constructor(
             wifiTransport.stop()
         }
 
+        onStateChanged()
         broadcastState()
-
-        _statusText.value = getStatusText()
     }
 
     fun broadcastState() {
@@ -137,16 +139,5 @@ class TransportController @Inject constructor(
 
     fun stop() {
         context.unregisterReceiver(hardwareStateReceiver)
-    }
-
-    private fun getStatusText(): String {
-        val bluetoothStatus = if (btEnabled) R.string.on else R.string.off
-        val wifiStatus = if (wifiEnabled) R.string.on else R.string.off
-
-        return context.getString(
-            R.string.status_text,
-            context.getString(bluetoothStatus),
-            context.getString(wifiStatus),
-        )
     }
 }

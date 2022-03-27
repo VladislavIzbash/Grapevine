@@ -100,7 +100,9 @@ class NetworkController @Inject constructor(
     }
 
     fun start() {
-        check(!started)
+        if (started) {
+            return
+        }
 
         Log.i(TAG, "Starting")
 
