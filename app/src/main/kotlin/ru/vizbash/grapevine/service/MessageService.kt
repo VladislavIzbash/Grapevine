@@ -64,6 +64,8 @@ class MessageService @Inject constructor(
         }
     }
 
+    fun getLastMessage(chatId: Long) = messageDao.observeLastMessage(chatId)
+
     suspend fun sendMessage(
         chatId: Long,
         text: String,

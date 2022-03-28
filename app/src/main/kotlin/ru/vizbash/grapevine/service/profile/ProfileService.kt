@@ -11,6 +11,7 @@ import kotlinx.coroutines.withContext
 import ru.vizbash.grapevine.network.Node
 import ru.vizbash.grapevine.service.NodeVerifier
 import ru.vizbash.grapevine.storage.Profile.StoredProfile
+import ru.vizbash.grapevine.storage.node.KnownNode
 import ru.vizbash.grapevine.storage.node.NodeDao
 import ru.vizbash.grapevine.storage.storedProfile
 import ru.vizbash.grapevine.util.*
@@ -39,7 +40,8 @@ class ProfileService @Inject constructor(
 
     val hasProfile get() = storedProfile != null
 
-    val storedName get() = storedProfile!!.username
+    val storedName: String
+        get() = storedProfile!!.username
 
     init {
         try {
@@ -120,6 +122,13 @@ class ProfileService @Inject constructor(
             )
             saveProfile(password)
         }
+
+        nodeDao.insert(KnownNode(
+            id = profile.nodeId,
+            username = profile.username,
+            pubKey = profile.pubKey,
+            photo = profile.photo,
+        ))
 
         saveAutoLogin(autoLogin, password)
     }

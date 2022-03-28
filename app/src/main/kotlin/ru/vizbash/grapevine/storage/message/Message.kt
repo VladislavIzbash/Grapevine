@@ -1,10 +1,17 @@
 package ru.vizbash.grapevine.storage.message
 
 import androidx.room.*
+import ru.vizbash.grapevine.storage.chat.Chat
 import java.util.*
 
 @Entity(
     foreignKeys = [
+        ForeignKey(
+            entity = Chat::class,
+            parentColumns = ["id"],
+            childColumns = ["chatId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
         ForeignKey(
             entity = Message::class,
             parentColumns = ["id"],
@@ -14,6 +21,7 @@ import java.util.*
     ],
     indices = [
         Index(value = ["origMsgId"]),
+        Index(value = ["chatId"]),
     ],
 )
 data class Message(

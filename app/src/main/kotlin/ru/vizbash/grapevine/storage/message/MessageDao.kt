@@ -1,9 +1,7 @@
 package ru.vizbash.grapevine.storage.message
 
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
+import androidx.room.*
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface MessageDao {
@@ -18,4 +16,8 @@ interface MessageDao {
 
     @Query("UPDATE Message SET state = :newState WHERE id = :id")
     suspend fun changeState(id: Long, newState: Message.State)
+
+    @Transaction
+    @Query("SELECT * FROM Message WHERE chatId = :chatId ORDER BY timestamp DESC LIMIT 1")
+    fun observeLastMessage(chatId: Long): Flow<MessageWithSender?>
 }

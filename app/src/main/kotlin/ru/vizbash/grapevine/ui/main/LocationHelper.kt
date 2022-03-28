@@ -66,21 +66,20 @@ class LocationHelper(
     }
 
     private fun askLocationService(context: Context): Boolean {
-        val locationManager = context.getSystemService(AppCompatActivity.LOCATION_SERVICE) as LocationManager
+        val locationManager = context.getSystemService(AppCompatActivity.LOCATION_SERVICE)
+                as LocationManager
 
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && !locationManager.isLocationEnabled) {
-            val dialog = AlertDialog.Builder(activity)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && !locationManager.isLocationEnabled) {
+            AlertDialog.Builder(activity)
                 .setMessage(context.getString(R.string.location_alert))
                 .setNegativeButton(R.string.close, null)
                 .setPositiveButton(R.string.enable) { _, _ ->
                     context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
                 }
-                .create()
-
-            dialog.show()
-            false
+                .show()
+            return false
         } else {
-            true
+            return true
         }
     }
 }

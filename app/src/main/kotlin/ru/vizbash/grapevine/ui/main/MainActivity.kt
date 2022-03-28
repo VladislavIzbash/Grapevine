@@ -126,6 +126,7 @@ class MainActivity : AppCompatActivity() {
             when (item.itemId) {
                 R.id.item_logout -> {
                     model.disableAutoLogin()
+                    stopService(Intent(this, ForegroundService::class.java))
                     finish()
                     true
                 }
@@ -169,7 +170,7 @@ class MainActivity : AppCompatActivity() {
 
         val topLevel = setOf(
             R.id.fragment_chat_list,
-            R.id.fragment_people_around,
+            R.id.fragment_node_list,
             R.id.fragment_global_chat,
         )
         val appBarConfig = AppBarConfiguration(topLevel, ui.root)

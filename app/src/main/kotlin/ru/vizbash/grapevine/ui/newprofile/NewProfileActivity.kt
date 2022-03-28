@@ -10,6 +10,7 @@ import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.widget.addTextChangedListener
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -20,9 +21,12 @@ import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.databinding.ActivityNewProfileBinding
 import ru.vizbash.grapevine.ui.main.MainActivity
 import ru.vizbash.grapevine.ui.newprofile.NewProfileModel.CreationState.*
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class NewProfileActivity : AppCompatActivity() {
+    @Inject lateinit var imagePicker: ImagePicker.Builder
+
     private lateinit var ui: ActivityNewProfileBinding
     private val model: NewProfileModel by viewModels()
 
@@ -62,15 +66,15 @@ class NewProfileActivity : AppCompatActivity() {
             ui.photo.setImageURI(it)
         }
 
-        ui.nameField.addTextChangedListener(AfterTextWatcher {
-            model.form.value = model.form.value.copy(username = it)
-        })
-        ui.passwordField.addTextChangedListener(AfterTextWatcher {
-            model.form.value = model.form.value.copy(password = it)
-        })
-        ui.passwordRepeatField.addTextChangedListener(AfterTextWatcher {
-            model.form.value = model.form.value.copy(passwordRepeat = it)
-        })
+        ui.nameField.addTextChangedListener {
+            model.form.value = model.form.value.copy(username = it.toString())
+        }
+        ui.passwordField.addTextChangedListener {
+            model.form.value = model.form.value.copy(password = it.toString())
+        }
+        ui.passwordRepeatField.addTextChangedListener {
+            model.form.value = model.form.value.copy(passwordRepeat = it.toString())
+        }
         ui.autoLoginCheck.setOnCheckedChangeListener { _, checked ->
             model.form.value = model.form.value.copy(autoLogin = checked)
         }
@@ -88,13 +92,7 @@ class NewProfileActivity : AppCompatActivity() {
         }
 
         ui.photo.setOnClickListener {
-            ImagePicker.with(this)
-                .compress(256)
-                .maxResultSize(256, 256)
-                .cropSquare()
-                .createIntent {
-                    pickerLauncher.launch(it)
-                }
+            imagePicker.createIntent { pickerLauncher.launch(it) }
         }
 
         ui.createProfileButton.setOnClickListener {
@@ -109,18 +107,6 @@ class NewProfileActivity : AppCompatActivity() {
         CREATED -> {
             startActivity(Intent(this, MainActivity::class.java))
             finish()
-        }
-    }
-
-    private inner class AfterTextWatcher(
-        private val afterTextChanged: (String) -> Unit,
-    ) : TextWatcher {
-        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-
-        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-
-        override fun afterTextChanged(s: Editable?) {
-            afterTextChanged(s.toString())
         }
     }
 }

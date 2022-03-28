@@ -15,7 +15,7 @@
         android:layout_height="wrap_content"
         android:gravity="center"
         android:text="@string/login_welcome"
-        style="@style/TextAppearance.MaterialComponents.Headline5"/>
+        android:textAppearance="@style/TextAppearance.MaterialComponents.Headline5"/>
 
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"

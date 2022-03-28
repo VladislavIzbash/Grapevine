@@ -19,6 +19,7 @@ class Router @Inject constructor(private val profileProvider: ProfileProvider) {
 
     companion object {
         private const val TAG = "Router"
+
         private const val DEFAULT_TTL = 16
     }
 
@@ -31,9 +32,7 @@ class Router @Inject constructor(private val profileProvider: ProfileProvider) {
 
     val nodes: List<Node>
         @Synchronized
-        get() = routingTable.map { (node, routes) ->
-            node.apply { primarySource = routes.minByOrNull(NodeRoute::hops)!!.neighbor.sourceType }
-        }.distinctBy { it.id }
+        get() = routingTable.keys.distinctBy { it.id }
 
     fun addNeighbor(neighbor: Neighbor) {
         val hello = directMessage {
@@ -59,10 +58,11 @@ class Router @Inject constructor(private val profileProvider: ProfileProvider) {
 
         val msg = directMessage {
             routed = routedMessage {
-                msgId = id
-                srcId = myNode.id
+                this.msgId = id
+                this.srcId = myNode.id
+                this.destId = dest.id
                 this.payload = ByteString.copyFrom(payload)
-                ttl = DEFAULT_TTL
+                this.ttl = DEFAULT_TTL
                 this.sign = ByteString.copyFrom(sign)
             }
         }

@@ -9,7 +9,6 @@ import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.scopes.ServiceScoped
 import ru.vizbash.grapevine.network.Router
-import ru.vizbash.grapevine.network.SourceType
 import ru.vizbash.grapevine.network.message.DirectMessages.DirectMessage
 import java.io.IOException
 import java.nio.ByteBuffer
@@ -192,8 +191,6 @@ class BluetoothTransport @Inject constructor(
             private set
         var disconnectCb: () -> Unit = {}
             private set
-
-        override val sourceType = SourceType.BLUETOOTH
 
         override fun send(msg: DirectMessage) {
             try {

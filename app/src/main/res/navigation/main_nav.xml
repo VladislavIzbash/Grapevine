@@ -8,14 +8,25 @@
     <fragment
         android:id="@+id/fragment_chat_list"
         android:name="ru.vizbash.grapevine.ui.main.chats.ChatListFragment"
-        android:label="@string/chats"/>
+        android:label="@string/chats">
+        <action
+            android:id="@+id/action_fragment_chat_list_to_dialog_new_chat"
+            app:destination="@id/dialog_new_chat" />
+    </fragment>
 
     <fragment
-        android:id="@+id/fragment_people_around"
+        android:id="@+id/fragment_node_list"
+        android:name="ru.vizbash.grapevine.ui.main.nodes.NodeListFragment"
+        tools:layout="@layout/fragment_node_list"
         android:label="@string/people_around" />
 
     <fragment
         android:id="@+id/fragment_global_chat"
         android:label="@string/global_chat" />
+
+    <dialog
+        android:id="@+id/dialog_new_chat"
+        android:name="ru.vizbash.grapevine.ui.main.chats.NewChatDialog"
+        android:label="@string/create_chat" />
 
 </navigation>

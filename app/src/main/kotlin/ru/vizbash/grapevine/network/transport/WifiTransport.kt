@@ -17,7 +17,6 @@ import com.google.protobuf.InvalidProtocolBufferException
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.scopes.ServiceScoped
 import ru.vizbash.grapevine.network.Router
-import ru.vizbash.grapevine.network.SourceType
 import ru.vizbash.grapevine.network.message.DirectMessages.DirectMessage
 import java.io.IOException
 import java.net.InetSocketAddress
@@ -327,8 +326,6 @@ class WifiTransport @Inject constructor(
             private set
         var disconnectCb: () -> Unit = {}
             private set
-
-        override val sourceType = SourceType.WIFI
 
         override fun send(msg: DirectMessage) {
             try {

@@ -17,7 +17,7 @@
     <string name="repeat_password">Повторите пароль</string>
     <string name="auto_login">Автоматический вход</string>
     <string name="create_profile">Создать профиль</string>
-    <string name="invalid_username">Имя должно быть длиной от 4 до 35 и не содержать спецсимволов</string>
+    <string name="invalid_name">Имя должно быть длиной от 4 до 35 и не содержать спецсимволов</string>
     <string name="password_too_short">Пароль слишком короткий</string>
     <string name="password_is_blank">Пароль не может быть пустым</string>
     <string name="passwords_dont_match">Пароли не совпадают</string>
@@ -40,4 +40,14 @@
     <string name="enable">Включить</string>
     <string name="close">Закрыть</string>
     <string name="stop">Остановить</string>
+    <string name="no_people_around">Вы совсем один</string>
+    <string name="chat_name">Название чата</string>
+    <string name="you">Вы</string>
+    <string name="last_message">Последнее сообщение</string>
+    <string name="no_chats">Пока чатов нет</string>
+    <string name="chats_hint">Вы можете создать диалог в разделе \"Люди поблизоcти\"</string>
+    <string name="delete">Удалить</string>
+    <string name="cancel">Отмена</string>
+    <string name="create">Создать</string>
+    <string name="create_chat">Создание чата</string>
 </resources>

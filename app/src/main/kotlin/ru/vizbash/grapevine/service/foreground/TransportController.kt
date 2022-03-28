@@ -33,6 +33,8 @@ class TransportController @Inject constructor(
 
     private val sharedPrefs = context.getSharedPreferences("transport", Context.MODE_PRIVATE)
 
+    private var locationEnabled = true
+
     var wifiUserEnabled = sharedPrefs.getBoolean(WIFI_ENABLED_KEY, false)
         set(value) {
             field = value
@@ -40,17 +42,16 @@ class TransportController @Inject constructor(
             sharedPrefs.edit().putBoolean(WIFI_ENABLED_KEY, value).apply()
         }
     private var wifiHardwareEnabled = false
-    val wifiEnabled get() = wifiUserEnabled && wifiHardwareEnabled
+    val wifiEnabled get() = wifiUserEnabled && wifiHardwareEnabled && locationEnabled
 
     var btUserEnabled = sharedPrefs.getBoolean(BT_ENABLED_KEY, false)
         set(value) {
             field = value
             updateState()
             sharedPrefs.edit().putBoolean(BT_ENABLED_KEY, value).apply()
-
         }
     private var btHardwareEnabled = bluetoothTransport.isAdapterEnabled
-    val btEnabled get() = btUserEnabled && btHardwareEnabled
+    val btEnabled get() = btUserEnabled && btHardwareEnabled && locationEnabled
 
     private var onStateChanged: () -> Unit = {}
 
@@ -77,13 +78,23 @@ class TransportController @Inject constructor(
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                         val locationManager = context.getSystemService(Service.LOCATION_SERVICE)
                                 as LocationManager
-                        wifiHardwareEnabled = locationManager.isLocationEnabled
-                        btHardwareEnabled = locationManager.isLocationEnabled
+                        locationEnabled = locationManager.isLocationEnabled
                     }
                     updateState()
                 }
             }
         }
+    }
+
+    init {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val locationManager = context.getSystemService(Service.LOCATION_SERVICE)
+                    as LocationManager
+
+            locationEnabled = locationManager.isLocationEnabled
+        }
+
+        updateState()
     }
 
     fun start() {

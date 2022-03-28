@@ -55,7 +55,7 @@ class NewProfileModel @Inject constructor(
 
         _validation.value = Validation(
             nameError = if (!nameValid && form.username.isNotEmpty()) {
-                R.string.invalid_username
+                R.string.invalid_name
             } else {
                 null
             },

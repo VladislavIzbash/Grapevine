@@ -1,12 +1,17 @@
 package ru.vizbash.grapevine.service
 
-import android.graphics.Bitmap
+import android.content.Context
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.util.Log
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import ru.vizbash.grapevine.GvException
 import ru.vizbash.grapevine.network.Node
 import ru.vizbash.grapevine.network.NodeProvider
@@ -25,6 +30,7 @@ import kotlin.random.Random
 @Singleton
 class ChatService @Inject constructor(
     @ServiceCoroutineScope private val coroutineScope: CoroutineScope,
+    @ApplicationContext private val context: Context,
     private val chatDao: ChatDao,
     private val nodeDao: NodeDao,
     private val profileProvider: ProfileProvider,
@@ -50,6 +56,8 @@ class ChatService @Inject constructor(
             }
         }
     }
+
+    suspend fun getChatById(chatId: Long) = chatDao.getById(chatId)
 
     private suspend fun getChatInfo(chatId: Long, senderId: Long): GroupChatDispatcher.ChatInfo? {
         val members = chatDao.getGroupChatMembers(chatId)
@@ -79,7 +87,7 @@ class ChatService @Inject constructor(
         return knownNode
     }
 
-    suspend fun createDialog(knownNode: KnownNode) {
+    suspend fun createDialogChat(knownNode: KnownNode) {
         chatDao.insert(Chat(
             id = knownNode.id,
             name = knownNode.username,
@@ -89,7 +97,15 @@ class ChatService @Inject constructor(
         ))
     }
 
-    suspend fun createGroupChat(name: String, photo: Bitmap?) {
+    @Suppress("BlockingMethodInNonBlockingContext")
+    suspend fun createGroupChat(name: String, photoUri: Uri?) {
+        val photo = photoUri?.let {
+            withContext(Dispatchers.IO) {
+                val input = context.contentResolver.openInputStream(it)
+                BitmapFactory.decodeStream(input)
+            }
+        }
+
         val chat = Chat(
             id = Random.nextLong(),
             name = name,
@@ -106,9 +122,7 @@ class ChatService @Inject constructor(
         chatDao.insertChatMembers(listOf(GroupChatMember(chatId, knownNode.id)))
     }
 
-    suspend fun deleteChat(chat: Chat) {
-        chatDao.delete(chat)
-    }
+    suspend fun deleteChat(chat: Chat) = chatDao.delete(chat)
 
     private suspend fun receiveChatInvitation(node: Node, chatId: Long) {
         try {

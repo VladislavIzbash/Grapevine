@@ -8,7 +8,7 @@
             android:title="@string/chats"
             android:icon="@drawable/ic_chats" />
         <item
-            android:id="@+id/fragment_people_around"
+            android:id="@+id/fragment_node_list"
             android:title="@string/people_around"
             android:icon="@drawable/ic_search" />
 

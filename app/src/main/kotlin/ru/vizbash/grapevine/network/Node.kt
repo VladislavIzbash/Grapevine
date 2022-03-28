@@ -14,7 +14,6 @@ data class Node(
     val username: String,
     val pubKey: PublicKey,
     val sessionPubKey: DHPublicKey,
-    var primarySource: SourceType? = null,
 ) {
     constructor(proto: DirectMessages.Node) : this(
         proto.userId,

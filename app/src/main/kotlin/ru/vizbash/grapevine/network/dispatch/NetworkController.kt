@@ -30,7 +30,7 @@ class NetworkController @Inject constructor(
     @DispatcherCoroutineScope private val coroutineScope: CoroutineScope,
 ) : NodeProvider {
     companion object {
-        private const val TAG = "MessageDispatcher"
+        private const val TAG = "NetworkController"
 
         private const val ASK_INTERVAL_MS = 30_000L
         private const val RECEIVE_TIMEOUT_MS = 2_000L
@@ -128,7 +128,8 @@ class NetworkController @Inject constructor(
         try {
             withTimeout(RECEIVE_TIMEOUT_MS) {
                 acceptedMessages
-                    .filter { it.payload.hasResponse() && it.payload.response.requestId == reqId }
+                    .filter {
+                        it.payload.hasResponse() && it.payload.response.requestId == reqId }
                     .map { msg ->
                         val resp = msg.payload.response
                         if (resp.error == RoutedMessages.Error.NO_ERROR) {
