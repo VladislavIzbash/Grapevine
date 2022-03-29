@@ -15,12 +15,12 @@ import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.R
 import ru.vizbash.grapevine.databinding.ActivityLoginBinding
 import ru.vizbash.grapevine.ui.main.MainActivity
-import ru.vizbash.grapevine.ui.login.LoginModel.State.*
+import ru.vizbash.grapevine.ui.login.LoginViewModel.State.*
 
 @AndroidEntryPoint
 class LoginActivity : AppCompatActivity() {
     private lateinit var ui: ActivityLoginBinding
-    private val model: LoginModel by viewModels()
+    private val model: LoginViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,7 +40,7 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
-    private fun applyState(state: LoginModel.State) = when (state) {
+    private fun applyState(state: LoginViewModel.State) = when (state) {
         is LoggingIn -> ui.loginProgress.visibility = View.VISIBLE
         is LoginError -> {
             ui.loginProgress.visibility = View.INVISIBLE

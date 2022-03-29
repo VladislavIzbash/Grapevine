@@ -1,5 +1,6 @@
 package ru.vizbash.grapevine.ui.main.chats
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.MenuItem
@@ -20,11 +21,14 @@ import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.R
 import ru.vizbash.grapevine.databinding.FragmentChatListBinding
 import ru.vizbash.grapevine.storage.chat.Chat
+import ru.vizbash.grapevine.ui.chat.ChatActivity
 import ru.vizbash.grapevine.ui.main.MainViewModel
 import javax.inject.Inject
 
 class ChatListFragment : Fragment() {
-    private lateinit var ui: FragmentChatListBinding
+    private var _ui: FragmentChatListBinding? = null
+    private val ui get() = _ui!!
+
     private val activityModel: MainViewModel by activityViewModels()
 
     private lateinit var chatAdapter: ChatAdapter
@@ -34,12 +38,17 @@ class ChatListFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        ui = FragmentChatListBinding.inflate(inflater, container, false)
+        _ui = FragmentChatListBinding.inflate(inflater, container, false)
 
         chatAdapter = ChatAdapter(
             viewLifecycleOwner.lifecycleScope,
             activityModel.profile.nodeId,
-        ) {}
+        ) {
+            val intent = Intent(requireContext(), ChatActivity::class.java).apply {
+                putExtra(ChatActivity.EXTRA_CHAT_ID, it.id)
+            }
+            startActivity(intent)
+        }
 
         val decoration = DividerItemDecoration(requireContext(), DividerItemDecoration.VERTICAL)
 
@@ -60,6 +69,11 @@ class ChatListFragment : Fragment() {
         }
 
         return ui.root
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _ui = null
     }
 
     private fun updateChatList(chats: List<Chat>) {

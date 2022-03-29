@@ -3,8 +3,6 @@ package ru.vizbash.grapevine.ui.newprofile
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import android.text.Editable
-import android.text.TextWatcher
 import android.util.Log
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
@@ -20,7 +18,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.databinding.ActivityNewProfileBinding
 import ru.vizbash.grapevine.ui.main.MainActivity
-import ru.vizbash.grapevine.ui.newprofile.NewProfileModel.CreationState.*
+import ru.vizbash.grapevine.ui.newprofile.NewProfileViewModel.CreationState.*
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -28,7 +26,7 @@ class NewProfileActivity : AppCompatActivity() {
     @Inject lateinit var imagePicker: ImagePicker.Builder
 
     private lateinit var ui: ActivityNewProfileBinding
-    private val model: NewProfileModel by viewModels()
+    private val model: NewProfileViewModel by viewModels()
 
     companion object {
         private const val TAG = "NewProfileActivity"
@@ -100,7 +98,7 @@ class NewProfileActivity : AppCompatActivity() {
         }
     }
 
-    private fun applyState(state: NewProfileModel.CreationState) = when (state) {
+    private fun applyState(state: NewProfileViewModel.CreationState) = when (state) {
         INVALID -> ui.createProfileButton.isEnabled = false
         VALID -> ui.createProfileButton.isEnabled = true
         CREATING -> ui.creatingProgress.visibility = View.VISIBLE

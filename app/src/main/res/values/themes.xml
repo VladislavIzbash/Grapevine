@@ -21,11 +21,17 @@
         <item name="toolbarStyle">@style/Widget.Grapevine.Toolbar</item>
         <item name="snackbarStyle">@style/Widget.Grapevine.Snackbar</item>
         <item name="snackbarTextViewStyle">@style/Widget.Grapevine.Snackbar.TextView</item>
+
+        <item name="chatBackground">@color/rose</item>
+        <item name="attachmentBackground">@color/deep_lavender_blush</item>
     </style>
 
     <style name="Theme.Grapevine.NoActionBar" parent="Theme.Grapevine.ActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
+    </style>
+
+    <style name="Theme.Grapevine.NoActionBar.TranslucentStatus" parent="Theme.Grapevine.NoActionBar">
         <item name="android:windowTranslucentStatus">true</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
     </style>

@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:minHeight="@dimen/attachment_min_height"
+    android:padding="@dimen/attachment_padding"
+    android:background="?attr/attachmentBackground">
+
+    <View
+        android:layout_width="2dp"
+        android:layout_height="0dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:background="?attr/colorPrimary" />
+
+    <TextView
+        android:id="@+id/username"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:maxLength="35"
+        android:layout_marginStart="5dp"
+        android:text="@string/username"
+        android:textAppearance="@style/TextAppearance.Grapevine.MessageTitle"/>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintTop_toBottomOf="@id/username"
+        app:layout_constraintStart_toStartOf="@id/username">
+
+        <TextView
+            android:id="@+id/text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            app:layout_constraintStart_toStartOf="@id/username"
+            app:layout_constraintEnd_toStartOf="@id/timestamp"
+            app:layout_constraintTop_toBottomOf="@id/username"
+            android:maxLines="6"
+            android:ellipsize="end"
+            android:maxWidth="180dp"
+            android:text="@string/message_text"
+            android:textAppearance="@style/TextAppearance.MaterialComponents.Body2" />
+
+        <TextView
+            android:id="@+id/timestamp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="30dp"
+            android:layout_gravity="bottom"
+            android:layout_marginStart="5dp"
+            android:textAppearance="@style/TextAppearance.Grapevine.Timestamp"
+            android:text="@string/timestamp_placeholder" />
+    </LinearLayout>
+
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -56,6 +56,10 @@
         <activity
             android:name=".ui.main.MainActivity"
             android:launchMode="singleTask"
+            android:theme="@style/Theme.Grapevine.NoActionBar.TranslucentStatus" />
+
+        <activity
+            android:name=".ui.chat.ChatActivity"
             android:theme="@style/Theme.Grapevine.NoActionBar" />
 
     </application>

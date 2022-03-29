@@ -1,5 +1,6 @@
 package ru.vizbash.grapevine.storage.message
 
+import androidx.paging.PagingSource
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 
@@ -20,4 +21,8 @@ interface MessageDao {
     @Transaction
     @Query("SELECT * FROM Message WHERE chatId = :chatId ORDER BY timestamp DESC LIMIT 1")
     fun observeLastMessage(chatId: Long): Flow<MessageWithSender?>
+
+    @Transaction
+    @Query("SELECT * FROM Message WHERE chatId = :chatId ORDER BY timestamp DESC")
+    fun observeMessagesFromChat(chatId: Long): PagingSource<Int, MessageWithOrig>
 }

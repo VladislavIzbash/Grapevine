@@ -9,6 +9,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import jp.wasabeef.recyclerview.animators.SlideInUpAnimator
@@ -20,7 +21,9 @@ import ru.vizbash.grapevine.storage.chat.Chat
 import ru.vizbash.grapevine.ui.main.MainViewModel
 
 class NodeListFragment : Fragment() {
-    private lateinit var ui: FragmentNodeListBinding
+    private var _ui: FragmentNodeListBinding? = null
+    private val ui get() = _ui!!
+
     private val activityModel: MainViewModel by activityViewModels()
 
     override fun onCreateView(
@@ -28,7 +31,7 @@ class NodeListFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        ui = FragmentNodeListBinding.inflate(inflater, container, false)
+        _ui = FragmentNodeListBinding.inflate(inflater, container, false)
 
         val nodeAdapter = NodeAdapter(viewLifecycleOwner.lifecycleScope, {}, ::openChat)
 
@@ -46,6 +49,11 @@ class NodeListFragment : Fragment() {
         }
 
         return ui.root
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _ui = null
     }
 
     private fun updateNodeList(nodes: List<Node>, adapter: NodeAdapter) {

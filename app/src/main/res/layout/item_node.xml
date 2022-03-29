@@ -21,6 +21,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:src="@drawable/avatar_placeholder"
+            android:scaleType="centerCrop"
             tools:ignore="ContentDescription" />
 
     </androidx.cardview.widget.CardView>
@@ -38,13 +39,13 @@
 
     <ImageButton
         android:id="@+id/writeButton"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         android:background="?android:attr/selectableItemBackgroundBorderless"
-        android:src="@drawable/ic_pencil"
+        android:src="@drawable/ic_create"
         tools:ignore="ContentDescription" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

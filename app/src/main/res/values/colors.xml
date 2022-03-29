@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="white">#FFFFFFFF</color>
+    <color name="grey">#757575</color>
     <color name="black">#FF000000</color>
     <color name="blush">#A33263</color>
     <color name="deep_blush">#671A3B</color>
     <color name="lavender_blush">#FFF5F5</color>
+    <color name="deep_lavender_blush">#FFF0F0</color>
+    <color name="rose">#F7E5E5</color>
     <color name="floral_white">#F5F0F0</color>
     <color name="red">#B50000</color>
     <color name="lime_green">#32CD32</color>

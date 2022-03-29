@@ -18,4 +18,13 @@
     <style name="Widget.Grapevine.Snackbar.TextView" parent="Widget.MaterialComponents.Snackbar.TextView">
         <item name="android:textColor">?attr/colorError</item>
     </style>
+
+    <style name="TextAppearance.Grapevine.MessageTitle" parent="TextAppearance.MaterialComponents.Subtitle2">
+        <item name="android:textColor">?attr/colorPrimary</item>
+    </style>
+
+    <style name="TextAppearance.Grapevine.Timestamp" parent="">
+        <item name="android:textSize">10sp</item>
+        <item name="android:textColor">@color/grey</item>
+    </style>
 </resources>

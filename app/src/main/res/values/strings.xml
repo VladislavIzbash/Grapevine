@@ -50,4 +50,15 @@
     <string name="cancel">Отмена</string>
     <string name="create">Создать</string>
     <string name="create_chat">Создание чата</string>
+    <string name="message_prompt">Введите сообщение</string>
+    <string name="message_text">Текст сообщения</string>
+    <string name="timestamp_placeholder">00:00</string>
+    <string name="file_name">Название файла</string>
+    <string name="file_size_placeholder">2.2 МиБ</string>
+    <string-array name="size_units">
+        <item>Б</item>
+        <item>КиБ</item>
+        <item>МиБ</item>
+        <item>ГиБ</item>
+    </string-array>
 </resources>

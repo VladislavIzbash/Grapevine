@@ -1,0 +1,64 @@
+package ru.vizbash.grapevine.ui.chat
+
+import android.os.Bundle
+import android.view.View
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.os.bundleOf
+import androidx.fragment.app.add
+import androidx.fragment.app.commit
+import androidx.lifecycle.lifecycleScope
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import ru.vizbash.grapevine.R
+import ru.vizbash.grapevine.databinding.ActivityChatBinding
+import ru.vizbash.grapevine.service.ChatService
+import javax.inject.Inject
+
+@AndroidEntryPoint
+class ChatActivity : AppCompatActivity() {
+    @Inject lateinit var chatService: ChatService
+
+    companion object {
+        const val EXTRA_CHAT_ID = "chat_id"
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        val ui = ActivityChatBinding.inflate(layoutInflater)
+        setContentView(ui.root)
+
+        setSupportActionBar(ui.toolbar)
+        supportActionBar!!.apply {
+            setDisplayShowTitleEnabled(false)
+            setDisplayHomeAsUpEnabled(true)
+        }
+
+        val chatId = intent.getLongExtra(EXTRA_CHAT_ID, -1)
+
+        val args = bundleOf(ChatFragment.ARG_CHAT_ID to chatId)
+
+        lifecycleScope.launch(Dispatchers.Main) {
+            val chat = requireNotNull(chatService.getChatById(chatId))
+
+            if (chat.photo != null) {
+                ui.photoCard.visibility = View.VISIBLE
+                ui.photo.setImageBitmap(chat.photo)
+            } else {
+                ui.photoCard.visibility = View.GONE
+            }
+
+            ui.chatName.text = chat.name
+
+            supportFragmentManager.commit {
+                setReorderingAllowed(true)
+                add<ChatFragment>(R.id.chat_fragment_container, null, args)
+            }
+        }
+    }
+
+    override fun onSupportNavigateUp(): Boolean {
+        onBackPressed()
+        return true
+    }
+}

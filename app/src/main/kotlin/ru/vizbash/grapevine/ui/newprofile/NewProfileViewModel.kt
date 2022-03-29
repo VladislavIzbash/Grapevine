@@ -14,7 +14,7 @@ import ru.vizbash.grapevine.util.validateName
 import javax.inject.Inject
 
 @HiltViewModel
-class NewProfileModel @Inject constructor(
+class NewProfileViewModel @Inject constructor(
     private val profileService: ProfileService,
 ) : ViewModel() {
     enum class CreationState { INVALID, VALID, CREATING, CREATED }

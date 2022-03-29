@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <item name="item_delete" type="id" />
+    <item name="attachment_message" type="id" />
+    <item name="attachment_file" type="id" />
 </resources>

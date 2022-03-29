@@ -11,7 +11,7 @@ import ru.vizbash.grapevine.service.profile.ProfileService
 import javax.inject.Inject
 
 @HiltViewModel
-class LoginModel @Inject constructor(
+class LoginViewModel @Inject constructor(
     private val profileService: ProfileService,
 ) : ViewModel() {
 
