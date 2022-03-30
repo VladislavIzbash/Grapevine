@@ -123,12 +123,7 @@ class ProfileService @Inject constructor(
             saveProfile(password)
         }
 
-        nodeDao.insert(KnownNode(
-            id = profile.nodeId,
-            username = profile.username,
-            pubKey = profile.pubKey,
-            photo = profile.photo,
-        ))
+        nodeDao.insert(profile.toKnownNode())
 
         saveAutoLogin(autoLogin, password)
     }

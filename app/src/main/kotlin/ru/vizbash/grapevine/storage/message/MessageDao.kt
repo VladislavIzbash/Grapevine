@@ -16,7 +16,7 @@ interface MessageDao {
     suspend fun insert(message: Message)
 
     @Query("UPDATE Message SET state = :newState WHERE id = :id")
-    suspend fun changeState(id: Long, newState: Message.State)
+    suspend fun setState(id: Long, newState: Message.State)
 
     @Transaction
     @Query("SELECT * FROM Message WHERE chatId = :chatId ORDER BY timestamp DESC LIMIT 1")
@@ -24,5 +24,5 @@ interface MessageDao {
 
     @Transaction
     @Query("SELECT * FROM Message WHERE chatId = :chatId ORDER BY timestamp DESC")
-    fun observeMessagesFromChat(chatId: Long): PagingSource<Int, MessageWithOrig>
+    fun pageMessagesFromChat(chatId: Long): PagingSource<Int, MessageWithOrig>
 }

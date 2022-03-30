@@ -1,5 +1,6 @@
 package ru.vizbash.grapevine.ui.main.nodes
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -13,11 +14,13 @@ import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import jp.wasabeef.recyclerview.animators.SlideInUpAnimator
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.databinding.FragmentNodeListBinding
 import ru.vizbash.grapevine.network.Node
 import ru.vizbash.grapevine.storage.chat.Chat
+import ru.vizbash.grapevine.ui.chat.ChatActivity
 import ru.vizbash.grapevine.ui.main.MainViewModel
 
 class NodeListFragment : Fragment() {
@@ -65,6 +68,12 @@ class NodeListFragment : Fragment() {
     }
 
     private fun openChat(node: Node) {
-        activityModel.createDialogChat(node)
+        lifecycleScope.launch(Dispatchers.Main) {
+            activityModel.createDialogChat(node)
+            val intent = Intent(requireContext(), ChatActivity::class.java).apply {
+                putExtra(ChatActivity.EXTRA_CHAT_ID, node.id)
+            }
+            startActivity(intent)
+        }
     }
 }

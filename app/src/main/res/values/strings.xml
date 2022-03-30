@@ -61,4 +61,5 @@
         <item>МиБ</item>
         <item>ГиБ</item>
     </string-array>
+    <string name="unknown">Неизвестно</string>
 </resources>

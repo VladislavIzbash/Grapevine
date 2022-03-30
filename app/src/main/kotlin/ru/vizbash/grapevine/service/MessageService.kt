@@ -1,59 +1,70 @@
 package ru.vizbash.grapevine.service
 
-import android.net.Uri
+import android.content.Context
 import android.util.Log
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.*
+import ru.vizbash.grapevine.GrapevineApp
 import ru.vizbash.grapevine.GvException
+import ru.vizbash.grapevine.network.Node
 import ru.vizbash.grapevine.network.NodeProvider
 import ru.vizbash.grapevine.network.dispatch.FileTransferDispatcher
 import ru.vizbash.grapevine.network.dispatch.TextMessageDispatcher
+import ru.vizbash.grapevine.network.message.RoutedMessages
 import ru.vizbash.grapevine.service.profile.ProfileProvider
 import ru.vizbash.grapevine.storage.chat.ChatDao
 import ru.vizbash.grapevine.storage.message.Message
 import ru.vizbash.grapevine.storage.message.MessageDao
 import ru.vizbash.grapevine.storage.message.MessageFile
 import ru.vizbash.grapevine.storage.node.NodeDao
-import java.io.*
+import java.io.File
+import java.io.IOException
+import java.io.InputStream
 import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.Exception
 import kotlin.random.Random
 
 @Singleton
 class MessageService @Inject constructor(
     @ServiceCoroutineScope private val coroutineScope: CoroutineScope,
+    @ApplicationContext private val context: Context,
     private val profileProvider: ProfileProvider,
     private val textDispatcher: TextMessageDispatcher,
     private val fileDispatcher: FileTransferDispatcher,
+    private val nodeProvider: NodeProvider,
     private val nodeDao: NodeDao,
     private val chatDao: ChatDao,
     private val messageDao: MessageDao,
-    private val nodeProvider: NodeProvider,
+    private val chatService: ChatService,
 ) {
     companion object {
         private const val TAG = "MessageService"
 
         private const val REDELIVER_INTERVAL_MS = 5000L
+        private const val FILE_CHUNK_SIZE = 10_000
     }
 
     private val _ingoingMessages = Channel<Message>()
     val ingoingMessages: ReceiveChannel<Message> = _ingoingMessages
 
-    private val streamedFiles = mutableMapOf<Long, InputStream>()
+    private val streamedFiles = mutableMapOf<Pair<Long, Long>, InputStream>()
+
+    private val _downloadingFiles = mutableMapOf<MessageFile, StateFlow<Float?>>()
+    val downloadingFiles: Map<MessageFile, StateFlow<Float?>> = _downloadingFiles
 
     init {
         fileDispatcher.setFileChunkProvider(::getNextFileChunk)
 
         coroutineScope.launch {
-            textDispatcher.textMessages.collect {
-                messageDao.insert(it)
-                _ingoingMessages.send(it)
+            textDispatcher.textMessages.collect { (msg, sender) -> receiveMessage(msg, sender) }
+        }
+        coroutineScope.launch {
+            textDispatcher.readConfirmations.collect { (msgId, _) ->
+                messageDao.setState(msgId, Message.State.READ)
             }
         }
         coroutineScope.launch {
@@ -65,6 +76,40 @@ class MessageService @Inject constructor(
     }
 
     fun getLastMessage(chatId: Long) = messageDao.observeLastMessage(chatId)
+
+    fun getChatMessages(chatId: Long) = messageDao.pageMessagesFromChat(chatId)
+
+    private suspend fun receiveMessage(msg: RoutedMessages.TextMessage, sender: Node) {
+        val chat = chatService.getChatById(sender.id)
+
+        when {
+            msg.chatId != profileProvider.profile.nodeId && chat == null -> return
+            msg.chatId == profileProvider.profile.nodeId && chat == null -> {
+                chatService.createDialogChat(chatService.rememberNode(sender))
+            }
+        }
+
+        val message = Message(
+            id = msg.msgId,
+            chatId = sender.id,
+            timestamp = Date(msg.timestamp * 1000),
+            text = msg.text,
+            senderId = sender.id,
+            state = Message.State.DELIVERED,
+            origMsgId = if (msg.originalMsgId == -1L) null else msg.originalMsgId,
+            file = if (msg.hasFile) MessageFile(
+                uri = null,
+                name = msg.fileName,
+                size = msg.fileSize,
+                isDownloaded = false,
+            ) else {
+                null
+            },
+        )
+
+        messageDao.insert(message)
+        _ingoingMessages.trySend(message)
+    }
 
     suspend fun sendMessage(
         chatId: Long,
@@ -83,7 +128,7 @@ class MessageService @Inject constructor(
             state = Message.State.SENT,
         )
         messageDao.insert(msg)
-        fileDispatcher
+
         val knownNode = nodeDao.getById(chatId)
         if (knownNode != null) {
             sendToDialogChat(msg, knownNode.id)
@@ -95,9 +140,9 @@ class MessageService @Inject constructor(
     private suspend fun sendToDialogChat(msg: Message, nodeId: Long) {
         try {
             textDispatcher.sendTextMessage(msg, nodeProvider.getOrThrow(nodeId))
-            messageDao.changeState(msg.id, Message.State.DELIVERED)
+            messageDao.setState(msg.id, Message.State.DELIVERED)
         } catch (e: GvException) {
-            messageDao.changeState(msg.id, Message.State.DELIVERY_FAILED)
+            messageDao.setState(msg.id, Message.State.DELIVERY_FAILED)
         }
     }
 
@@ -115,23 +160,28 @@ class MessageService @Inject constructor(
             }
         }
 
-        messageDao.changeState(msg.id, state ?: Message.State.DELIVERY_FAILED)
+        messageDao.setState(msg.id, state ?: Message.State.DELIVERY_FAILED)
     }
 
     private suspend fun redeliverMessages() {
         val messages = messageDao.getAllWithState(Message.State.DELIVERY_FAILED, 5)
 
-        if (messages.size > 0) {
+        if (messages.isNotEmpty()) {
             Log.d(TAG, "Redelivering ${messages.size} messages")
         }
 
         for (msg in messages) {
-            sendMessage(msg.chatId, msg.text, msg.origMsgId, msg.file)
+            val knownNode = nodeDao.getById(msg.chatId)
+            if (knownNode != null) {
+                sendToDialogChat(msg, knownNode.id)
+            } else {
+                sendToGroupChat(msg, msg.chatId)
+            }
         }
     }
 
     suspend fun markAsRead(msgId: Long, senderId: Long) {
-        messageDao.changeState(msgId, Message.State.READ)
+        messageDao.setState(msgId, Message.State.READ)
 
         try {
             textDispatcher.sendReadConfirmation(msgId, nodeProvider.getOrThrow(senderId))
@@ -139,14 +189,19 @@ class MessageService @Inject constructor(
         }
     }
 
+    fun startFileDownload(msg: Message) {
+        _downloadingFiles.computeIfAbsent(msg.file!!) {
+            getDownloadFlow(msg).stateIn(coroutineScope, SharingStarted.Eagerly, 0F)
+        }
+    }
+
     @Suppress("BlockingMethodInNonBlockingContext")
-    suspend fun downloadFile(
-        msg: Message,
-        saveLocation: Uri,
-    ): Flow<Float> = withContext(Dispatchers.IO) {
-        return@withContext flow {
-            try {
-                val output = File(saveLocation.path!!, msg.file!!.name)
+    private fun getDownloadFlow(msg: Message): Flow<Float?> {
+        return flow<Float?> {
+            emit(0F)
+
+            withContext(Dispatchers.IO) {
+                val output = File(GrapevineApp.downloadsDir, msg.file!!.name)
                     .outputStream()
                     .buffered()
 
@@ -155,36 +210,41 @@ class MessageService @Inject constructor(
                 output.use {
                     val sender = nodeProvider.getOrThrow(msg.senderId)
                     fileDispatcher.downloadFile(msg.id, msg.file, sender).collect { chunk ->
-                        while (received < msg.file.size) {
+                        if (received < msg.file.size) {
                             output.write(chunk)
                             received += chunk.size
+
+                            emit(received.toFloat() / msg.file.size.toFloat())
+                        } else {
+                            Log.d(TAG, "Downloaded file ${msg.file.name}")
+                            emit(1F)
+                            return@collect
+
                         }
                     }
                 }
-            } catch (e: Exception) {
-                if (e is GvException) {
-                    throw e
-                }
             }
+        }.catch {
+            if (it is IOException) {
+                it.printStackTrace()
+            }
+            emit(null)
         }
     }
 
     @Suppress("BlockingMethodInNonBlockingContext")
-    private suspend fun getNextFileChunk(msgId: Long, size: Int): ByteArray? {
+    private suspend fun getNextFileChunk(msgId: Long, node: Node): ByteArray? {
         try {
-            val stream = streamedFiles.getOrPut(msgId) {
-                val msg = messageDao.getById(msgId) ?: return null
-                val fileInfo = msg.file ?: return null
-                val uri = fileInfo.uri ?: return null
-
-                File(uri.path!!).inputStream().buffered()
+            val stream = streamedFiles.getOrPut(Pair(msgId, node.id)) {
+                val uri = messageDao.getById(msgId)?.file?.uri ?: return null
+                context.contentResolver.openInputStream(uri)!!.buffered()
             }
 
-            val buffer = ByteArray(size)
+            val buffer = ByteArray(FILE_CHUNK_SIZE)
             val read = stream.read(buffer)
             if (read < 0) {
                 stream.close()
-                streamedFiles.remove(msgId)
+                streamedFiles.remove(Pair(msgId, node.id))
                 return null
             }
 

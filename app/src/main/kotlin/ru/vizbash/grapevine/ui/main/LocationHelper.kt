@@ -69,7 +69,7 @@ class LocationHelper(
         val locationManager = context.getSystemService(AppCompatActivity.LOCATION_SERVICE)
                 as LocationManager
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && !locationManager.isLocationEnabled) {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && !locationManager.isLocationEnabled) {
             AlertDialog.Builder(activity)
                 .setMessage(context.getString(R.string.location_alert))
                 .setNegativeButton(R.string.close, null)
@@ -77,9 +77,9 @@ class LocationHelper(
                     context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
                 }
                 .show()
-            return false
+            false
         } else {
-            return true
+            true
         }
     }
 }

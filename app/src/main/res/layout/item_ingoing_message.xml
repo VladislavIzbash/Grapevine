@@ -19,6 +19,7 @@
             android:id="@+id/photoCard"
             android:layout_width="40dp"
             android:layout_height="40dp"
+            android:layout_marginEnd="5dp"
             android:layout_gravity="bottom|start"
             app:cardCornerRadius="20dp">
 
@@ -36,7 +37,7 @@
             android:id="@+id/timestampLayout"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="5dp"
+            android:minHeight="@dimen/message_min_height"
             android:padding="5dp"
             android:background="@drawable/bg_chat_message"
             android:orientation="horizontal">
@@ -45,7 +46,8 @@
                 android:id="@+id/bodyLayout"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-
+                android:minHeight="25dp"
+                android:gravity="bottom"
                 android:orientation="vertical">
 
                 <TextView
@@ -60,8 +62,9 @@
                     android:id="@+id/messageText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_gravity="bottom"
                     android:text="@string/message_text"
-                    android:textAppearance="@style/TextAppearance.MaterialComponents.Body1" />
+                    android:textAppearance="@style/TextAppearance.MaterialComponents.Body2" />
 
             </LinearLayout>
 

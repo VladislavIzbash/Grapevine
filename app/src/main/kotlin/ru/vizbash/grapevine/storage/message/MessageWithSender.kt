@@ -10,5 +10,5 @@ data class MessageWithSender(
         parentColumn = "senderId",
         entityColumn = "id",
     )
-    val sender: KnownNode,
+    val sender: KnownNode?,
 )

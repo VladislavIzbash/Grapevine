@@ -21,6 +21,7 @@
         <item name="toolbarStyle">@style/Widget.Grapevine.Toolbar</item>
         <item name="snackbarStyle">@style/Widget.Grapevine.Snackbar</item>
         <item name="snackbarTextViewStyle">@style/Widget.Grapevine.Snackbar.TextView</item>
+        <item name="imageButtonStyle">@style/Widget.Grapevine.ImageButton</item>
 
         <item name="chatBackground">@color/rose</item>
         <item name="attachmentBackground">@color/deep_lavender_blush</item>

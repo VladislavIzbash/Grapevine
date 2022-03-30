@@ -46,12 +46,10 @@ class MainViewModel @Inject constructor(
 
     fun getLastMessage(chatId: Long) = messageService.getLastMessage(chatId)
 
-    fun createDialogChat(node: Node) {
-        viewModelScope.launch {
-            val knownNode = chatService.rememberNode(node)
-            if (chatService.getChatById(knownNode.id) == null) {
-                chatService.createDialogChat(knownNode)
-            }
+    suspend fun createDialogChat(node: Node) {
+        val knownNode = chatService.rememberNode(node)
+        if (chatService.getChatById(knownNode.id) == null) {
+            chatService.createDialogChat(knownNode)
         }
     }
 

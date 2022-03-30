@@ -9,11 +9,13 @@ import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.LinearLayout
 import android.widget.LinearLayout.LayoutParams
 import android.widget.TextView
-import androidx.appcompat.content.res.AppCompatResources
+import androidx.annotation.CallSuper
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
-import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collect
 import ru.vizbash.grapevine.R
 import ru.vizbash.grapevine.databinding.AttachmentFileBinding
 import ru.vizbash.grapevine.databinding.AttachmentMessageBinding
@@ -27,13 +29,14 @@ import ru.vizbash.grapevine.util.formatMessageTimestamp
 import ru.vizbash.grapevine.util.toHumanSize
 
 class MessageAdapter(
-    private val coroutineScope: CoroutineScope,
     private val myId: Long,
     private val maxWidth: Int,
     private val groupMode: Boolean,
-    private val getMessageSender: suspend (Message) -> KnownNode?,
+    private val getMessageSender: suspend (Long) -> KnownNode?,
+    private val getDownloadProgress: (MessageFile) -> Flow<Float?>?,
     private val onMessagedRead: (Message) -> Unit,
-) : PagingDataAdapter<MessageWithOrig, RecyclerView.ViewHolder>(MessageDiffCallback()) {
+    private val onFileActionClicked: (Message) -> Unit,
+) : PagingDataAdapter<MessageWithOrig, MessageAdapter.ViewHolder>(MessageDiffCallback()) {
 
     class MessageDiffCallback : DiffUtil.ItemCallback<MessageWithOrig>() {
         override fun areItemsTheSame(
@@ -73,7 +76,7 @@ class MessageAdapter(
     }
 
     @SuppressLint("InflateParams")
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val layoutInflater = LayoutInflater.from(parent.context)
 
         val holder = if (viewType and IS_INGOING != 0) {
@@ -110,22 +113,39 @@ class MessageAdapter(
         return holder
     }
 
-
     private fun shouldExpand(textView: TextView, msg: Message): Boolean {
-        val margin = textView.context.resources.getDimensionPixelSize(R.dimen.message_end_margin)
+        val measureText = {
+            paint.textSize = textView.textSize
+            paint.typeface = textView.typeface
+            paint.measureText(msg.text)
+        }
 
-        paint.textSize = textView.textSize
-        paint.typeface = textView.typeface
-
-        return msg.origMsgId != null
-                || msg.file != null
-                || paint.measureText(msg.text) > maxWidth - margin
+        return msg.origMsgId != null || msg.file != null || measureText() > maxWidth
     }
 
-    inner class OutgoingViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+    abstract class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        var itemScope: CoroutineScope? = null
+        var boundItem: Message? = null
+
+        @CallSuper
+        open fun bind(msg: Message) {
+            itemScope = CoroutineScope(Dispatchers.Default)
+            boundItem = msg
+        }
+
+        @CallSuper
+        open fun unbind() {
+            itemScope?.cancel()
+            boundItem = null
+        }
+    }
+
+    inner class OutgoingViewHolder(view: View) : ViewHolder(view) {
         private val ui = ItemOutgoingMessageBinding.bind(view)
 
-        fun bind(msg: Message) {
+        override fun bind(msg: Message) {
+            super.bind(msg)
+
             ui.messageText.text = msg.text
             ui.timestamp.text = formatMessageTimestamp(msg.timestamp)
 
@@ -135,8 +155,7 @@ class MessageAdapter(
                 Message.State.READ -> R.drawable.ic_msg_double_check
                 Message.State.DELIVERY_FAILED -> R.drawable.ic_msg_error
             }
-            val drawable = AppCompatResources.getDrawable(itemView.context, stateRes)
-            ui.timestamp.setCompoundDrawables(null, null, drawable, null)
+            ui.stateImage.setImageResource(stateRes)
 
             ui.timestampLayout.orientation = if (shouldExpand(ui.messageText, msg)) {
                 LinearLayout.VERTICAL
@@ -146,14 +165,27 @@ class MessageAdapter(
         }
     }
 
-    inner class IngoingViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+    inner class IngoingViewHolder(view: View) : ViewHolder(view) {
         private val ui = ItemIngoingMessageBinding.bind(view)
 
-        fun bind(msg: Message) {
+        override fun bind(msg: Message) {
+            super.bind(msg)
+
             ui.messageText.text = msg.text
 
             ui.username.visibility = if (groupMode) View.VISIBLE else View.GONE
             ui.photoCard.visibility = if (groupMode) View.VISIBLE else View.GONE
+
+            if (groupMode) {
+                ui.username.setText(R.string.unknown)
+                itemScope!!.launch {
+                    val sender = getMessageSender(msg.senderId)
+                    ui.username.post {
+                        ui.username.text = sender?.username
+                            ?: itemView.context.getString(R.string.unknown)
+                    }
+                }
+            }
 
             ui.timestamp.text = formatMessageTimestamp(msg.timestamp)
 
@@ -162,38 +194,86 @@ class MessageAdapter(
             } else {
                 LinearLayout.HORIZONTAL
             }
+
+            if (msg.state != Message.State.READ) {
+                onMessagedRead(msg)
+            }
         }
     }
 
-    private fun bindOriginalMessage(view: View, msg: Message) {
+    private fun bindOriginalMessage(view: View, msg: Message, coroutineScope: CoroutineScope) {
         val ui = AttachmentMessageBinding.bind(view)
 
         ui.text.text = msg.text
         ui.timestamp.text = formatMessageTimestamp(msg.timestamp)
+        ui.username.setText(R.string.unknown)
+
+        coroutineScope.launch {
+            val sender = getMessageSender(msg.senderId)
+
+            ui.username.post {
+                ui.username.text = sender?.username ?: view.context.getString(R.string.unknown)
+            }
+        }
     }
 
-    private fun bindFile(view: View, file: MessageFile) {
+    private fun bindFile(view: View, msg: Message, coroutineScope: CoroutineScope) {
         val ui = AttachmentFileBinding.bind(view)
+
+        val file = msg.file!!
 
         ui.filename.text = file.name
 
         val sizeUnits = view.context.resources.getStringArray(R.array.size_units)
         ui.fileSize.text = file.size.toHumanSize(sizeUnits)
+
+        ui.downloadLayout.setOnClickListener { onFileActionClicked(msg) }
+
+        val progress = getDownloadProgress(file)
+        if (progress != null) {
+            ui.downloadStateImage.setImageResource(R.drawable.ic_close)
+            ui.downloadProgress.visibility = View.VISIBLE
+            ui.downloadProgress.progress = 0
+
+            coroutineScope.launch {
+                progress.collect { prog ->
+                    when (prog) {
+                        null -> {
+                            ui.downloadStateImage.setImageResource(R.drawable.ic_download)
+                            ui.downloadProgress.visibility = View.INVISIBLE
+                        }
+                        1F -> {
+                            ui.downloadStateImage.setImageResource(R.drawable.ic_open_in_new)
+                            ui.downloadProgress.visibility = View.INVISIBLE
+                        }
+                        else -> ui.downloadProgress.progress = (prog * 100).toInt()
+                    }
+                }
+            }
+        } else {
+            ui.downloadStateImage.setImageResource(R.drawable.ic_download)
+            ui.downloadProgress.visibility = View.INVISIBLE
+        }
     }
 
-    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = getItem(position) ?: return
 
-        when (holder) {
-            is IngoingViewHolder -> holder.bind(item.msg)
-            is OutgoingViewHolder -> holder.bind(item.msg)
-        }
+        holder.unbind()
+        holder.bind(item.msg)
 
         item.orig?.let {
-            bindOriginalMessage(holder.itemView.findViewById(R.id.attachment_message), it)
+            val view = holder.itemView.findViewById<View>(R.id.attachment_message)
+            bindOriginalMessage(view, it, holder.itemScope!!)
         }
         item.msg.file?.let {
-            bindFile(holder.itemView.findViewById(R.id.attachment_file), it)
+            val view = holder.itemView.findViewById<View>(R.id.attachment_file)
+            bindFile(view, item.msg, holder.itemScope!!)
         }
+    }
+
+    override fun onViewDetachedFromWindow(holder: ViewHolder) {
+        super.onViewDetachedFromWindow(holder)
+        holder.unbind()
     }
 }

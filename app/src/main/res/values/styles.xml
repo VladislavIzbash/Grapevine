@@ -19,6 +19,10 @@
         <item name="android:textColor">?attr/colorError</item>
     </style>
 
+    <style name="Widget.Grapevine.ImageButton" parent="Widget.AppCompat.ImageButton">
+        <item name="tint">@color/image_button</item>
+    </style>
+
     <style name="TextAppearance.Grapevine.MessageTitle" parent="TextAppearance.MaterialComponents.Subtitle2">
         <item name="android:textColor">?attr/colorPrimary</item>
     </style>

@@ -60,7 +60,7 @@ class ChatAdapter(
             }
 
             lastMessageJob = coroutineScope.launch {
-                item.lastMessage.collect(::updateLastMessage)
+                item.lastMessage.collect { updateLastMessage(it, item) }
             }
         }
 
@@ -68,26 +68,31 @@ class ChatAdapter(
             lastMessageJob.cancel()
         }
 
-        private fun updateLastMessage(lastMessage: MessageWithSender?) {
+        private fun updateLastMessage(lastMessage: MessageWithSender?, item: ChatItem) {
             if (lastMessage == null) {
                 ui.lastMessage.visibility = View.INVISIBLE
             } else {
                 ui.lastMessage.visibility = View.VISIBLE
 
-                val username = if (lastMessage.sender.id != myId) {
-                    lastMessage.sender.username
+                val senderId = lastMessage.sender?.id ?: myId
+                val username = if (senderId != myId) {
+                    lastMessage.sender!!.username
                 } else {
                     itemView.context.getString(R.string.you)
                 }
 
-                val lastText = SpannableString("$username: ${lastMessage.msg.text}")
-                lastText.setSpan(
-                    StyleSpan(Typeface.BOLD),
-                    0,
-                    username.length + 1,
-                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
-                )
-                ui.lastMessage.text = lastText
+                ui.lastMessage.text = if (item.chat.isGroup || senderId == myId) {
+                    SpannableString("$username: ${lastMessage.msg.text}").apply {
+                        setSpan(
+                            StyleSpan(Typeface.BOLD),
+                            0,
+                            username.length + 1,
+                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
+                        )
+                    }
+                } else {
+                    lastMessage.msg.text
+                }
             }
         }
     }

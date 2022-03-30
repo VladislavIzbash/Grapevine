@@ -34,7 +34,7 @@ class NodeAdapter(
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         private val ui = ItemNodeBinding.bind(view)
 
-        private lateinit var photoJob: Job
+        private var photoJob: Job? = null
 
         fun bind(item: NodeItem) {
             ui.root.setOnClickListener { onItemClicked(item.node) }
@@ -55,7 +55,7 @@ class NodeAdapter(
         }
 
         fun unbind() {
-            photoJob.cancel()
+            photoJob?.cancel()
         }
     }
 
@@ -66,6 +66,7 @@ class NodeAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        holder.unbind()
         holder.bind(getItem(position))
     }
 

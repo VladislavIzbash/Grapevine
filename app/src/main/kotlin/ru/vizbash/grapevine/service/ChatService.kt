@@ -117,6 +117,16 @@ class ChatService @Inject constructor(
         chatDao.insertChatMembers(listOf(GroupChatMember(chat.id, chat.ownerId!!)))
     }
 
+    suspend fun resolveNode(nodeId: Long): KnownNode? {
+        nodeDao.getById(nodeId)?.let {
+            return it
+        }
+
+        return nodeProvider.get(nodeId)?.let {
+            rememberNode(it)
+        }
+    }
+
     suspend fun inviteToChat(chatId: Long, knownNode: KnownNode) {
         chatDispatcher.sendChatInvitation(chatId, nodeProvider.getOrThrow(knownNode.id))
         chatDao.insertChatMembers(listOf(GroupChatMember(chatId, knownNode.id)))

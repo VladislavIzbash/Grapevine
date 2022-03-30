@@ -36,10 +36,14 @@ class ChatActivity : AppCompatActivity() {
 
         val chatId = intent.getLongExtra(EXTRA_CHAT_ID, -1)
 
-        val args = bundleOf(ChatFragment.ARG_CHAT_ID to chatId)
+
 
         lifecycleScope.launch(Dispatchers.Main) {
             val chat = requireNotNull(chatService.getChatById(chatId))
+
+            if (!chat.isGroup) {
+                ui.membersButton.visibility = View.INVISIBLE
+            }
 
             if (chat.photo != null) {
                 ui.photoCard.visibility = View.VISIBLE
@@ -49,6 +53,11 @@ class ChatActivity : AppCompatActivity() {
             }
 
             ui.chatName.text = chat.name
+
+            val args = bundleOf(
+                ChatFragment.ARG_CHAT_ID to chatId,
+                ChatFragment.ARG_GROUP_MODE to chat.isGroup,
+            )
 
             supportFragmentManager.commit {
                 setReorderingAllowed(true)

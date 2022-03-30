@@ -1,6 +1,7 @@
 package ru.vizbash.grapevine.service.profile
 
 import android.graphics.Bitmap
+import ru.vizbash.grapevine.storage.node.KnownNode
 import java.security.PrivateKey
 import java.security.PublicKey
 import javax.crypto.interfaces.DHPrivateKey
@@ -14,4 +15,6 @@ data class Profile(
     val sessionPubKey: DHPublicKey,
     val sessionPrivKey: DHPrivateKey,
     val photo: Bitmap?,
-)
+) {
+    fun toKnownNode() = KnownNode(nodeId, username, pubKey, photo)
+}

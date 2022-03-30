@@ -5,6 +5,7 @@ import com.google.protobuf.InvalidProtocolBufferException
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
+import ru.vizbash.grapevine.GvException
 import ru.vizbash.grapevine.GvRejectedException
 import ru.vizbash.grapevine.GvTimeoutException
 import ru.vizbash.grapevine.network.DispatcherCoroutineScope
@@ -168,6 +169,9 @@ class NetworkController @Inject constructor(
                 this.error = error
             }
         }
-        send(payload, dest)
+        try {
+            send(payload, dest)
+        } catch (e: GvException) {
+        }
     }
 }

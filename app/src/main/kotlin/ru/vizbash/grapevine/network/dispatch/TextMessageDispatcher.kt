@@ -23,7 +23,7 @@ class TextMessageDispatcher @Inject constructor(
         private const val TAG = "TextMessageDispatcher"
     }
 
-    val textMessages: Flow<Message> = network.acceptedMessages
+    val textMessages: Flow<Pair<RoutedMessages.TextMessage, Node>> = network.acceptedMessages
         .filter { it.payload.hasText() }
         .map(::handleTextMessage)
         .shareIn(coroutineScope, SharingStarted.Eagerly, replay = 5)
@@ -33,7 +33,7 @@ class TextMessageDispatcher @Inject constructor(
         .map(::handleReadConfirmation)
         .shareIn(coroutineScope, SharingStarted.Eagerly, replay = 5)
 
-    private suspend fun handleTextMessage(req: AcceptedMessage): Message {
+    private suspend fun handleTextMessage(req: AcceptedMessage): Pair<RoutedMessages.TextMessage, Node> {
         Log.d(TAG, "Received text message from ${req.sender}")
 
         if (!validateMessageText(req.payload.text.text)
@@ -44,25 +44,7 @@ class TextMessageDispatcher @Inject constructor(
         }
 
         network.sendEmptyResponse(req.id, req.sender)
-        return req.payload.text.run {
-            Message(
-                id = msgId,
-                chatId = chatId,
-                timestamp = Date(timestamp * 1000),
-                text = text,
-                senderId = req.sender.id,
-                state = Message.State.DELIVERED,
-                origMsgId = if (originalMsgId == -1L) null else originalMsgId,
-                file = if (hasFile) MessageFile(
-                    uri = null,
-                    name = fileName,
-                    size = fileSize,
-                    isDownloaded = false,
-                ) else {
-                    null
-                },
-            )
-        }
+        return Pair(req.payload.text, req.sender)
     }
 
     private suspend fun handleReadConfirmation(req: AcceptedMessage): Pair<Long, Node> {
