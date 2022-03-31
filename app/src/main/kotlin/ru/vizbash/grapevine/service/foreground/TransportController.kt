@@ -150,5 +150,7 @@ class TransportController @Inject constructor(
 
     fun stop() {
         context.unregisterReceiver(hardwareStateReceiver)
+        bluetoothTransport.stop()
+        wifiTransport.stop()
     }
 }
