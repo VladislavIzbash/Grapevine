@@ -10,7 +10,6 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import jp.wasabeef.recyclerview.animators.SlideInUpAnimator
@@ -19,7 +18,6 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.databinding.FragmentNodeListBinding
 import ru.vizbash.grapevine.network.Node
-import ru.vizbash.grapevine.storage.chat.Chat
 import ru.vizbash.grapevine.ui.chat.ChatActivity
 import ru.vizbash.grapevine.ui.main.MainViewModel
 

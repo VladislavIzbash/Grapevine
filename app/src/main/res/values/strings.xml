@@ -62,4 +62,5 @@
         <item>ГиБ</item>
     </string-array>
     <string name="unknown">Неизвестно</string>
+    <string name="chat_members">Участники чата</string>
 </resources>

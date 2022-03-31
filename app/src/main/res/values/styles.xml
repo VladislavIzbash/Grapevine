@@ -20,7 +20,7 @@
     </style>
 
     <style name="Widget.Grapevine.ImageButton" parent="Widget.AppCompat.ImageButton">
-        <item name="tint">@color/image_button</item>
+        <item name="tint">@color/icon_tint</item>
     </style>
 
     <style name="TextAppearance.Grapevine.MessageTitle" parent="TextAppearance.MaterialComponents.Subtitle2">

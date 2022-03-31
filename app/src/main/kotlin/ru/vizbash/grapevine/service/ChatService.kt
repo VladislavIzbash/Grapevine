@@ -9,7 +9,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import ru.vizbash.grapevine.GvException
@@ -60,7 +62,7 @@ class ChatService @Inject constructor(
     suspend fun getChatById(chatId: Long) = chatDao.getById(chatId)
 
     private suspend fun getChatInfo(chatId: Long, senderId: Long): GroupChatDispatcher.ChatInfo? {
-        val members = chatDao.getGroupChatMembers(chatId)
+        val members = chatDao.getGroupChatMemberIds(chatId)
 
         if (senderId !in members) {
             return null
@@ -71,7 +73,7 @@ class ChatService @Inject constructor(
                 name = it.name,
                 ownerId = it.ownerId ?: return@let null,
                 photo = it.photo,
-                members = chatDao.getGroupChatMembers(chatId),
+                members = chatDao.getGroupChatMemberIds(chatId),
             )
         }
     }
@@ -132,6 +134,10 @@ class ChatService @Inject constructor(
         chatDao.insertChatMembers(listOf(GroupChatMember(chatId, knownNode.id)))
     }
 
+    fun getGroupChatMembers(chatId: Long): Flow<List<KnownNode>> {
+        return chatDao.observeChatMembers(chatId).map { it.members }
+    }
+
     suspend fun deleteChat(chat: Chat) = chatDao.delete(chat)
 
     private suspend fun receiveChatInvitation(node: Node, chatId: Long) {
@@ -154,7 +160,7 @@ class ChatService @Inject constructor(
         }
     }
 
-    private suspend fun refreshChatInfo(chatId: Long) {
+    suspend fun refreshChatInfo(chatId: Long) {
         val chat = chatDao.getById(chatId) ?: return
         if (!chat.isGroup) {
             return

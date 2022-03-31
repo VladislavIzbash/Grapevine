@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.github.dhaval2404.imagepicker.ImagePicker
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.R
 import ru.vizbash.grapevine.databinding.FragmentChatListBinding
@@ -81,7 +82,11 @@ class ChatListFragment : Fragment() {
         ui.chatList.visibility = if (chats.isEmpty()) View.INVISIBLE else View.VISIBLE
 
         val items = chats.map {
-            ChatAdapter.ChatItem(it, activityModel.getLastMessage(it.id))
+            ChatAdapter.ChatItem(
+                it,
+                activityModel.getLastMessage(it.id),
+                if (!it.isGroup) activityModel.getOnlineFlow(it.id) else null,
+            )
         }
         chatAdapter.submitList(items)
     }

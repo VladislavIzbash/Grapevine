@@ -8,9 +8,13 @@ import ru.vizbash.grapevine.storage.node.KnownNode
 data class ChatWithMembers(
     @Embedded val chat: Chat,
     @Relation(
-        parentColumn = "chatId",
-        entityColumn = "nodeId",
-        associateBy = Junction(GroupChatMember::class),
+        parentColumn = "id",
+        entityColumn = "id",
+        associateBy = Junction(
+            value = GroupChatMember::class,
+            parentColumn = "chatId",
+            entityColumn = "nodeId",
+        ),
     )
     val members: List<KnownNode>,
 )

@@ -149,7 +149,7 @@ class MessageService @Inject constructor(
     private suspend fun sendToGroupChat(msg: Message, chatId: Long) {
         var state: Message.State? = null
 
-        for (memberId in chatDao.getGroupChatMembers(chatId)) {
+        for (memberId in chatDao.getGroupChatMemberIds(chatId)) {
             try {
                 textDispatcher.sendTextMessage(msg, nodeProvider.getOrThrow(memberId))
                 state = Message.State.DELIVERED

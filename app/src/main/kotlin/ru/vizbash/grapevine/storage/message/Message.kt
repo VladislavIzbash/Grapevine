@@ -19,10 +19,7 @@ import java.util.*
             onDelete = ForeignKey.SET_NULL,
         ),
     ],
-    indices = [
-        Index(value = ["origMsgId"]),
-        Index(value = ["chatId"]),
-    ],
+    indices = [Index("origMsgId"), Index("chatId")],
 )
 data class Message(
     @PrimaryKey val id: Long,

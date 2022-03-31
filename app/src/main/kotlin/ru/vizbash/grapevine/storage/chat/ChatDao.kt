@@ -13,7 +13,7 @@ interface ChatDao {
     suspend fun getById(id: Long): Chat?
 
     @Query("SELECT nodeId FROM GroupChatMember WHERE chatId = :id")
-    suspend fun getGroupChatMembers(id: Long): List<Long>
+    suspend fun getGroupChatMemberIds(id: Long): List<Long>
 
     @Query("UPDATE Chat SET updateTime = :date WHERE id = :id")
     suspend fun setUpdateTIme(id: Long, date: Date)
@@ -26,6 +26,10 @@ interface ChatDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertChatMembers(chatMembers: List<GroupChatMember>)
+
+    @Transaction
+    @Query("SELECT * FROM Chat WHERE id = :chatId")
+    fun observeChatMembers(chatId: Long): Flow<ChatWithMembers>
 
     @Delete
     suspend fun delete(chat: Chat)

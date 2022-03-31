@@ -1,5 +1,6 @@
 package ru.vizbash.grapevine.ui.chat
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
@@ -36,7 +37,12 @@ class ChatActivity : AppCompatActivity() {
 
         val chatId = intent.getLongExtra(EXTRA_CHAT_ID, -1)
 
-
+        ui.membersButton.setOnClickListener {
+            val intent = Intent(this, ChatMembersActivity::class.java).apply {
+                putExtra(ChatMembersActivity.EXTRA_CHAT_ID, chatId)
+            }
+            startActivity(intent)
+        }
 
         lifecycleScope.launch(Dispatchers.Main) {
             val chat = requireNotNull(chatService.getChatById(chatId))

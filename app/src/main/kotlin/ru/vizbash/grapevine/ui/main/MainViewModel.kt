@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.GvException
 import ru.vizbash.grapevine.network.Node
@@ -63,5 +64,9 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             chatService.deleteChat(chat)
         }
+    }
+
+    fun getOnlineFlow(nodeId: Long) = nodeProvider.availableNodes.map {
+        nodeProvider.get(nodeId) != null
     }
 }

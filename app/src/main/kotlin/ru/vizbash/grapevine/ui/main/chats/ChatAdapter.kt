@@ -26,7 +26,11 @@ class ChatAdapter(
     var currentMenuItem: ChatItem? = null
         private set
 
-    data class ChatItem(val chat: Chat, val lastMessage: Flow<MessageWithSender?>)
+    data class ChatItem(
+        val chat: Chat,
+        val lastMessage: Flow<MessageWithSender?>,
+        val onlineFlow: Flow<Boolean>?,
+    )
 
     class ChatDiffCallback : DiffUtil.ItemCallback<ChatItem>() {
         override fun areItemsTheSame(oldItem: ChatItem, newItem: ChatItem): Boolean
@@ -39,7 +43,7 @@ class ChatAdapter(
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         private val ui = ItemChatBinding.bind(view)
 
-        private lateinit var lastMessageJob: Job
+        private lateinit var updateJob: Job
 
         fun bind(item: ChatItem) {
             ui.root.setOnClickListener { onItemClicked(item.chat) }
@@ -59,18 +63,31 @@ class ChatAdapter(
                 ui.photo.setImageResource(R.drawable.chat_placeholder)
             }
 
-            lastMessageJob = coroutineScope.launch {
-                item.lastMessage.collect { updateLastMessage(it, item) }
+            ui.onlineIndicator.visibility = if (item.onlineFlow != null) {
+                View.VISIBLE
+            } else {
+                View.INVISIBLE
+            }
+
+            updateJob = coroutineScope.launch {
+                launch {
+                    item.lastMessage.collect { updateLastMessage(it, item) }
+                }
+                launch {
+                    item.onlineFlow?.collect {
+                        ui.onlineIndicator.isEnabled = it
+                    }
+                }
             }
         }
 
         fun unbind() {
-            lastMessageJob.cancel()
+            updateJob.cancel()
         }
 
         private fun updateLastMessage(lastMessage: MessageWithSender?, item: ChatItem) {
             if (lastMessage == null) {
-                ui.lastMessage.visibility = View.INVISIBLE
+                ui.lastMessage.visibility = View.GONE
             } else {
                 ui.lastMessage.visibility = View.VISIBLE
 
