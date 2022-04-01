@@ -10,7 +10,10 @@ interface MessageDao {
     suspend fun getById(id: Long): Message?
 
     @Query("SELECT * FROM Message WHERE state = :state ORDER BY timestamp DESC LIMIT :limit")
-    suspend fun getAllWithState(state: Message.State, limit: Int): List<Message>
+    suspend fun getAllWithStateLimit(state: Message.State, limit: Int): List<Message>
+
+    @Query("SELECT * FROM Message WHERE chatId = :chatId AND state = :state ORDER BY timestamp DESC")
+    suspend fun getAllFromChatWithState(chatId: Long, state: Message.State): List<Message>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(message: Message)

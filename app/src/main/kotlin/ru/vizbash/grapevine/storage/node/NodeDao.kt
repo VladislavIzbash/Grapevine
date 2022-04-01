@@ -10,6 +10,6 @@ interface NodeDao {
     @Query("SELECT * FROM KnownNode WHERE id = :id")
     suspend fun getById(id: Long): KnownNode?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(node: KnownNode)
 }

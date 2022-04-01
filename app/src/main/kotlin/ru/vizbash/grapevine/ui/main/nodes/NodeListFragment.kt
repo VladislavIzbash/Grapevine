@@ -16,6 +16,7 @@ import jp.wasabeef.recyclerview.animators.SlideInUpAnimator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import ru.vizbash.grapevine.databinding.FragmentNodeListBinding
 import ru.vizbash.grapevine.network.Node
 import ru.vizbash.grapevine.ui.chat.ChatActivity
@@ -66,8 +67,9 @@ class NodeListFragment : Fragment() {
     }
 
     private fun openChat(node: Node) {
-        lifecycleScope.launch(Dispatchers.Main) {
+        lifecycleScope.launch(Dispatchers.Default) {
             activityModel.createDialogChat(node)
+
             val intent = Intent(requireContext(), ChatActivity::class.java).apply {
                 putExtra(ChatActivity.EXTRA_CHAT_ID, node.id)
             }

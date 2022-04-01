@@ -22,25 +22,31 @@ import javax.inject.Inject
 @ServiceScoped
 class NotificationSender @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val chatNotificationSender: ChatNotificationSender,
     private val transportController: TransportController,
     private val bluetoothTransport: BluetoothTransport,
     private val wifiTransport: WifiTransport,
     private val chatService: ChatService,
     private val messageService: MessageService,
-) {
+) : ChatNotificationSender.MessageActionListener {
     companion object {
         private const val FOREGROUND_CHANNEL_ID = "status_channel"
-        private const val FOREGROUND_NOTIFICATION_ID = 10
-
         const val MESSAGE_CHANNEL_ID = "message_channel"
-        private const val INVITATIONS_CHANNEL_ID = "invitations_channel"
+
+        private const val FOREGROUND_NOTIFICATION_ID = 10
 
         private const val STATS_UPDATE_INTERVAL = 10_000L
     }
 
+    private lateinit var coroutineScope: CoroutineScope
+
+    private val mutedChats = mutableSetOf<Long>()
 
     fun start(coroutineScope: CoroutineScope, startForeground: (Int, Notification) -> Unit) {
+        this.coroutineScope = coroutineScope
+
         registerChannels()
+        chatNotificationSender.register(this)
 
         val pendingIntent = PendingIntent.getActivity(
             context,
@@ -85,10 +91,34 @@ class NotificationSender @Inject constructor(
                 notificationManager.notify(FOREGROUND_NOTIFICATION_ID, fgNotification.build())
             }
         }
+        coroutineScope.launch {
+            for (msg in messageService.ingoingMessages) {
+                if (msg.id !in mutedChats) {
+                    chatNotificationSender.notify(msg)
+                }
+            }
+        }
+        coroutineScope.launch {
+            for (chat in chatService.ingoingChatInvitations) {
+                if (chat.id !in mutedChats) {
+                    chatNotificationSender.notifyInvitation(chat)
+                }
+            }
+        }
     }
 
     fun stop() {
         transportController.setOnStateChanged {  }
+        chatNotificationSender.unregister()
+    }
+
+    fun muteChat(chatId: Long) {
+        chatNotificationSender.cancelChatNotifications(chatId)
+        mutedChats.add(chatId)
+    }
+
+    fun unmuteChat(chatId: Long) {
+        mutedChats.remove(chatId)
     }
 
     private fun registerChannels() {
@@ -126,5 +156,20 @@ class NotificationSender @Inject constructor(
             wifiTransport.packetsSent + bluetoothTransport.packetsSent,
             wifiTransport.packetsReceived + bluetoothTransport.packetsReceived,
         )
+    }
+
+    override fun onMarkAsRead(chatId: Long) {
+        coroutineScope.launch {
+            for (msg in messageService.getUnread(chatId)) {
+                messageService.markAsRead(msg)
+            }
+        }
+    }
+
+    override fun onReply(chatId: Long, text: String) {
+        coroutineScope.launch {
+            val msg = messageService.sendMessage(chatId, text)
+            chatNotificationSender.notify(msg)
+        }
     }
 }

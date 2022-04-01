@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import ru.vizbash.grapevine.R
 import ru.vizbash.grapevine.databinding.FragmentChatBinding
+import ru.vizbash.grapevine.service.foreground.ForegroundService
 import ru.vizbash.grapevine.storage.message.Message
 import ru.vizbash.grapevine.storage.message.MessageFile
 import ru.vizbash.grapevine.util.formatMessageTimestamp
@@ -88,6 +89,26 @@ class ChatFragment : Fragment() {
         }
 
         return ui.root
+    }
+
+    override fun onStart() {
+        super.onStart()
+
+        val intent = Intent(requireContext(), ForegroundService::class.java).apply {
+            action = ForegroundService.ACTION_MUTE_CHAT
+            putExtra(ForegroundService.EXTRA_CHAT_ID, model.chatId)
+        }
+        requireContext().startService(intent)
+    }
+
+    override fun onStop() {
+        super.onStop()
+
+        val intent = Intent(requireContext(), ForegroundService::class.java).apply {
+            action = ForegroundService.ACTION_UNMUTE_CHAT
+            putExtra(ForegroundService.EXTRA_CHAT_ID, model.chatId)
+        }
+        requireContext().startService(intent)
     }
 
     override fun onDestroyView() {

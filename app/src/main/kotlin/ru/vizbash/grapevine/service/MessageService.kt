@@ -116,7 +116,7 @@ class MessageService @Inject constructor(
         text: String,
         origId: Long? = null,
         file: MessageFile? = null,
-    ) {
+    ): Message {
         val msg = Message(
             id = Random.nextLong(),
             timestamp = Date(),
@@ -135,6 +135,8 @@ class MessageService @Inject constructor(
         } else {
             sendToGroupChat(msg, chatId)
         }
+
+        return msg
     }
 
     private suspend fun sendToDialogChat(msg: Message, nodeId: Long) {
@@ -163,8 +165,11 @@ class MessageService @Inject constructor(
         messageDao.setState(msg.id, state ?: Message.State.DELIVERY_FAILED)
     }
 
+    suspend fun getUnread(chatId: Long)
+        = messageDao.getAllFromChatWithState(chatId, Message.State.DELIVERED)
+
     private suspend fun redeliverMessages() {
-        val messages = messageDao.getAllWithState(Message.State.DELIVERY_FAILED, 5)
+        val messages = messageDao.getAllWithStateLimit(Message.State.DELIVERY_FAILED, 5)
 
         if (messages.isNotEmpty()) {
             Log.d(TAG, "Redelivering ${messages.size} messages")
@@ -180,11 +185,11 @@ class MessageService @Inject constructor(
         }
     }
 
-    suspend fun markAsRead(msgId: Long, senderId: Long) {
-        messageDao.setState(msgId, Message.State.READ)
+    suspend fun markAsRead(msg: Message) {
+        messageDao.setState(msg.id, Message.State.READ)
 
         try {
-            textDispatcher.sendReadConfirmation(msgId, nodeProvider.getOrThrow(senderId))
+            textDispatcher.sendReadConfirmation(msg.id, nodeProvider.getOrThrow(msg.senderId))
         } catch (e: GvException) {
         }
     }

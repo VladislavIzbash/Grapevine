@@ -22,19 +22,21 @@ class ForegroundService : Service() {
 
         const val ACTION_ENABLE_TRANSPORT = "ru.vizbash.grapevine.action.ENABLE_TRANSPORT"
         const val ACTION_GET_TRANSPORT_STATE = "ru.vizbash.grapevine.action.ACTION_GET_TRANSPORT_STATE"
-
         const val ACTION_TRANSPORT_STATE_CHANGED
             = "ru.vizbash.grapevine.action.ACTION_TRANSPORT_STATE_CHANGED"
         const val ACTION_TRANSPORT_HARDWARE_STATE_CHANGED
             = "ru.vizbash.grapevine.action.ACTION_TRANSPORT_HARDWARE_STATE_CHANGED"
-        const val ACTION_STOP_SERVICE
-            = "ru.vizbash.grapevine.action.ACTION_STOP_SERVICE"
-
         const val EXTRA_STATE = "state"
 
         const val EXTRA_TRANSPORT_TYPE = "transport_type"
         const val TRANSPORT_WIFI = 0
         const val TRANSPORT_BLUETOOTH = 1
+
+        const val ACTION_MUTE_CHAT = "ru.vizbash.grapevine.action.ACTION_MUTE_CHAT"
+        const val ACTION_UNMUTE_CHAT = "ru.vizbash.grapevine.action.ACTION_UNMUTE_CHAT"
+        const val EXTRA_CHAT_ID = "chat_id"
+
+        const val ACTION_STOP_SERVICE = "ru.vizbash.grapevine.action.ACTION_STOP_SERVICE"
     }
 
     private val coroutineScope = CoroutineScope(Dispatchers.Default)
@@ -66,6 +68,12 @@ class ForegroundService : Service() {
                 }
             }
             ACTION_GET_TRANSPORT_STATE -> transportController.broadcastState()
+            ACTION_MUTE_CHAT -> {
+                notificationSender.muteChat(intent.getLongExtra(EXTRA_CHAT_ID, -1))
+            }
+            ACTION_UNMUTE_CHAT -> {
+                notificationSender.unmuteChat(intent.getLongExtra(EXTRA_CHAT_ID, -1))
+            }
             ACTION_STOP_SERVICE -> stopSelf()
         }
 

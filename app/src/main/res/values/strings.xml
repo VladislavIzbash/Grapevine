@@ -65,4 +65,5 @@
     <string name="chat_members">Участники чата</string>
     <string name="mark_as_read">Прочитано</string>
     <string name="reply">Ответить</string>
+    <string name="chat_invitation_text">Вы были добавлены в этот чат</string>
 </resources>

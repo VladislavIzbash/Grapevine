@@ -6,24 +6,24 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.*
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.Person
 import androidx.core.app.RemoteInput
 import androidx.core.graphics.drawable.IconCompat
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.scopes.ServiceScoped
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import ru.vizbash.grapevine.R
 import ru.vizbash.grapevine.service.ChatService
 import ru.vizbash.grapevine.service.profile.ProfileProvider
+import ru.vizbash.grapevine.storage.chat.Chat
 import ru.vizbash.grapevine.storage.message.Message
 import ru.vizbash.grapevine.ui.chat.ChatActivity
+import javax.inject.Inject
 
 @ServiceScoped
-class ChatMessageNotifier(
+class ChatNotificationSender @Inject constructor(
     @ApplicationContext private val context: Context,
     private val chatService: ChatService,
     private val profileProvider: ProfileProvider,
@@ -38,23 +38,42 @@ class ChatMessageNotifier(
         private const val KEY_REPLY_TEXT = "reply_text"
     }
 
-    private val notificationManager = NotificationManagerCompat.from(context)
+    interface MessageActionListener {
+        fun onMarkAsRead(chatId: Long)
 
-    private val coroutineScope = CoroutineScope(Dispatchers.Default)
+        fun onReply(chatId: Long, text: String)
+    }
+
+    private val notificationManager = NotificationManagerCompat.from(context)
 
     private val messageStyles = mutableMapOf<Long, NotificationCompat.MessagingStyle>()
 
+    private val roundBitmapCache = mutableMapOf<Long, Bitmap>()
+
+    private lateinit var messageActionListener: MessageActionListener
+
     private val actionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
+            val chatId = intent.getLongExtra(EXTRA_CHAT_ID, -1)
+
             when (intent.action) {
                 ACTION_MARK_READ -> {
-
+                    messageActionListener.onMarkAsRead(chatId)
+                    notificationManager.cancel(chatId.toInt())
                 }
+                ACTION_REPLY -> {
+                    RemoteInput.getResultsFromIntent(intent)?.getCharSequence(KEY_REPLY_TEXT)?.let {
+                        messageActionListener.onReply(chatId, it.toString())
+                    }
+                }
+                ACTION_DISMISS -> messageStyles.remove(chatId)
             }
         }
     }
 
-    fun register() {
+    fun register(listener: MessageActionListener) {
+        messageActionListener = listener
+
         val filter = IntentFilter().apply {
             addAction(ACTION_DISMISS)
             addAction(ACTION_MARK_READ)
@@ -65,6 +84,25 @@ class ChatMessageNotifier(
 
     fun unregister() {
         context.unregisterReceiver(actionReceiver)
+    }
+
+    private fun makeRoundBitmap(nodeId: Long, src: Bitmap) = roundBitmapCache.getOrPut(nodeId) {
+        val output = Bitmap.createBitmap(src.width, src.height, src.config)
+        val canvas = Canvas(output)
+
+        val paint = Paint().apply {
+            isAntiAlias = true
+            color = 0xff424242.toInt()
+        }
+        val rect = Rect(0, 0, src.width, src.height)
+
+        canvas.drawARGB(0, 0, 0, 0)
+        canvas.drawCircle(src.width / 2F, src.height / 2F, src.width / 2F, paint)
+
+        paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_IN)
+        canvas.drawBitmap(src, rect, rect, paint)
+
+        output
     }
 
     private suspend fun addToStyle(msg: Message): NotificationCompat.MessagingStyle {
@@ -90,14 +128,16 @@ class ChatMessageNotifier(
                 setKey(msg.senderId.toString())
                 setName(sender.username)
                 sender.photo?.let {
-                    setIcon(IconCompat.createWithBitmap(sender.photo))
+                    val bitmap = makeRoundBitmap(sender.id, it)
+                    setIcon(IconCompat.createWithBitmap(bitmap))
                 }
             }
         } else {
             Person.Builder().apply {
                 setName(profileProvider.profile.username)
                 profileProvider.profile.photo?.let {
-                    setIcon(IconCompat.createWithBitmap(it))
+                    val bitmap = makeRoundBitmap(profileProvider.profile.nodeId, it)
+                    setIcon(IconCompat.createWithBitmap(bitmap))
                 }
             }
         }
@@ -105,21 +145,27 @@ class ChatMessageNotifier(
         style.addMessage(msg.text, msg.timestamp.time, person.build())
         return style
     }
+    
+    private fun createChatContentIntent(chatId: Long) = PendingIntent.getActivity(
+        context,
+        chatId.toInt(),
+        Intent(context, ChatActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            putExtra(ChatActivity.EXTRA_CHAT_ID, chatId)
+        },
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+    )
+
+    fun cancelChatNotifications(chatId: Long) {
+        messageStyles.remove(chatId)
+        notificationManager.cancel(chatId.toInt())
+        notificationManager.cancel(chatId.toInt() + 10)
+    }
 
     @SuppressLint("UnspecifiedImmutableFlag")
     suspend fun notify(msg: Message) {
         val style = addToStyle(msg)
-
-        val contentIntent = PendingIntent.getActivity(
-            context,
-            msg.chatId.toInt(),
-            Intent(context, ChatActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                putExtra(ChatActivity.EXTRA_CHAT_ID, msg.chatId)
-            },
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
-
+        
         val dismissIntent = PendingIntent.getBroadcast(
             context,
             msg.chatId.toInt(),
@@ -156,7 +202,7 @@ class ChatMessageNotifier(
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setAutoCancel(true)
-            .setContentIntent(contentIntent)
+            .setContentIntent(createChatContentIntent(msg.chatId))
             .setDeleteIntent(dismissIntent)
             .addAction(NotificationCompat.Action(
                 R.drawable.ic_check,
@@ -171,5 +217,18 @@ class ChatMessageNotifier(
             .build()
 
         notificationManager.notify(msg.chatId.toInt(), notif)
+    }
+    
+    fun notifyInvitation(chat: Chat) {
+        val notif = NotificationCompat.Builder(context, NotificationSender.MESSAGE_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_mail)
+            .setContentTitle(chat.name)
+            .setContentText(context.getString(R.string.chat_invitation_text))
+            .setCategory(NotificationCompat.CATEGORY_EVENT)
+            .setAutoCancel(true)
+            .setContentIntent(createChatContentIntent(chat.id))
+            .build()
+
+        notificationManager.notify(chat.id.toInt() + 10, notif)
     }
 }

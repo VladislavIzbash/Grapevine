@@ -28,7 +28,7 @@ class ChatViewModel @Inject constructor(
     private val messageService: MessageService,
     private val chatService: ChatService,
 ) : ViewModel() {
-    private val chatId = savedState.get<Long>(ChatFragment.ARG_CHAT_ID)!!
+    val chatId = savedState.get<Long>(ChatFragment.ARG_CHAT_ID)!!
     private val groupMode = savedState.get<Boolean>(ChatFragment.ARG_GROUP_MODE)!!
 
     val pagedMessages = Pager(PagingConfig(pageSize = 25, enablePlaceholders = false)) {
@@ -61,7 +61,7 @@ class ChatViewModel @Inject constructor(
 
     fun markAsRead(message: Message) {
         viewModelScope.launch {
-            messageService.markAsRead(message.id, message.senderId)
+            messageService.markAsRead(message)
         }
     }
 
