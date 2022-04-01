@@ -31,12 +31,13 @@ class NotificationSender @Inject constructor(
     companion object {
         private const val FOREGROUND_CHANNEL_ID = "status_channel"
         private const val FOREGROUND_NOTIFICATION_ID = 10
-        
-        private const val MESSAGE_CHANNEL_ID = "message_channel"
+
+        const val MESSAGE_CHANNEL_ID = "message_channel"
         private const val INVITATIONS_CHANNEL_ID = "invitations_channel"
 
         private const val STATS_UPDATE_INTERVAL = 10_000L
     }
+
 
     fun start(coroutineScope: CoroutineScope, startForeground: (Int, Notification) -> Unit) {
         registerChannels()

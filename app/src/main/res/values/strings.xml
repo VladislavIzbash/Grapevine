@@ -63,4 +63,6 @@
     </string-array>
     <string name="unknown">Неизвестно</string>
     <string name="chat_members">Участники чата</string>
+    <string name="mark_as_read">Прочитано</string>
+    <string name="reply">Ответить</string>
 </resources>

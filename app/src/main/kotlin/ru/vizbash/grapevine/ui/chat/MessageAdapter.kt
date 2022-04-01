@@ -114,13 +114,13 @@ class MessageAdapter(
     }
 
     private fun shouldExpand(textView: TextView, msg: Message): Boolean {
-        val measureText = {
+        val textWidth by lazy {
             paint.textSize = textView.textSize
             paint.typeface = textView.typeface
             paint.measureText(msg.text)
         }
 
-        return msg.origMsgId != null || msg.file != null || measureText() > maxWidth
+        return msg.origMsgId != null || msg.file != null || textWidth > maxWidth
     }
 
     abstract class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
