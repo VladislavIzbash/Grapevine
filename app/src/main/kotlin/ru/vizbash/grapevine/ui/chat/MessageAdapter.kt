@@ -180,9 +180,15 @@ class MessageAdapter(
                 ui.username.setText(R.string.unknown)
                 itemScope!!.launch {
                     val sender = getMessageSender(msg.senderId)
-                    ui.username.post {
+                    ui.root.post {
                         ui.username.text = sender?.username
                             ?: itemView.context.getString(R.string.unknown)
+                        val photo = sender?.photo
+                        if (photo != null) {
+                            ui.photo.setImageBitmap(photo)
+                        } else {
+                            ui.photo.setImageResource(R.drawable.avatar_placeholder)
+                        }
                     }
                 }
             }

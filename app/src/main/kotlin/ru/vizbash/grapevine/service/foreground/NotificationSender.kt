@@ -93,7 +93,7 @@ class NotificationSender @Inject constructor(
         }
         coroutineScope.launch {
             for (msg in messageService.ingoingMessages) {
-                if (msg.id !in mutedChats) {
+                if (msg.chatId !in mutedChats) {
                     chatNotificationSender.notify(msg)
                 }
             }
@@ -102,6 +102,13 @@ class NotificationSender @Inject constructor(
             for (chat in chatService.ingoingChatInvitations) {
                 if (chat.id !in mutedChats) {
                     chatNotificationSender.notifyInvitation(chat)
+                }
+            }
+        }
+        coroutineScope.launch {
+            for (chat in chatService.ingoingChatKicks) {
+                if (chat.id !in mutedChats) {
+                    chatNotificationSender.notifyKick(chat)
                 }
             }
         }

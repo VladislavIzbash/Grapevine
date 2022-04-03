@@ -18,6 +18,7 @@
         <entry key="app/src/main/res/drawable/ic_file.xml" value="0.211" />
         <entry key="app/src/main/res/drawable/ic_grape_selector.xml" value="0.223" />
         <entry key="app/src/main/res/drawable/ic_info.xml" value="0.211" />
+        <entry key="app/src/main/res/drawable/ic_leave.xml" value="0.216" />
         <entry key="app/src/main/res/drawable/ic_logout.xml" value="0.211" />
         <entry key="app/src/main/res/drawable/ic_msg_check.xml" value="0.2" />
         <entry key="app/src/main/res/drawable/ic_msg_double_check.xml" value="0.211" />
@@ -36,12 +37,14 @@
         <entry key="app/src/main/res/layout/activity_new_profile.xml" value="0.35" />
         <entry key="app/src/main/res/layout/attachment_file.xml" value="0.67" />
         <entry key="app/src/main/res/layout/attachment_message.xml" value="0.5" />
+        <entry key="app/src/main/res/layout/dialog_invite.xml" value="0.35" />
         <entry key="app/src/main/res/layout/dialog_new_chat.xml" value="0.33" />
         <entry key="app/src/main/res/layout/drawer_header.xml" value="0.33" />
         <entry key="app/src/main/res/layout/fragment_chat.xml" value="0.33" />
         <entry key="app/src/main/res/layout/fragment_chat_list.xml" value="0.33" />
         <entry key="app/src/main/res/layout/fragment_node_list.xml" value="0.33" />
         <entry key="app/src/main/res/layout/item_chat.xml" value="0.33" />
+        <entry key="app/src/main/res/layout/item_chat_member.xml" value="0.35" />
         <entry key="app/src/main/res/layout/item_ingoing_message.xml" value="0.5" />
         <entry key="app/src/main/res/layout/item_node.xml" value="0.33" />
         <entry key="app/src/main/res/layout/item_outgoing_message.xml" value="0.5" />

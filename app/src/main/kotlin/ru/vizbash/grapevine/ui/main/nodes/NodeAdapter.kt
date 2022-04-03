@@ -18,6 +18,7 @@ import ru.vizbash.grapevine.network.Node
 class NodeAdapter(
     private val coroutineScope: CoroutineScope,
     private val onItemClicked: (Node) -> Unit,
+    private val enableWrite: Boolean,
     private val onWriteClicked: (Node) -> Unit,
 ) : ListAdapter<NodeAdapter.NodeItem, NodeAdapter.ViewHolder>(NodeDiffCallback()) {
 
@@ -38,6 +39,7 @@ class NodeAdapter(
 
         fun bind(item: NodeItem) {
             ui.root.setOnClickListener { onItemClicked(item.node) }
+            ui.writeButton.visibility = if (enableWrite) View.VISIBLE else View.INVISIBLE
             ui.writeButton.setOnClickListener { onWriteClicked(item.node) }
 
             ui.username.text = item.node.username

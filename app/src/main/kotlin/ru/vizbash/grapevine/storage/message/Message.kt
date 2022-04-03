@@ -30,6 +30,7 @@ data class Message(
     val origMsgId: Long?,
     @Embedded(prefix = "file") val file: MessageFile?,
     val state: State,
+    val fullyDelivered: Boolean,
 ) {
     enum class State { SENT, DELIVERED, READ, DELIVERY_FAILED }
 }

@@ -36,6 +36,9 @@ class ChatNotificationSender @Inject constructor(
         private const val EXTRA_CHAT_ID = "chat_id"
 
         private const val KEY_REPLY_TEXT = "reply_text"
+
+        private const val INVITATION_ID_OFFSET = 10
+        private const val KICK_ID_OFFSET = 20
     }
 
     interface MessageActionListener {
@@ -106,7 +109,7 @@ class ChatNotificationSender @Inject constructor(
     }
 
     private suspend fun addToStyle(msg: Message): NotificationCompat.MessagingStyle {
-        val chat = chatService.getChatById(msg.chatId)!!
+        val chat = chatService.getChat(msg.chatId)!!
 
         val style = messageStyles.getOrPut(msg.chatId) {
             val chatPerson = Person.Builder()
@@ -159,7 +162,8 @@ class ChatNotificationSender @Inject constructor(
     fun cancelChatNotifications(chatId: Long) {
         messageStyles.remove(chatId)
         notificationManager.cancel(chatId.toInt())
-        notificationManager.cancel(chatId.toInt() + 10)
+        notificationManager.cancel(chatId.toInt() + INVITATION_ID_OFFSET)
+        notificationManager.cancel(chatId.toInt() + KICK_ID_OFFSET)
     }
 
     @SuppressLint("UnspecifiedImmutableFlag")
@@ -221,7 +225,7 @@ class ChatNotificationSender @Inject constructor(
     
     fun notifyInvitation(chat: Chat) {
         val notif = NotificationCompat.Builder(context, NotificationSender.MESSAGE_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_mail)
+            .setSmallIcon(R.drawable.ic_person_add)
             .setContentTitle(chat.name)
             .setContentText(context.getString(R.string.chat_invitation_text))
             .setCategory(NotificationCompat.CATEGORY_EVENT)
@@ -229,6 +233,19 @@ class ChatNotificationSender @Inject constructor(
             .setContentIntent(createChatContentIntent(chat.id))
             .build()
 
-        notificationManager.notify(chat.id.toInt() + 10, notif)
+        notificationManager.notify(chat.id.toInt() + INVITATION_ID_OFFSET, notif)
+    }
+
+    fun notifyKick(chat: Chat) {
+        val notif = NotificationCompat.Builder(context, NotificationSender.MESSAGE_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_leave)
+            .setContentTitle(chat.name)
+            .setContentText(context.getString(R.string.kicked_from_chat))
+            .setCategory(NotificationCompat.CATEGORY_EVENT)
+            .setAutoCancel(true)
+            .setContentIntent(createChatContentIntent(chat.id))
+            .build()
+
+        notificationManager.notify(chat.id.toInt() + KICK_ID_OFFSET, notif)
     }
 }

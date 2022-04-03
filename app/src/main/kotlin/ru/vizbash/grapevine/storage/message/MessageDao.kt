@@ -9,17 +9,20 @@ interface MessageDao {
     @Query("SELECT * FROM Message WHERE id = :id")
     suspend fun getById(id: Long): Message?
 
-    @Query("SELECT * FROM Message WHERE state = :state ORDER BY timestamp DESC LIMIT :limit")
-    suspend fun getAllWithStateLimit(state: Message.State, limit: Int): List<Message>
-
     @Query("SELECT * FROM Message WHERE chatId = :chatId AND state = :state ORDER BY timestamp DESC")
-    suspend fun getAllFromChatWithState(chatId: Long, state: Message.State): List<Message>
+    suspend fun getFromChatWithState(chatId: Long, state: Message.State): List<Message>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(message: Message)
 
     @Query("UPDATE Message SET state = :newState WHERE id = :id")
     suspend fun setState(id: Long, newState: Message.State)
+
+    @Query("SELECT * FROM Message WHERE fullyDelivered = 0 ORDER BY timestamp DESC LIMIT :limit")
+    suspend fun getUndeliveredLimit(limit: Int): List<Message>
+
+    @Query("UPDATE Message SET fullyDelivered = 1 WHERE id = :id")
+    suspend fun setFullyDelivered(id: Long)
 
     @Transaction
     @Query("SELECT * FROM Message WHERE chatId = :chatId ORDER BY timestamp DESC LIMIT 1")

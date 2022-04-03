@@ -49,7 +49,7 @@ class MainViewModel @Inject constructor(
 
     suspend fun createDialogChat(node: Node) {
         val knownNode = chatService.rememberNode(node)
-        if (chatService.getChatById(knownNode.id) == null) {
+        if (chatService.getChat(knownNode.id) == null) {
             chatService.createDialogChat(knownNode)
         }
     }

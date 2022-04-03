@@ -14,11 +14,13 @@ import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.R
 import ru.vizbash.grapevine.databinding.ActivityChatBinding
 import ru.vizbash.grapevine.service.ChatService
+import ru.vizbash.grapevine.service.profile.ProfileProvider
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class ChatActivity : AppCompatActivity() {
     @Inject lateinit var chatService: ChatService
+    @Inject lateinit var profileProvider: ProfileProvider
 
     companion object {
         const val EXTRA_CHAT_ID = "chat_id"
@@ -37,15 +39,18 @@ class ChatActivity : AppCompatActivity() {
 
         val chatId = intent.getLongExtra(EXTRA_CHAT_ID, -1)
 
-        ui.membersButton.setOnClickListener {
-            val intent = Intent(this, ChatMembersActivity::class.java).apply {
-                putExtra(ChatMembersActivity.EXTRA_CHAT_ID, chatId)
-            }
-            startActivity(intent)
-        }
-
         lifecycleScope.launch(Dispatchers.Main) {
-            val chat = requireNotNull(chatService.getChatById(chatId))
+            val chat = requireNotNull(chatService.getChat(chatId))
+
+            val isAdmin = chat.ownerId == profileProvider.profile.nodeId
+
+            ui.membersButton.setOnClickListener {
+                val intent = Intent(this@ChatActivity, ChatMembersActivity::class.java).apply {
+                    putExtra(ChatMembersActivity.EXTRA_CHAT_ID, chatId)
+                    putExtra(ChatMembersActivity.EXTRA_IS_ADMIN, isAdmin)
+                }
+                startActivity(intent)
+            }
 
             if (!chat.isGroup) {
                 ui.membersButton.visibility = View.INVISIBLE

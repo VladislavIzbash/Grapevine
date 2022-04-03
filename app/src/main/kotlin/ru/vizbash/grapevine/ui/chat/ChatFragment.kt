@@ -67,11 +67,6 @@ class ChatFragment : Fragment() {
 
         setupAttachments()
 
-        ui.sendButton.isEnabled = false
-        ui.messageTextField.addTextChangedListener {
-            ui.sendButton.isEnabled = it?.isNotBlank() ?: false
-        }
-
         ui.attachFileButton.setOnClickListener {
             pickFile.launch(arrayOf("*/*"))
         }
@@ -88,6 +83,8 @@ class ChatFragment : Fragment() {
             }
         }
 
+        ui.sendButton.isEnabled = false
+
         return ui.root
     }
 
@@ -99,6 +96,18 @@ class ChatFragment : Fragment() {
             putExtra(ForegroundService.EXTRA_CHAT_ID, model.chatId)
         }
         requireContext().startService(intent)
+
+        lifecycleScope.launch(Dispatchers.Main) {
+            if (!model.isMember()) {
+                ui.messageTextField.isEnabled = false
+                ui.messageTextField.setText(R.string.not_in_chat)
+                ui.sendButton.isEnabled = false
+            } else {
+                ui.messageTextField.addTextChangedListener {
+                    ui.sendButton.isEnabled = it?.isNotBlank() ?: false
+                }
+            }
+        }
     }
 
     override fun onStop() {

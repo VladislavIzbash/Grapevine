@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
+import android.widget.GridView
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -49,6 +50,9 @@ class ChatService @Inject constructor(
     private val _ingoingChatInvitations = Channel<Chat>()
     val ingoingChatInvitations: ReceiveChannel<Chat> = _ingoingChatInvitations
 
+    private val _ingoingChatKicks = Channel<Chat>()
+    val ingoingChatKicks: ReceiveChannel<Chat> = _ingoingChatKicks
+
     init {
         chatDispatcher.setChatInfoProvider(::getChatInfo)
 
@@ -57,9 +61,14 @@ class ChatService @Inject constructor(
                 receiveChatInvitation(node, chatId)
             }
         }
+        coroutineScope.launch {
+            chatDispatcher.chatLeaveMessages.collect { (node, chatId) ->
+                receiveChatLeave(node, chatId)
+            }
+        }
     }
 
-    suspend fun getChatById(chatId: Long) = chatDao.getById(chatId)
+    suspend fun getChat(chatId: Long) = chatDao.getById(chatId)
 
     private suspend fun getChatInfo(chatId: Long, senderId: Long): GroupChatDispatcher.ChatInfo? {
         val members = chatDao.getGroupChatMemberIds(chatId)
@@ -130,13 +139,18 @@ class ChatService @Inject constructor(
     }
 
     suspend fun inviteToChat(chatId: Long, knownNode: KnownNode) {
-        chatDispatcher.sendChatInvitation(chatId, nodeProvider.getOrThrow(knownNode.id))
         chatDao.insertChatMembers(listOf(GroupChatMember(chatId, knownNode.id)))
+        chatDispatcher.sendChatInvitation(chatId, nodeProvider.getOrThrow(knownNode.id))
     }
 
     fun getGroupChatMembers(chatId: Long): Flow<List<KnownNode>> {
-        return chatDao.observeChatMembers(chatId).map { it.members }
+        return chatDao.observeChatMembers(chatId).map {
+            listOf(profileProvider.profile.toKnownNode()) + it.members
+        }
     }
+
+    suspend fun isMemberOfChat(chatId: Long, nodeId: Long)
+        = chatDao.getGroupChatMemberIds(chatId).contains(nodeId)
 
     suspend fun deleteChat(chat: Chat) = chatDao.delete(chat)
 
@@ -157,22 +171,57 @@ class ChatService @Inject constructor(
             _ingoingChatInvitations.send(chat)
         } catch (e: GvException) {
             Log.e(TAG, "Failed to add chat $chatId")
+            e.printStackTrace()
         }
     }
 
-    suspend fun refreshChatInfo(chatId: Long) {
-        val chat = chatDao.getById(chatId) ?: return
-        if (!chat.isGroup) {
+    private suspend fun receiveChatLeave(node: Node, chatId: Long) {
+        val chat = chatDao.getById(chatId)
+        if (chat == null || !chat.isGroup) {
             return
         }
 
+        val isOwner = chat.ownerId == profileProvider.profile.nodeId
+        if (!isOwner && node.id == chat.ownerId) {
+            chatDao.deleteChatMember(GroupChatMember(chat.id, profileProvider.profile.nodeId))
+            _ingoingChatKicks.trySend(chat)
+        } else if (isOwner) {
+            chatDao.deleteChatMember(GroupChatMember(chat.id, node.id))
+        }
+    }
+
+    suspend fun leaveChat(chat: Chat) {
+        check(chat.isGroup)
+
+        chatDao.deleteChatMember(GroupChatMember(chat.id, profileProvider.profile.nodeId))
+
+        try {
+            chatDispatcher.sendLeaveMessage(chat.id, nodeProvider.getOrThrow(chat.ownerId!!))
+        } catch (e: GvException) {
+            Log.w(TAG, "Failed to leave chat ${chat.id}")
+        }
+    }
+
+    suspend fun kickChatMember(chat: Chat, nodeId: Long) {
+        check(chat.isGroup && chat.ownerId == profileProvider.profile.nodeId)
+
+        chatDao.deleteChatMember(GroupChatMember(chat.id, nodeId))
+        try {
+            chatDispatcher.sendLeaveMessage(chat.id, nodeProvider.getOrThrow(nodeId))
+        } catch (e: GvException) {
+        }
+    }
+
+    suspend fun refreshChatInfo(chat: Chat) {
+        check(chat.isGroup)
+
         try {
             val chatInfo = chatDispatcher.fetchChatInfo(
-                chatId,
+                chat.id,
                 nodeProvider.getOrThrow(chat.ownerId!!),
             )
             chatDao.update(chat.copy(name = chatInfo.name, photo = chatInfo.photo))
-            chatDao.insertChatMembers(chatInfo.members.map { GroupChatMember(chatId, it) })
+            chatDao.insertChatMembers(chatInfo.members.map { GroupChatMember(chat.id, it) })
         } catch (e: GvException) {
         }
     }

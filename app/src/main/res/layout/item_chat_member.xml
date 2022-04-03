@@ -1,14 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="horizontal"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="?android:attr/selectableItemBackground"
-    android:padding="5dp"
-    android:orientation="horizontal"
-    android:gravity="center_vertical">
+    android:gravity="center_vertical"
+    android:padding="5dp">
 
     <androidx.cardview.widget.CardView
         android:id="@+id/photoCard"
@@ -26,28 +24,22 @@
 
     </androidx.cardview.widget.CardView>
 
-    <LinearLayout
+    <TextView
+        android:id="@+id/username"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
         android:layout_weight="1"
-        android:layout_marginStart="20dp">
+        android:layout_marginStart="20dp"
+        android:text="@string/username"
+        android:textAppearance="@style/TextAppearance.MaterialComponents.Subtitle1" />
 
-        <TextView
-            android:id="@+id/chatName"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/chat_name"
-            android:textAppearance="@style/TextAppearance.MaterialComponents.Subtitle1" />
-
-        <TextView
-            android:id="@+id/lastMessage"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/last_message"
-            android:singleLine="true" />
-
-    </LinearLayout>
+    <ImageButton
+        android:id="@+id/kickButton"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:src="@drawable/ic_leave"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        tools:ignore="ContentDescription" />
 
     <ImageView
         android:id="@+id/onlineIndicator"
@@ -56,5 +48,6 @@
         android:src="@drawable/ic_grape"
         app:tint="@color/icon_tint"
         tools:ignore="ContentDescription" />
+
 
 </LinearLayout>

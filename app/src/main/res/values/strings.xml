@@ -9,7 +9,7 @@
     <string name="message_channel_name">Сообщения</string>
     <string name="message_channel_desc">Отображение входящих сообщений</string>
     <string name="grapevine_service">Сервис Grapevine</string>
-    <string name="status_text">Bluetooth: %1$s\nWi-FI: %2$s\n\nОтдано: %3$d Получено: %4$d</string>
+    <string name="status_text">Bluetooth: %1$s\nWi-FI: %2$s\n\nОтправлено: %3$d Получено: %4$d</string>
     <string name="on">вкл.</string>
     <string name="off">выкл.</string>
     <string name="name">Имя</string>
@@ -65,5 +65,9 @@
     <string name="chat_members">Участники чата</string>
     <string name="mark_as_read">Прочитано</string>
     <string name="reply">Ответить</string>
-    <string name="chat_invitation_text">Вы были добавлены в этот чат</string>
+    <string name="chat_invitation_text">Вы были добавлены в чат</string>
+    <string name="no_people_around_to_add">Поблизости никого нет</string>
+    <string name="leave_chat">Покинуть чат</string>
+    <string name="not_in_chat">Вы не состоите в этом чате</string>
+    <string name="kicked_from_chat">Вы были искючены из чата</string>
 </resources>

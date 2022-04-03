@@ -39,6 +39,11 @@ class GroupChatDispatcher @Inject constructor(
         .map(::handleChatInvitation)
         .shareIn(coroutineScope, SharingStarted.Eagerly, replay = 5)
 
+    val chatLeaveMessages = network.acceptedMessages
+        .filter { it.payload.hasChatLeave() }
+        .map(::handleChatLeave)
+        .shareIn(coroutineScope, SharingStarted.Eagerly, replay = 5)
+
     init {
         coroutineScope.launch {
             network.acceptedMessages
@@ -54,7 +59,16 @@ class GroupChatDispatcher @Inject constructor(
     private suspend fun handleChatInvitation(req: AcceptedMessage): Pair<Node, Long> {
         val chatId = req.payload.chatInvitation.chatId
 
-        Log.d(TAG, "Received invitation to chat $chatId form ${req.sender}")
+        Log.d(TAG, "Received invitation to chat $chatId from ${req.sender}")
+
+        network.sendEmptyResponse(req.id, req.sender)
+        return Pair(req.sender, chatId)
+    }
+
+    private suspend fun handleChatLeave(req: AcceptedMessage): Pair<Node, Long> {
+        val chatId = req.payload.chatLeave.chatId
+
+        Log.d(TAG, "Received chat leave message from ${req.sender}")
 
         network.sendEmptyResponse(req.id, req.sender)
         return Pair(req.sender, chatId)
@@ -73,6 +87,7 @@ class GroupChatDispatcher @Inject constructor(
 
         val resp = routedPayload {
             response = routedResponse {
+                requestId = req.id
                 chatInfoResp = chatInfoResponse {
                     name = chatInfo.name
                     ownerId = chatInfo.ownerId
@@ -80,6 +95,7 @@ class GroupChatDispatcher @Inject constructor(
                     if (chatInfo.photo != null) {
                         photo = ByteString.copyFrom(encodeBitmap(chatInfo.photo))
                     }
+                    members.addAll(chatInfo.members)
                 }
             }
         }
@@ -91,6 +107,18 @@ class GroupChatDispatcher @Inject constructor(
 
         val req = routedPayload {
             chatInvitation = chatInvitation {
+                this.chatId = chatId
+            }
+        }
+        val reqId = network.send(req, node)
+        network.receiveResponse(reqId)
+    }
+
+    suspend fun sendLeaveMessage(chatId: Long, node: Node) {
+        Log.d(TAG, "Sending leave message to chat $chatId to $node")
+
+        val req = routedPayload {
+            chatLeave = chatLeave {
                 this.chatId = chatId
             }
         }
@@ -114,6 +142,8 @@ class GroupChatDispatcher @Inject constructor(
 
             throw GvInvalidResponseException()
         }
+
+        Log.d(TAG, "Fetched chat info, members: ${resp.chatInfoResp.membersList}")
 
         return resp.chatInfoResp.run {
             val photoBitmap = if (hasPhoto) {

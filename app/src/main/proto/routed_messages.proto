@@ -10,7 +10,8 @@ message RoutedPayload {
     ReadConfirmation read_confirmation = 4;
     FileDownloadRequest download_req = 7;
     ChatInvitation chat_invitation = 8;
-    ChatInfoRequest chat_info_req = 9;
+    ChatLeave chat_leave = 9;
+    ChatInfoRequest chat_info_req = 10;
   }
 }
 
@@ -65,6 +66,10 @@ message FileChunkResponse {
 
 message ChatInvitation {
   uint64 chat_id = 1;
+}
+
+message ChatLeave {
+  uint64 chat_id = 2;
 }
 
 message ChatInfoRequest {

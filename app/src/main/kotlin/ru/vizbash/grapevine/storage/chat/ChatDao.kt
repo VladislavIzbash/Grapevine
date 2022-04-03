@@ -18,7 +18,7 @@ interface ChatDao {
     @Query("UPDATE Chat SET updateTime = :date WHERE id = :id")
     suspend fun setUpdateTIme(id: Long, date: Date)
 
-    @Insert(onConflict = OnConflictStrategy.ABORT)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(chat: Chat)
 
     @Update
@@ -26,6 +26,9 @@ interface ChatDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertChatMembers(chatMembers: List<GroupChatMember>)
+
+    @Delete
+    suspend fun deleteChatMember(member: GroupChatMember)
 
     @Transaction
     @Query("SELECT * FROM Chat WHERE id = :chatId")

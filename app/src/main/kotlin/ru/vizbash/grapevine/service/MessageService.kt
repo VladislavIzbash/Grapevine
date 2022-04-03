@@ -44,7 +44,7 @@ class MessageService @Inject constructor(
     companion object {
         private const val TAG = "MessageService"
 
-        private const val REDELIVER_INTERVAL_MS = 5000L
+        private const val REDELIVER_INTERVAL_MS = 15_000L
         private const val FILE_CHUNK_SIZE = 10_000
     }
 
@@ -80,18 +80,25 @@ class MessageService @Inject constructor(
     fun getChatMessages(chatId: Long) = messageDao.pageMessagesFromChat(chatId)
 
     private suspend fun receiveMessage(msg: RoutedMessages.TextMessage, sender: Node) {
-        val chat = chatService.getChatById(sender.id)
+        val isGroupChat = msg.chatId != profileProvider.profile.nodeId
 
         when {
-            msg.chatId != profileProvider.profile.nodeId && chat == null -> return
-            msg.chatId == profileProvider.profile.nodeId && chat == null -> {
+            isGroupChat && chatService.getChat(msg.chatId) == null -> return
+            isGroupChat && !chatService.isMemberOfChat(msg.chatId, sender.id) -> {
+                Log.w(TAG, "Non member $sender attempted to send message to chat ${msg.chatId}")
+                return
+            }
+            isGroupChat && !chatService.isMemberOfChat(msg.chatId, profileProvider.profile.nodeId) -> {
+                return
+            }
+            !isGroupChat && chatService.getChat(sender.id) == null -> {
                 chatService.createDialogChat(chatService.rememberNode(sender))
             }
         }
 
         val message = Message(
             id = msg.msgId,
-            chatId = sender.id,
+            chatId = if (isGroupChat) msg.chatId else sender.id,
             timestamp = Date(msg.timestamp * 1000),
             text = msg.text,
             senderId = sender.id,
@@ -105,6 +112,7 @@ class MessageService @Inject constructor(
             ) else {
                 null
             },
+            fullyDelivered = true,
         )
 
         messageDao.insert(message)
@@ -126,6 +134,7 @@ class MessageService @Inject constructor(
             origMsgId = origId,
             file = file,
             state = Message.State.SENT,
+            fullyDelivered = false,
         )
         messageDao.insert(msg)
 
@@ -143,15 +152,23 @@ class MessageService @Inject constructor(
         try {
             textDispatcher.sendTextMessage(msg, nodeProvider.getOrThrow(nodeId))
             messageDao.setState(msg.id, Message.State.DELIVERED)
+            messageDao.setFullyDelivered(msg.id)
         } catch (e: GvException) {
             messageDao.setState(msg.id, Message.State.DELIVERY_FAILED)
         }
     }
 
     private suspend fun sendToGroupChat(msg: Message, chatId: Long) {
-        var state: Message.State? = null
+        val members = chatDao.getGroupChatMemberIds(chatId)
 
-        for (memberId in chatDao.getGroupChatMemberIds(chatId)) {
+        var state: Message.State? = if (members.isEmpty()) null else Message.State.DELIVERED
+        var fullyDelivered = true
+
+        for (memberId in members) {
+            if (memberId == profileProvider.profile.nodeId) {
+                continue
+            }
+
             try {
                 textDispatcher.sendTextMessage(msg, nodeProvider.getOrThrow(memberId))
                 state = Message.State.DELIVERED
@@ -159,17 +176,21 @@ class MessageService @Inject constructor(
                 if (state == null) {
                     state = Message.State.DELIVERY_FAILED
                 }
+                fullyDelivered = false
             }
         }
 
         messageDao.setState(msg.id, state ?: Message.State.DELIVERY_FAILED)
+        if (fullyDelivered) {
+            messageDao.setFullyDelivered(msg.id)
+        }
     }
 
     suspend fun getUnread(chatId: Long)
-        = messageDao.getAllFromChatWithState(chatId, Message.State.DELIVERED)
+        = messageDao.getFromChatWithState(chatId, Message.State.DELIVERED)
 
     private suspend fun redeliverMessages() {
-        val messages = messageDao.getAllWithStateLimit(Message.State.DELIVERY_FAILED, 5)
+        val messages = messageDao.getUndeliveredLimit(5)
 
         if (messages.isNotEmpty()) {
             Log.d(TAG, "Redelivering ${messages.size} messages")

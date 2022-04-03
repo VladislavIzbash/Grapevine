@@ -73,6 +73,8 @@ class ChatViewModel @Inject constructor(
         }
     }
 
+    suspend fun isMember() = chatService.isMemberOfChat(chatId, profile.nodeId)
+
     fun getDownloadProgress(file: MessageFile) = messageService.downloadingFiles[file]
 
     fun startFileDownload(msg: Message) = messageService.startFileDownload(msg)

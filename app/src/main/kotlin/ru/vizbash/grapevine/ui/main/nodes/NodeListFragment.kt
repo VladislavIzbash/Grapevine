@@ -35,7 +35,7 @@ class NodeListFragment : Fragment() {
     ): View {
         _ui = FragmentNodeListBinding.inflate(inflater, container, false)
 
-        val nodeAdapter = NodeAdapter(viewLifecycleOwner.lifecycleScope, {}, ::openChat)
+        val nodeAdapter = NodeAdapter(viewLifecycleOwner.lifecycleScope, {}, true, ::openChat)
 
         val decoration = DividerItemDecoration(requireContext(), DividerItemDecoration.VERTICAL)
 
