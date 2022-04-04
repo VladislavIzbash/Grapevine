@@ -26,6 +26,7 @@ import ru.vizbash.grapevine.storage.chat.ChatDao
 import ru.vizbash.grapevine.storage.chat.GroupChatMember
 import ru.vizbash.grapevine.storage.node.KnownNode
 import ru.vizbash.grapevine.storage.node.NodeDao
+import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.random.Random
@@ -56,6 +57,18 @@ class ChatService @Inject constructor(
     init {
         chatDispatcher.setChatInfoProvider(::getChatInfo)
 
+        coroutineScope.launch {
+            if (chatDao.getById(0) == null) {
+                chatDao.insert(Chat(
+                    id = 0,
+                    name = "global_chat",
+                    photo = null,
+                    isGroup = true,
+                    ownerId = null,
+                    updateTime = Date(),
+                ))
+            }
+        }
         coroutineScope.launch {
             chatDispatcher.chatInvitations.collect { (node, chatId) ->
                 receiveChatInvitation(node, chatId)
@@ -150,7 +163,7 @@ class ChatService @Inject constructor(
     }
 
     suspend fun isMemberOfChat(chatId: Long, nodeId: Long)
-        = chatDao.getGroupChatMemberIds(chatId).contains(nodeId)
+        = chatId == 0L || chatDao.getGroupChatMemberIds(chatId).contains(nodeId)
 
     suspend fun deleteChat(chat: Chat) = chatDao.delete(chat)
 

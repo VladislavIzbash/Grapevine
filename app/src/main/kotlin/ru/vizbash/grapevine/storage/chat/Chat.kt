@@ -12,7 +12,7 @@ data class Chat(
     val photo: Bitmap?,
     val isGroup: Boolean,
     val ownerId: Long?,
-    val updateTime: Date? = Date(),
+    val updateTime: Date = Date(),
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -34,7 +34,7 @@ data class Chat(
         result = 31 * result + name.hashCode()
         result = 31 * result + isGroup.hashCode()
         result = 31 * result + (ownerId?.hashCode() ?: 0)
-        result = 31 * result + (updateTime?.hashCode() ?: 0)
+        result = 31 * result + updateTime.hashCode()
         return result
     }
 }

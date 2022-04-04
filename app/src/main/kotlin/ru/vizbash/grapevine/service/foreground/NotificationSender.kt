@@ -93,7 +93,7 @@ class NotificationSender @Inject constructor(
         }
         coroutineScope.launch {
             for (msg in messageService.ingoingMessages) {
-                if (msg.chatId !in mutedChats) {
+                if (msg.chatId != 0L && msg.chatId !in mutedChats) {
                     chatNotificationSender.notify(msg)
                 }
             }

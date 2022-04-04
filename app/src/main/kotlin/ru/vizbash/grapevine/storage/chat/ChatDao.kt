@@ -6,7 +6,7 @@ import java.util.*
 
 @Dao
 interface ChatDao {
-    @Query("SELECT * FROM Chat ORDER BY updateTime DESC")
+    @Query("SELECT * FROM Chat WHERE id != 0 ORDER BY updateTime DESC")
     fun observeAll(): Flow<List<Chat>>
 
     @Query("SELECT * FROM Chat WHERE id = :id")
@@ -16,7 +16,7 @@ interface ChatDao {
     suspend fun getGroupChatMemberIds(id: Long): List<Long>
 
     @Query("UPDATE Chat SET updateTime = :date WHERE id = :id")
-    suspend fun setUpdateTIme(id: Long, date: Date)
+    suspend fun setUpdateTime(id: Long, date: Date)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(chat: Chat)

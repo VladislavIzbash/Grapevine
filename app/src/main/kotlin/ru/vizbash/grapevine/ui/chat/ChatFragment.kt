@@ -98,7 +98,7 @@ class ChatFragment : Fragment() {
         requireContext().startService(intent)
 
         lifecycleScope.launch(Dispatchers.Main) {
-            if (!model.isMember()) {
+            if (model.groupMode && !model.isMember()) {
                 ui.messageTextField.isEnabled = false
                 ui.messageTextField.setText(R.string.not_in_chat)
                 ui.sendButton.isEnabled = false
@@ -131,7 +131,7 @@ class ChatFragment : Fragment() {
         val messageAdapter = MessageAdapter(
             model.profile.nodeId,
             requireActivity().window.decorView.width - endMargin,
-            requireArguments().getBoolean(ARG_GROUP_MODE),
+            model.groupMode,
             model::getMessageSender,
             model::getDownloadProgress,
             model::markAsRead,

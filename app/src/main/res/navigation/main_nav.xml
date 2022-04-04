@@ -22,6 +22,8 @@
 
     <fragment
         android:id="@+id/fragment_global_chat"
+        android:name="ru.vizbash.grapevine.ui.chat.ChatFragment"
+        tools:layout="@layout/fragment_chat"
         android:label="@string/global_chat" />
 
     <dialog

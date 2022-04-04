@@ -31,6 +31,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/message_text"
+                android:textIsSelectable="true"
                 android:textAppearance="@style/TextAppearance.MaterialComponents.Body2" />
 
         </LinearLayout>

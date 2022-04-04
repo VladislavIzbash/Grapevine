@@ -83,6 +83,7 @@ class MessageService @Inject constructor(
         val isGroupChat = msg.chatId != profileProvider.profile.nodeId
 
         when {
+            msg.chatId == 0L -> {}
             isGroupChat && chatService.getChat(msg.chatId) == null -> return
             isGroupChat && !chatService.isMemberOfChat(msg.chatId, sender.id) -> {
                 Log.w(TAG, "Non member $sender attempted to send message to chat ${msg.chatId}")
@@ -116,6 +117,7 @@ class MessageService @Inject constructor(
         )
 
         messageDao.insert(message)
+        chatDao.setUpdateTime(message.chatId, Date())
         _ingoingMessages.trySend(message)
     }
 
@@ -137,6 +139,12 @@ class MessageService @Inject constructor(
             fullyDelivered = false,
         )
         messageDao.insert(msg)
+        chatDao.setUpdateTime(chatId, Date())
+
+        if (chatId == 0L) {
+            sendBroadcast(msg)
+            return msg
+        }
 
         val knownNode = nodeDao.getById(chatId)
         if (knownNode != null) {
@@ -146,6 +154,14 @@ class MessageService @Inject constructor(
         }
 
         return msg
+    }
+
+    private suspend fun sendBroadcast(msg: Message) {
+        for (node in nodeProvider.availableNodes.value) {
+            textDispatcher.sendTextMessage(msg, node)
+        }
+        messageDao.setState(msg.id, Message.State.DELIVERED)
+        messageDao.setFullyDelivered(msg.id)
     }
 
     private suspend fun sendToDialogChat(msg: Message, nodeId: Long) {
