@@ -24,6 +24,17 @@
         android:label="@string/app_name"
         android:supportsRtl="false"
         android:theme="@style/Theme.Grapevine.ActionBar">
+        
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="ru.vizbash.grapevine.downloads"
+            android:exported="false"
+            android:grantUriPermissions="true">
+
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/provider_paths" />
+        </provider>
 
         <service android:name=".service.foreground.ForegroundService" android:exported="false" />
 

@@ -33,7 +33,7 @@ class MessageAdapter(
     private val maxWidth: Int,
     private val groupMode: Boolean,
     private val getMessageSender: suspend (Long) -> KnownNode?,
-    private val getDownloadProgress: (MessageFile) -> Flow<Float?>?,
+    private val getDownloadProgress: (Long) -> Flow<Float?>?,
     private val onMessagedRead: (Message) -> Unit,
     private val onFileActionClicked: (Message) -> Unit,
 ) : PagingDataAdapter<MessageWithOrig, MessageAdapter.ViewHolder>(MessageDiffCallback()) {
@@ -235,30 +235,32 @@ class MessageAdapter(
 
         ui.downloadLayout.setOnClickListener { onFileActionClicked(msg) }
 
-        val progress = getDownloadProgress(file)
-        if (progress != null) {
-            ui.downloadStateImage.setImageResource(R.drawable.ic_close)
-            ui.downloadProgress.visibility = View.VISIBLE
-            ui.downloadProgress.progress = 0
+        when (file.state) {
+            MessageFile.State.NOT_DOWNLOADED, MessageFile.State.FAILED -> {
+                ui.downloadStateImage.setImageResource(R.drawable.ic_download)
+                ui.downloadProgress.progress = 1
+                ui.downloadProgress.visibility = View.INVISIBLE
+            }
+            MessageFile.State.DOWNLOADING -> {
+                ui.downloadStateImage.setImageResource(R.drawable.ic_close)
+                ui.downloadProgress.progress = 1
+                ui.downloadProgress.visibility = View.VISIBLE
 
-            coroutineScope.launch {
-                progress.collect { prog ->
-                    when (prog) {
-                        null -> {
-                            ui.downloadStateImage.setImageResource(R.drawable.ic_download)
-                            ui.downloadProgress.visibility = View.INVISIBLE
+                coroutineScope.launch {
+                    getDownloadProgress(msg.id)?.collect { prog ->
+                        when (prog) {
+                            null -> return@collect
+                            else -> ui.root.post {
+                                ui.downloadProgress.progress = (prog * 100).toInt()
+                            }
                         }
-                        1F -> {
-                            ui.downloadStateImage.setImageResource(R.drawable.ic_open_in_new)
-                            ui.downloadProgress.visibility = View.INVISIBLE
-                        }
-                        else -> ui.downloadProgress.progress = (prog * 100).toInt()
                     }
                 }
             }
-        } else {
-            ui.downloadStateImage.setImageResource(R.drawable.ic_download)
-            ui.downloadProgress.visibility = View.INVISIBLE
+            MessageFile.State.DOWNLOADED -> {
+                ui.downloadStateImage.setImageResource(R.drawable.ic_open_in_new)
+                ui.downloadProgress.visibility = View.INVISIBLE
+            }
         }
     }
 

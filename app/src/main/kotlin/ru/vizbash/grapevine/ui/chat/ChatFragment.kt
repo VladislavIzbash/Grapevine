@@ -49,10 +49,10 @@ class ChatFragment : Fragment() {
 
         val doc = DocumentFile.fromSingleUri(requireContext(), uri)!!
         model.attachedFile.value = MessageFile(
-            uri,
-            doc.name!!,
-            doc.length().toInt(),
-            false,
+            uri = uri,
+            name = doc.name!!,
+            size = doc.length().toInt(),
+            state = MessageFile.State.DOWNLOADED,
         )
     }
 
@@ -135,7 +135,7 @@ class ChatFragment : Fragment() {
             model::getMessageSender,
             model::getDownloadProgress,
             model::markAsRead,
-            model::startFileDownload,
+            ::onFileAction,
         )
 
         ui.messageList.layoutManager = LinearLayoutManager(requireContext()).apply {
@@ -213,6 +213,23 @@ class ChatFragment : Fragment() {
             withContext(Dispatchers.Main) {
                 ui.attachedMessage.username.text = sender?.username
                     ?: getString(R.string.unknown)
+            }
+        }
+    }
+
+    private fun onFileAction(msg: Message) {
+        when (msg.file!!.state) {
+            MessageFile.State.NOT_DOWNLOADED, MessageFile.State.FAILED -> {
+                model.startFileDownload(msg)
+            }
+            MessageFile.State.DOWNLOADING -> model.cancelFileDownload(msg)
+            MessageFile.State.DOWNLOADED -> {
+                val intent = Intent(Intent.ACTION_VIEW, msg.file.uri).apply {
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                if (intent.resolveActivity(requireContext().packageManager) != null) {
+                    startActivity(intent)
+                }
             }
         }
     }

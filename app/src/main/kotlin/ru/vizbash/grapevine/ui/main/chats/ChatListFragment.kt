@@ -94,8 +94,8 @@ class ChatListFragment : Fragment() {
     override fun onContextItemSelected(item: MenuItem): Boolean {
         return if (item.itemId == R.id.item_delete) {
             AlertDialog.Builder(requireContext())
-                .setTitle("Удалить чат?")
-                .setMessage("Все сообщения будут безвозвратно удалены")
+                .setTitle(getString(R.string.delete_chat))
+                .setMessage(getString(R.string.delete_chat_alert))
                 .setNegativeButton(R.string.cancel, null)
                 .setPositiveButton(R.string.delete) { _, _ ->
                     activityModel.deleteChat(chatAdapter.currentMenuItem!!.chat)

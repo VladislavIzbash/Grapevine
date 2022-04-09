@@ -57,10 +57,10 @@ message ReadConfirmation {
 
 message FileDownloadRequest {
   uint64 msg_id = 1;
+  bool start = 2;
 }
 
 message FileChunkResponse {
-  uint32 chunk_num = 3;
   bytes chunk = 4;
 }
 

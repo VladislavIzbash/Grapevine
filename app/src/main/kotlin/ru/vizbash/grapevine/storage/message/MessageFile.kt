@@ -6,5 +6,7 @@ data class MessageFile(
     val uri: Uri?,
     val name: String,
     val size: Int,
-    val isDownloaded: Boolean,
-)
+    val state: State,
+) {
+    enum class State { NOT_DOWNLOADED, DOWNLOADING, DOWNLOADED, FAILED }
+}

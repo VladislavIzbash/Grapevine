@@ -54,7 +54,7 @@ class ChatService @Inject constructor(
     private val _ingoingChatKicks = Channel<Chat>()
     val ingoingChatKicks: ReceiveChannel<Chat> = _ingoingChatKicks
 
-    init {
+    fun start() {
         chatDispatcher.setChatInfoProvider(::getChatInfo)
 
         coroutineScope.launch {

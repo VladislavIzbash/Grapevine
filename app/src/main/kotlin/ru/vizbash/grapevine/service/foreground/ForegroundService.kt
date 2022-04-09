@@ -9,11 +9,17 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import ru.vizbash.grapevine.network.dispatch.NetworkController
+import ru.vizbash.grapevine.service.ChatService
+import ru.vizbash.grapevine.service.FileService
+import ru.vizbash.grapevine.service.MessageService
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class ForegroundService : Service() {
     @Inject lateinit var networkController: NetworkController
+    @Inject lateinit var chatService: ChatService
+    @Inject lateinit var messageService: MessageService
+    @Inject lateinit var fileService: FileService
     @Inject lateinit var transportController: TransportController
     @Inject lateinit var notificationSender: NotificationSender
 
@@ -50,7 +56,11 @@ class ForegroundService : Service() {
         notificationSender.start(coroutineScope) { notifId, notif ->
             startForeground(notifId, notif)
         }
+
         networkController.start()
+        chatService.start()
+        messageService.start()
+        fileService.start()
 
         Log.i(TAG, "Started")
     }
@@ -86,6 +96,7 @@ class ForegroundService : Service() {
         coroutineScope.cancel()
         transportController.stop()
         notificationSender.stop()
+        fileService.cancelAllDownloads()
 
         Log.i(TAG, "Stopped")
     }

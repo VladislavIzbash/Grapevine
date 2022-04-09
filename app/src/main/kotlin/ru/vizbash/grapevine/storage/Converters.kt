@@ -5,6 +5,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.room.TypeConverter
 import ru.vizbash.grapevine.storage.message.Message
+import ru.vizbash.grapevine.storage.message.MessageFile
 import ru.vizbash.grapevine.util.encodeBitmap
 import ru.vizbash.grapevine.util.decodeRsaPublicKey
 import java.security.PublicKey
@@ -30,6 +31,12 @@ class Converters {
 
     @TypeConverter
     fun fromMessageState(value: Message.State) = value.ordinal
+
+    @TypeConverter
+    fun toFileState(value: Int) = enumValues<MessageFile.State>()[value]
+
+    @TypeConverter
+    fun fromFileState(value: MessageFile.State) = value.ordinal
 
     @TypeConverter
     fun fromDate(date: Date): Long = date.time / 1000

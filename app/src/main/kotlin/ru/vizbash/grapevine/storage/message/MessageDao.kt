@@ -1,5 +1,6 @@
 package ru.vizbash.grapevine.storage.message
 
+import android.net.Uri
 import androidx.paging.PagingSource
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
@@ -17,6 +18,12 @@ interface MessageDao {
 
     @Query("UPDATE Message SET state = :newState WHERE id = :id")
     suspend fun setState(id: Long, newState: Message.State)
+
+    @Query("UPDATE Message SET filestate = :newState WHERE id = :id")
+    suspend fun setFileState(id: Long, newState: MessageFile.State)
+
+    @Query("UPDATE Message SET fileuri = :uri WHERE id = :id")
+    suspend fun setFileUri(id: Long, uri: Uri)
 
     @Query("SELECT * FROM Message WHERE fullyDelivered = 0 ORDER BY timestamp DESC LIMIT :limit")
     suspend fun getUndeliveredLimit(limit: Int): List<Message>

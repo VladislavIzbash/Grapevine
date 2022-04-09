@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import ru.vizbash.grapevine.GvException
 import ru.vizbash.grapevine.GvInvalidResponseException
 import ru.vizbash.grapevine.network.DispatcherCoroutineScope
@@ -27,7 +28,7 @@ class FileTransferDispatcher @Inject constructor(
         private const val TAG = "FileTransferDispatcher"
     }
 
-    private var getNextChunk: (suspend (Long, Node) -> ByteArray?)? = null
+    private var getNextChunk: (suspend (Long, Node, Boolean) -> ByteArray?)? = null
 
     init {
         coroutineScope.launch {
@@ -37,7 +38,7 @@ class FileTransferDispatcher @Inject constructor(
         }
     }
 
-    fun setFileChunkProvider(getNextChunk: suspend (Long, Node) -> ByteArray?) {
+    fun setFileChunkProvider(getNextChunk: suspend (Long, Node, Boolean) -> ByteArray?) {
         this.getNextChunk = getNextChunk
     }
 
@@ -45,33 +46,25 @@ class FileTransferDispatcher @Inject constructor(
         Log.d(TAG, "Received file download request from ${req.sender}")
 
         val msgId = req.payload.downloadReq.msgId
+        val start = req.payload.downloadReq.start
 
-        coroutineScope.launch(Dispatchers.IO) {
-            var chunkNum = 0
+        withContext(Dispatchers.IO) {
+            val chunk = getNextChunk?.invoke(msgId, req.sender, start) ?: return@withContext
+
+            Log.d(TAG, "Sending file chunk (${chunk.size} bytes) to ${req.sender}")
+
+            val resp = routedPayload {
+                response = routedResponse {
+                    requestId = req.id
+                    error = RoutedMessages.Error.NO_ERROR
+                    fileChunkResp = fileChunkResponse {
+                        this.chunk = ByteString.copyFrom(chunk)
+                    }
+                }
+            }
 
             try {
-                while (true) {
-                    val chunk = getNextChunk?.invoke(msgId, req.sender) ?: break
-
-                    Log.d(
-                        TAG,
-                        "Sending file chunk #$chunkNum (${chunk.size} bytes) to ${req.sender}"
-                    )
-
-                    val resp = routedPayload {
-                        response = routedResponse {
-                            requestId = req.id
-                            error = RoutedMessages.Error.NO_ERROR
-                            fileChunkResp = fileChunkResponse {
-                                this.chunkNum = chunkNum
-                                this.chunk = ByteString.copyFrom(chunk)
-                            }
-                        }
-                    }
-                    network.send(resp, req.sender)
-
-                    chunkNum++
-                }
+                network.send(resp, req.sender)
             } catch (e: GvException) {
             }
         }
@@ -80,33 +73,41 @@ class FileTransferDispatcher @Inject constructor(
     suspend fun downloadFile(msgId: Long, file: MessageFile, node: Node): Flow<ByteArray> {
         Log.d(TAG, "Sending file download request to $node")
 
-        val req = routedPayload {
+        var req = routedPayload {
             downloadReq = fileDownloadRequest {
                 this.msgId = msgId
+                this.start = true
             }
         }
-        val reqId = network.send(req, node)
+        var reqId = network.send(req, node)
 
         return flow {
-            var prevNum = -1
             var receivedBytes = 0
 
-            while (receivedBytes <= file.size) {
+            while (true) {
                 val resp = network.receiveResponse(reqId)
-                val chunkResp = if (resp.hasFileChunkResp()) {
-                    resp.fileChunkResp
+                val chunk = if (resp.hasFileChunkResp()) {
+                    resp.fileChunkResp.chunk
                 } else {
                     throw GvInvalidResponseException()
                 }
 
-                if (chunkResp.chunkNum != prevNum + 1) {
-                    throw GvInvalidResponseException()
+                receivedBytes += chunk.size()
+
+                Log.d(TAG, "Received file chunk (${chunk.size()} bytes) from $node")
+
+                emit(chunk.toByteArray())
+
+                if (receivedBytes >= file.size) {
+                    break
                 }
 
-                emit(chunkResp.chunk.toByteArray())
-
-                receivedBytes += chunkResp.chunk.size()
-                prevNum++
+                req = routedPayload {
+                    downloadReq = fileDownloadRequest {
+                        this.msgId = msgId
+                    }
+                }
+                reqId = network.send(req, node)
             }
         }
     }

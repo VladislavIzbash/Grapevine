@@ -70,4 +70,6 @@
     <string name="leave_chat">Покинуть чат</string>
     <string name="not_in_chat">Вы не состоите в этом чате</string>
     <string name="kicked_from_chat">Вы были искючены из чата</string>
+    <string name="delete_chat">Удалить чат?</string>
+    <string name="delete_chat_alert">Все сообщения будут безвозвратно удалены</string>
 </resources>
