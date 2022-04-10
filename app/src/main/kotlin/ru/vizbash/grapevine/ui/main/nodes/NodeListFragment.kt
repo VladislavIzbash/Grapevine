@@ -16,7 +16,6 @@ import jp.wasabeef.recyclerview.animators.SlideInUpAnimator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import ru.vizbash.grapevine.databinding.FragmentNodeListBinding
 import ru.vizbash.grapevine.network.Node
 import ru.vizbash.grapevine.ui.chat.ChatActivity
@@ -59,7 +58,8 @@ class NodeListFragment : Fragment() {
     }
 
     private fun updateNodeList(nodes: List<Node>, adapter: NodeAdapter) {
-        ui.noNodesText.visibility = if (nodes.isEmpty()) View.VISIBLE else View.INVISIBLE
+        val showNoNodes = nodes.isEmpty() && activityModel.searchQuery.value.isEmpty()
+        ui.noNodesText.visibility = if (showNoNodes) View.VISIBLE else View.INVISIBLE
         ui.nodeList.visibility = if (nodes.isEmpty()) View.INVISIBLE else View.VISIBLE
 
         val items = nodes.map { NodeAdapter.NodeItem(it, activityModel.fetchPhotoAsync(it)) }

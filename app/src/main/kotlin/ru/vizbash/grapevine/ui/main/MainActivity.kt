@@ -1,12 +1,19 @@
 package ru.vizbash.grapevine.ui.main
 
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.PorterDuff
 import android.os.Bundle
+import android.view.MenuItem
+import android.widget.EditText
+import android.widget.ImageView
 import androidx.activity.viewModels
+import androidx.annotation.StyleableRes
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.SearchView
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -76,10 +83,13 @@ class MainActivity : AppCompatActivity() {
             ).show()
         }
 
+//        menuInflater.inflate(R.menu.appbar, ui.toolbar.menu)
+
         val navController = setupNavigation()
 
         initDrawerHeader()
         initDrawerMenu(navController)
+        setupSearch(navController)
     }
 
     override fun onStart() {
@@ -101,8 +111,7 @@ class MainActivity : AppCompatActivity() {
     override fun onStop() {
         super.onStop()
 
-        LocalBroadcastManager.getInstance(this)
-            .unregisterReceiver(transportStateReceiver)
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(transportStateReceiver)
     }
 
     private fun initDrawerHeader() {
@@ -179,5 +188,52 @@ class MainActivity : AppCompatActivity() {
         ui.navView.setupWithNavController(navController)
 
         return navController
+    }
+
+    @SuppressLint("ResourceType")
+    private fun setupSearch(navController: NavController) {
+        val attrs = theme.obtainStyledAttributes(intArrayOf(
+            com.google.android.material.R.attr.colorOnPrimary,
+            android.R.attr.textColorHint,
+        ))
+        val colorOnPrimary = attrs.getColor(0, 0)
+        val hintColor = attrs.getColor(1, 0)
+        attrs.recycle()
+
+        val searchView = SearchView(this).apply {
+            queryHint = getString(R.string.search)
+            findViewById<EditText>(androidx.appcompat.R.id.search_src_text).apply {
+                setTextColor(colorOnPrimary)
+                setHintTextColor(hintColor)
+            }
+            findViewById<ImageView>(androidx.appcompat.R.id.search_close_btn).apply {
+                setColorFilter(colorOnPrimary, PorterDuff.Mode.MULTIPLY)
+            }
+        }
+        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?) = true
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                newText?.let {
+                    model.searchQuery.value = it
+                }
+                return true
+            }
+        })
+        searchView.setOnCloseListener {
+            model.searchQuery.value = ""
+            false
+        }
+
+        val searchItem = ui.toolbar.menu.add(R.string.search).apply {
+            setIcon(R.drawable.ic_search)
+            setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS or MenuItem.SHOW_AS_ACTION_COLLAPSE_ACTION_VIEW)
+            actionView = searchView
+        }
+
+        navController.addOnDestinationChangedListener { _, dest, _ ->
+            val searchable = dest.id in arrayOf(R.id.fragment_chat_list, R.id.fragment_node_list)
+            searchItem.isVisible = searchable
+        }
     }
 }

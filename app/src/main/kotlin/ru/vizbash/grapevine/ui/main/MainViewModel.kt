@@ -7,7 +7,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.GvException
 import ru.vizbash.grapevine.network.Node
@@ -29,9 +29,15 @@ class MainViewModel @Inject constructor(
 ) : ViewModel() {
     val profile get() = profileService.profile
 
-    val nodeList = nodeProvider.availableNodes
+    val searchQuery = MutableStateFlow("")
 
-    val chatList = chatService.chats
+    val chatList = chatService.chats.combine(searchQuery) { chats, query ->
+        chats.filter { it.name.contains(query, true) }
+    }
+
+    val nodeList = nodeProvider.availableNodes.combine(searchQuery) { nodes, query ->
+        nodes.filter { it.username.contains(query, true) }
+    }
 
     fun disableAutoLogin() = profileService.disableAutoLogin()
 

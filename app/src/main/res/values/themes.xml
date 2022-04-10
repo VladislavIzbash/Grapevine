@@ -40,5 +40,4 @@
     <style name="ThemeOverlay.Grapevine.Toolbar" parent="">
         <item name="colorControlNormal">@color/white</item>
     </style>
-
 </resources>

@@ -15,16 +15,13 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.github.dhaval2404.imagepicker.ImagePicker
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.R
 import ru.vizbash.grapevine.databinding.FragmentChatListBinding
 import ru.vizbash.grapevine.storage.chat.Chat
 import ru.vizbash.grapevine.ui.chat.ChatActivity
 import ru.vizbash.grapevine.ui.main.MainViewModel
-import javax.inject.Inject
 
 class ChatListFragment : Fragment() {
     private var _ui: FragmentChatListBinding? = null
@@ -78,7 +75,8 @@ class ChatListFragment : Fragment() {
     }
 
     private fun updateChatList(chats: List<Chat>) {
-        ui.noChatsLayout.visibility = if (chats.isEmpty()) View.VISIBLE else View.INVISIBLE
+        val showNoChats = chats.isEmpty() && activityModel.searchQuery.value.isEmpty()
+        ui.noChatsLayout.visibility = (if (showNoChats) View.VISIBLE else View.INVISIBLE)
         ui.chatList.visibility = if (chats.isEmpty()) View.INVISIBLE else View.VISIBLE
 
         val items = chats.map {
