@@ -11,7 +11,6 @@ import android.view.MenuItem
 import android.widget.EditText
 import android.widget.ImageView
 import androidx.activity.viewModels
-import androidx.annotation.StyleableRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.core.content.ContextCompat
@@ -149,20 +148,40 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        wifiSwitch = ui.navView.menu.findItem(R.id.item_wifi_switch).actionView
-                as SwitchMaterial
         bluetoothSwitch = ui.navView.menu.findItem(R.id.item_bluetooth_switch).actionView
                 as SwitchMaterial
+        wifiSwitch = ui.navView.menu.findItem(R.id.item_wifi_switch).actionView
+                as SwitchMaterial
+//        bluetoothSwitch.setOnClickListener {
+//            val intent = Intent(this, ForegroundService::class.java).apply {
+//                action = ACTION_ENABLE_TRANSPORT
+//                putExtra(EXTRA_TRANSPORT_TYPE, TRANSPORT_BLUETOOTH)
+//                putExtra(EXTRA_STATE, bluetoothSwitch.isChecked)
+//            }
+//
+//            if (bluetoothSwitch.isChecked) {
+//                bluetoothSwitch.isChecked = false
+//                locationHelper.requestPermissions {
+//                    startService(intent)
+//                }
+//            } else {
+//                startService(intent)
+//            }
+//        }
+        initTransportSwitch(bluetoothSwitch, TRANSPORT_BLUETOOTH)
+        initTransportSwitch(wifiSwitch, TRANSPORT_WIFI)
+    }
 
-        bluetoothSwitch.setOnClickListener {
+    private fun initTransportSwitch(switch: SwitchMaterial, transportType: Int) {
+        switch.setOnClickListener {
             val intent = Intent(this, ForegroundService::class.java).apply {
                 action = ACTION_ENABLE_TRANSPORT
-                putExtra(EXTRA_TRANSPORT_TYPE, TRANSPORT_BLUETOOTH)
-                putExtra(EXTRA_STATE, bluetoothSwitch.isChecked)
+                putExtra(EXTRA_TRANSPORT_TYPE, transportType)
+                putExtra(EXTRA_STATE, switch.isChecked)
             }
 
-            if (bluetoothSwitch.isChecked) {
-                bluetoothSwitch.isChecked = false
+            if (switch.isChecked) {
+                switch.isChecked = false
                 locationHelper.requestPermissions {
                     startService(intent)
                 }

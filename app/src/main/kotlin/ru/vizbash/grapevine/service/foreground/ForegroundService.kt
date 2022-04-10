@@ -94,6 +94,7 @@ class ForegroundService : Service() {
         super.onDestroy()
 
         coroutineScope.cancel()
+        networkController.stop()
         transportController.stop()
         notificationSender.stop()
         fileService.cancelAllDownloads()

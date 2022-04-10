@@ -36,7 +36,7 @@ class FileService @Inject constructor(
     companion object {
         private const val TAG = "FileService"
 
-        private const val FILE_CHUNK_SIZE = 50_000
+        private const val FILE_CHUNK_SIZE = 200_000
     }
 
     private val streamedFiles = mutableMapOf<Pair<Long, Long>, InputStream>()

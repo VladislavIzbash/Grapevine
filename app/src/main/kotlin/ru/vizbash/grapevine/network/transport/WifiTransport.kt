@@ -104,7 +104,7 @@ class WifiTransport @Inject constructor(
 
         registerService()
 
-        tickTimer.scheduleAtFixedRate(TickerTask(serverChannel), 100, TICK_INTERVAL_MS)
+        tickTimer.scheduleAtFixedRate(ServerTask(serverChannel), 100, TICK_INTERVAL_MS)
         Looper.loop()
 
         p2pChannel.close()
@@ -119,7 +119,6 @@ class WifiTransport @Inject constructor(
         }
 
         started = false
-        Log.i(TAG, "Stopping")
 
         context.unregisterReceiver(p2pConnectionReceiver)
         tickTimer.cancel()
@@ -127,6 +126,7 @@ class WifiTransport @Inject constructor(
         p2pManager.removeLocalService(p2pChannel, serviceInfo, object : WifiP2pManager.ActionListener {
             override fun onSuccess() {
                 looper.quit()
+                Log.i(TAG, "Stopped")
             }
 
             override fun onFailure(reason: Int) {
@@ -245,7 +245,7 @@ class WifiTransport @Inject constructor(
         }
     }
 
-    private inner class TickerTask(
+    private inner class ServerTask(
         private val serverChannel: ServerSocketChannel,
     ) : TimerTask() {
         private val buffers = mutableMapOf<WifiNeighbor, ByteBuffer>()
@@ -319,9 +319,7 @@ class WifiTransport @Inject constructor(
         }
     }
 
-    private inner class WifiNeighbor(
-        val channel: SocketChannel,
-    ) : Neighbor {
+    private inner class WifiNeighbor(val channel: SocketChannel) : Neighbor {
         var receiveCb: (DirectMessage) -> Unit = {}
             private set
         var disconnectCb: () -> Unit = {}

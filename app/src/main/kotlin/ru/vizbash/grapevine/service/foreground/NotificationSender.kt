@@ -9,6 +9,7 @@ import androidx.core.app.NotificationManagerCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.scopes.ServiceScoped
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.R
@@ -117,6 +118,7 @@ class NotificationSender @Inject constructor(
     fun stop() {
         transportController.setOnStateChanged {  }
         chatNotificationSender.unregister()
+        coroutineScope.cancel()
     }
 
     fun muteChat(chatId: Long) {

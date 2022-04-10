@@ -123,6 +123,13 @@ class NetworkController @Inject constructor(
         started = true
     }
 
+    fun stop() {
+        started = false
+
+        coroutineScope.cancel()
+        Log.i(TAG, "Stopped")
+    }
+
     suspend fun receiveResponse(
         reqId: Long,
     ): RoutedMessages.RoutedResponse = withContext(Dispatchers.Default) {
