@@ -40,7 +40,7 @@ class ChatListFragment : Fragment() {
 
         chatAdapter = ChatAdapter(
             viewLifecycleOwner.lifecycleScope,
-            activityModel.profile.nodeId,
+            activityModel.profile.value!!.nodeId,
         ) {
             val intent = Intent(requireContext(), ChatActivity::class.java).apply {
                 putExtra(ChatActivity.EXTRA_CHAT_ID, it.id)

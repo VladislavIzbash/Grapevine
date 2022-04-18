@@ -16,6 +16,9 @@ import androidx.appcompat.widget.SearchView
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
@@ -25,6 +28,9 @@ import androidx.navigation.ui.setupWithNavController
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.switchmaterial.SwitchMaterial
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.launch
 import ru.vizbash.grapevine.R
 import ru.vizbash.grapevine.databinding.ActivityMainBinding
 import ru.vizbash.grapevine.databinding.DrawerHeaderBinding
@@ -82,8 +88,6 @@ class MainActivity : AppCompatActivity() {
             ).show()
         }
 
-//        menuInflater.inflate(R.menu.appbar, ui.toolbar.menu)
-
         val navController = setupNavigation()
 
         initDrawerHeader()
@@ -123,9 +127,15 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
-        headerUi.username.text = model.profile.username
-        model.profile.photo?.let {
-            headerUi.userPhoto.setImageBitmap(it)
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                model.profile.filterNotNull().collect {
+                    headerUi.username.text = it.username
+                    it.photo?.let {
+                        headerUi.userPhoto.setImageBitmap(it)
+                    }
+                }
+            }
         }
     }
 
@@ -152,22 +162,7 @@ class MainActivity : AppCompatActivity() {
                 as SwitchMaterial
         wifiSwitch = ui.navView.menu.findItem(R.id.item_wifi_switch).actionView
                 as SwitchMaterial
-//        bluetoothSwitch.setOnClickListener {
-//            val intent = Intent(this, ForegroundService::class.java).apply {
-//                action = ACTION_ENABLE_TRANSPORT
-//                putExtra(EXTRA_TRANSPORT_TYPE, TRANSPORT_BLUETOOTH)
-//                putExtra(EXTRA_STATE, bluetoothSwitch.isChecked)
-//            }
-//
-//            if (bluetoothSwitch.isChecked) {
-//                bluetoothSwitch.isChecked = false
-//                locationHelper.requestPermissions {
-//                    startService(intent)
-//                }
-//            } else {
-//                startService(intent)
-//            }
-//        }
+
         initTransportSwitch(bluetoothSwitch, TRANSPORT_BLUETOOTH)
         initTransportSwitch(wifiSwitch, TRANSPORT_WIFI)
     }
@@ -200,6 +195,7 @@ class MainActivity : AppCompatActivity() {
             R.id.fragment_chat_list,
             R.id.fragment_node_list,
             R.id.fragment_global_chat,
+            R.id.fragment_settings,
         )
         val appBarConfig = AppBarConfiguration(topLevel, ui.root)
 

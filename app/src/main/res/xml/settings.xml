@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <SwitchPreferenceCompat
+        app:key="autologin"
+        app:title="@string/autologin_full"
+        app:defaultValue="true"
+        app:iconSpaceReserved="false" />
+
+    <EditTextPreference
+        app:key="max_connections"
+        app:title="@string/max_connections"
+        app:singleLineTitle="false"
+        app:defaultValue="5"
+        app:iconSpaceReserved="false"/>
+
+    <EditTextPreference
+        app:key="file_block_size"
+        app:title="@string/file_block_size"
+        app:singleLineTitle="false"
+        app:defaultValue="200"
+        app:iconSpaceReserved="false"/>
+
+    <SeekBarPreference
+        app:key="redeliver_interval"
+        app:title="@string/redeliver_interval"
+        app:showSeekBarValue="true"
+        app:singleLineTitle="false"
+        app:min="1"
+        android:max="120"
+        app:defaultValue="15"
+        app:iconSpaceReserved="false"/>
+
+</androidx.preference.PreferenceScreen>

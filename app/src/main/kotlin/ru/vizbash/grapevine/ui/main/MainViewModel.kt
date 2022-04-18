@@ -27,7 +27,7 @@ class MainViewModel @Inject constructor(
     private val chatService: ChatService,
     private val messageService: MessageService,
 ) : ViewModel() {
-    val profile get() = profileService.profile
+    val profile get() = profileService.profileFlow
 
     val searchQuery = MutableStateFlow("")
 

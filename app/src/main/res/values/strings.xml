@@ -73,4 +73,9 @@
     <string name="delete_chat">Удалить чат?</string>
     <string name="delete_chat_alert">Все сообщения будут безвозвратно удалены</string>
     <string name="search">Поиск</string>
+    <string name="autologin_full">Автоматический вход</string>
+    <string name="max_connections">Кол-во одновременных подключений</string>
+    <string name="wipe_data">Стереть все данные</string>
+    <string name="file_block_size">Размер блока при передаче файла, кБ</string>
+    <string name="redeliver_interval">Интервал повторной отправки сообщений, с</string>
 </resources>

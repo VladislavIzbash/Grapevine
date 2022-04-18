@@ -26,6 +26,12 @@
         tools:layout="@layout/fragment_chat"
         android:label="@string/global_chat" />
 
+    <fragment
+        android:id="@+id/fragment_settings"
+        android:name="ru.vizbash.grapevine.ui.main.settings.SettingsFragment"
+        tools:layout="@layout/fragment_settings"
+        android:label="@string/settings" />
+
     <dialog
         android:id="@+id/dialog_new_chat"
         android:name="ru.vizbash.grapevine.ui.main.chats.NewChatDialog"

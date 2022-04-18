@@ -30,7 +30,7 @@ class NodeListFragment : Fragment() {
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
-        savedInstanceState: Bundle?
+        savedInstanceState: Bundle?,
     ): View {
         _ui = FragmentNodeListBinding.inflate(inflater, container, false)
 
